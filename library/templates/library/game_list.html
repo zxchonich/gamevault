@@ -1,0 +1,452 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Каталог ігор | GameVault{% endblock %}
+
+{% block content %}
+<section class="dashboard-main page-wide">
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Каталог GameVault</div>
+            <h1>Бібліотека ігор</h1>
+            <p>
+                У цьому розділі зібрано ігри з бази даних GameVault.
+                Ігри можна шукати за назвою, фільтрувати за жанрами,
+                сортувати за рейтингом або датою додавання та відкривати
+                окрему сторінку з детальною інформацією.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Усього ігор</span>
+            <b>{{ total_games_count }}</b>
+            <p>Кількість ігор у загальному каталозі</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Жанрів</span>
+            <b>{{ genres_count }}</b>
+            <p>Кількість жанрів, доступних для фільтрації</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Ігор з рецензіями</span>
+            <b>{{ games_with_reviews_count }}</b>
+            <p>Ігри, для яких користувачі залишили оцінки</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Каталог і заявки</h2>
+            <span>Додавання нових ігор та перегляд статусу заявок</span>
+        </div>
+
+        <div class="catalog-hub-grid">
+            {% if current_library_user and current_library_user.role.name == 'admin' %}
+            <a class="catalog-hub-card admin-hub-card" href="{% url 'library:admin_game_add' %}">
+                <span>Admin</span>
+                <h3>Додати гру</h3>
+                <p>
+                    Створити нову гру вручну, додати опис, дату виходу,
+                    постер та прив’язати жанри.
+                </p>
+            </a>
+            {% endif %}
+
+            {% if current_library_user %}
+            <a class="catalog-hub-card" href="{% url 'library:request_game' %}">
+                <span>Request</span>
+                <h3>Запропонувати гру</h3>
+                <p>
+                    Якщо потрібної гри немає в каталозі, можна створити заявку
+                    на її додавання до системи GameVault.
+                </p>
+            </a>
+
+            <a class="catalog-hub-card" href="{% url 'library:my_requests' %}">
+                <span>Status</span>
+                <h3>Мої заявки</h3>
+                <p>
+                    Перегляньте заявки, які ви вже надіслали, а також їхній
+                    поточний статус модерації.
+                </p>
+            </a>
+
+            <a class="catalog-hub-card" href="{% url 'library:my_library' %}">
+                <span>Library</span>
+                <h3>Моя бібліотека</h3>
+                <p>
+                    Перейдіть до власної бібліотеки, щоб переглянути додані ігри
+                    та змінити їхні статуси.
+                </p>
+            </a>
+            {% else %}
+            <a class="catalog-hub-card" href="{% url 'library:login' %}">
+                <span>Account</span>
+                <h3>Увійдіть у систему</h3>
+                <p>
+                    Щоб додавати ігри до бібліотеки, пропонувати нові ігри
+                    та переглядати власні заявки, необхідно увійти в акаунт.
+                </p>
+            </a>
+
+            <a class="catalog-hub-card" href="{% url 'library:register' %}">
+                <span>Register</span>
+                <h3>Створити акаунт</h3>
+                <p>
+                    Зареєструйтеся, щоб користуватися персональною бібліотекою,
+                    рецензіями, друзями та рекомендаціями.
+                </p>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="dashboard-section catalog-filter-section">
+        <div class="section-head">
+            <h2>Фільтри каталогу</h2>
+            <span>Пошук, жанри та сортування</span>
+        </div>
+
+        <form method="get" class="catalog-filter-form advanced-catalog-filter">
+
+            <label class="filter-field">
+                <span>Пошук гри</span>
+                <input type="text" name="q" value="{{ query }}" placeholder="Введіть назву гри...">
+            </label>
+
+            <div class="filter-field genre-multiselect" data-multiselect>
+                <span class="filter-label">Жанри</span>
+
+                <button class="genre-multiselect-toggle unified-filter-control" type="button" data-toggle>
+                    <span class="genre-toggle-value" data-placeholder>Виберіть жанри</span>
+                    <b>▾</b>
+                </button>
+
+                <div class="selected-genres-hidden" data-selected>
+                    {% for genre in genres %}
+                    {% if genre.id|stringformat:"s" in selected_genres %}
+                    <input type="hidden" name="genres" value="{{ genre.id }}" data-hidden-genre="{{ genre.id }}"
+                        data-hidden-name="{{ genre.name }}">
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="genre-dropdown" data-dropdown>
+                    <input type="text" class="genre-search-input" placeholder="Пошук жанру..." data-search>
+
+                    <div class="genre-options-list">
+                        {% for genre in genres %}
+                        <button type="button"
+                            class="genre-option {% if genre.id|stringformat:'s' in selected_genres %}selected{% endif %}"
+                            data-genre-id="{{ genre.id }}" data-genre-name="{{ genre.name }}">
+                            <span>{{ genre.name }}</span>
+                            <b>✓</b>
+                        </button>
+                        {% empty %}
+                        <p class="genre-empty-text">Жанри ще не додані.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <label class="filter-field">
+                <span>Сортування</span>
+
+                <div class="custom-select-wrap">
+                    <span class="select-icon">▾</span>
+
+                    <select name="sort" class="custom-select unified-filter-control">
+                        <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>За назвою</option>
+                        <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Нові спочатку
+                        </option>
+                        <option value="rating" {% if selected_sort == 'rating' %}selected{% endif %}>За рейтингом</option>
+                    </select>
+                </div>
+            </label>
+
+            <div class="catalog-filter-actions">
+                <button class="pseudo-button filter-button" type="submit">
+                    <span>Застосувати</span>
+                </button>
+
+                <a class="reset-filter-link unified-filter-control" href="{% url 'library:game_list' %}">
+                    Скинути
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+    <section class="library-grid">
+        {% for game in games %}
+
+        {% if current_library_user and current_library_user.role.name == 'admin' %}
+        <article class="library-game-card">
+            {% if game.poster %}
+            <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+            {% else %}
+            <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ game.title }}">
+            {% endif %}
+
+            <div class="library-game-content">
+                <span class="game-status active">
+                    {% if game.avg_score %}
+                    {{ game.avg_score|floatformat:1 }}/10
+                    {% else %}
+                    Без рейтингу
+                    {% endif %}
+                </span>
+
+                <h3>{{ game.title }}</h3>
+                <div class="game-card-genres">
+                    {% for genre in game.visible_genres %}
+                    <span>{{ genre.name }}</span>
+                    {% empty %}
+                    <span>Без жанру</span>
+                    {% endfor %}
+                </div>
+
+                <p>
+                    {% if game.description %}
+                    {{ game.description|truncatechars:135 }}
+                    {% else %}
+                    Опис гри поки що відсутній.
+                    {% endif %}
+                </p>
+
+                <div class="admin-card-actions">
+                    <a href="{% url 'library:game_detail' game.id %}">Детальніше</a>
+                    <a href="{% url 'library:admin_game_edit' game.id %}">Редагувати</a>
+
+                    <form method="post" action="{% url 'library:admin_game_delete' game.id %}">
+                        {% csrf_token %}
+                        <button type="submit" onclick="return confirm('Видалити гру з каталогу?');">
+                            Видалити
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <a class="library-game-card clickable-game-card" href="{% url 'library:game_detail' game.id %}">
+            {% if game.poster %}
+            <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+            {% else %}
+            <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ game.title }}">
+            {% endif %}
+
+            <div class="library-game-content">
+                <span class="game-status active">
+                    {% if game.avg_score %}
+                    {{ game.avg_score|floatformat:1 }}/10
+                    {% else %}
+                    Без рейтингу
+                    {% endif %}
+                </span>
+
+                <h3>{{ game.title }}</h3>
+                <div class="game-card-genres">
+                    {% for genre in game.visible_genres %}
+                    <span>{{ genre.name }}</span>
+                    {% empty %}
+                    <span>Без жанру</span>
+                    {% endfor %}
+                </div>
+
+                <p>
+                    {% if game.description %}
+                    {{ game.description|truncatechars:135 }}
+                    {% else %}
+                    Опис гри поки що відсутній.
+                    {% endif %}
+                </p>
+            </div>
+        </a>
+        {% endif %}
+
+        {% empty %}
+        <div class="library-empty-panel">
+            <h2>Ігри не знайдені</h2>
+            <p>
+                Спробуйте змінити фільтри, прибрати частину жанрів або ввести інший пошуковий запит.
+            </p>
+        </div>
+        {% endfor %}
+    </section>
+    {% if page_obj.has_other_pages %}
+    <nav class="pagination">
+
+        {% if page_obj.has_previous %}
+        <a
+            href="?q={{ query }}{% for genre_id in selected_genres %}&genres={{ genre_id }}{% endfor %}&sort={{ selected_sort }}&page={{ page_obj.previous_page_number }}">
+            Назад
+        </a>
+        {% endif %}
+
+        {% if page_obj.number > 3 %}
+        <a
+            href="?q={{ query }}{% for genre_id in selected_genres %}&genres={{ genre_id }}{% endfor %}&sort={{ selected_sort }}&page=1">
+            1
+        </a>
+        {% endif %}
+
+        {% if page_obj.number > 4 %}
+        <span class="pagination-dots">...</span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+        {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %} {% if page_obj.number == num %} <span
+            class="active-page">{{ num }}</span>
+            {% else %}
+            <a
+                href="?q={{ query }}{% for genre_id in selected_genres %}&genres={{ genre_id }}{% endfor %}&sort={{ selected_sort }}&page={{ num }}">
+                {{ num }}
+            </a>
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %} <span class="pagination-dots">...</span>
+                {% endif %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %} <a
+                    href="?q={{ query }}{% for genre_id in selected_genres %}&genres={{ genre_id }}{% endfor %}&sort={{ selected_sort }}&page={{ page_obj.paginator.num_pages }}">
+                    {{ page_obj.paginator.num_pages }}
+                    </a>
+                    {% endif %}
+
+                    {% if page_obj.has_next %}
+                    <a
+                        href="?q={{ query }}{% for genre_id in selected_genres %}&genres={{ genre_id }}{% endfor %}&sort={{ selected_sort }}&page={{ page_obj.next_page_number }}">
+                        Далі
+                    </a>
+                    {% endif %}
+
+    </nav>
+    {% endif %}
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const multiselect = document.querySelector('[data-multiselect]');
+
+        if (!multiselect) {
+            return;
+        }
+
+        const toggle = multiselect.querySelector('[data-toggle]');
+        const search = multiselect.querySelector('[data-search]');
+        const selectedBox = multiselect.querySelector('[data-selected]');
+        const placeholder = multiselect.querySelector('[data-placeholder]');
+        const options = multiselect.querySelectorAll('.genre-option');
+
+        function getSelectedInputs() {
+            return Array.from(selectedBox.querySelectorAll('[data-hidden-genre]'));
+        }
+
+        function updatePlaceholder() {
+            const selectedInputs = getSelectedInputs();
+
+            if (selectedInputs.length === 0) {
+                placeholder.textContent = 'Виберіть жанри';
+                return;
+            }
+
+            const names = selectedInputs.map(function (input) {
+                return input.dataset.hiddenName;
+            });
+
+            const visible = names.slice(0, 3);
+            const extraCount = names.length - 3;
+
+            let text = visible.join(', ');
+
+            if (extraCount > 0) {
+                text += ' +' + extraCount;
+            }
+
+            placeholder.textContent = text;
+        }
+
+        function removeGenre(id) {
+            const hiddenInput = selectedBox.querySelector('[data-hidden-genre="' + id + '"]');
+            const option = multiselect.querySelector('[data-genre-id="' + id + '"]');
+
+            if (hiddenInput) {
+                hiddenInput.remove();
+            }
+
+            if (option) {
+                option.classList.remove('selected');
+            }
+
+            updatePlaceholder();
+        }
+
+        function addGenre(id, name) {
+            const existing = selectedBox.querySelector('[data-hidden-genre="' + id + '"]');
+
+            if (existing) {
+                removeGenre(id);
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'genres';
+            input.value = id;
+            input.dataset.hiddenGenre = id;
+            input.dataset.hiddenName = name;
+            selectedBox.appendChild(input);
+
+            const option = multiselect.querySelector('[data-genre-id="' + id + '"]');
+
+            if (option) {
+                option.classList.add('selected');
+            }
+
+            updatePlaceholder();
+        }
+
+        toggle.addEventListener('click', function () {
+            multiselect.classList.toggle('open');
+
+            if (multiselect.classList.contains('open')) {
+                search.focus();
+            }
+        });
+
+        options.forEach(function (option) {
+            option.addEventListener('click', function () {
+                addGenre(option.dataset.genreId, option.dataset.genreName);
+            });
+        });
+
+        search.addEventListener('input', function () {
+            const value = search.value.toLowerCase().trim();
+
+            options.forEach(function (option) {
+                const name = option.dataset.genreName.toLowerCase();
+
+                if (name.includes(value)) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!multiselect.contains(event.target)) {
+                multiselect.classList.remove('open');
+            }
+        });
+
+        updatePlaceholder();
+    });
+</script>
+{% endblock %}

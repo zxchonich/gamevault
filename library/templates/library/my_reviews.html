@@ -1,0 +1,130 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Мої рецензії | GameVault{% endblock %}
+
+{% block content %}
+<section class="reviews-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Оцінки та відгуки</div>
+
+            <h1>Мої рецензії</h1>
+
+            <p>
+                На цій сторінці зібрані всі оцінки та текстові відгуки, які ви залишили
+                до ігор у каталозі. Рецензії впливають на середній рейтинг ігор
+                та персональні рекомендації.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Усього рецензій</span>
+            <b>{{ reviews|length }}</b>
+            <p>Кількість ваших оцінок і відгуків</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Рейтинг</span>
+            <b>1–10</b>
+            <p>Оцінки використовуються у рекомендаційному алгоритмі</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Вплив</span>
+            <b>Рекомендації</b>
+            <p>Високі оцінки формують ваші жанрові вподобання</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Список рецензій</h2>
+            <span>Ваші оцінки до ігор</span>
+        </div>
+
+        <div class="user-reviews-grid">
+            {% for review in reviews %}
+            <article class="user-review-card my-review-card">
+                <a class="user-review-cover" href="{% url 'library:game_detail' review.game.id %}">
+                    {% if review.game.poster %}
+                    <img src="{{ review.game.poster.url }}" alt="{{ review.game.title }}">
+                    {% else %}
+                    <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ review.game.title }}">
+                    {% endif %}
+
+                    <div class="review-score-badge">
+                        {{ review.score }}/10
+                    </div>
+                </a>
+
+                <div class="user-review-content">
+                    <div class="my-review-card-head">
+                        <span class="game-status active">Рецензія</span>
+
+                        <form method="post" action="{% url 'library:admin_review_delete' review.id %}"
+                            class="review-delete-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+
+                            <button type="submit" onclick="return confirm('Видалити цю рецензію?');">
+                                Видалити
+                            </button>
+                        </form>
+                    </div>
+
+                    <h3>
+                        <a class="plain-title-link" href="{% url 'library:game_detail' review.game.id %}">
+                            {{ review.game.title }}
+                        </a>
+                    </h3>
+
+                    {% if review.text %}
+                    <p>{{ review.text|truncatechars:190 }}</p>
+                    {% else %}
+                    <p class="muted">Текстовий відгук відсутній.</p>
+                    {% endif %}
+
+                    <div class="review-meta">
+                        <div>
+                            <span>Дата створення</span>
+                            <b>{{ review.created_at }}</b>
+                        </div>
+
+                        {% if review.updated_at %}
+                        <div>
+                            <span>Оновлено</span>
+                            <b>{{ review.updated_at }}</b>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="my-review-actions">
+                        <a href="{% url 'library:game_detail' review.game.id %}" class="secondary-action-link">
+                            Сторінка гри
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            {% empty %}
+            <div class="empty-card">
+                <h3>Рецензій поки що немає</h3>
+                <p>
+                    Ви ще не залишали оцінок до ігор. Відкрийте сторінку гри
+                    та створіть першу рецензію.
+                </p>
+
+                <a href="{% url 'library:game_list' %}">
+                    Перейти до каталогу
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</section>
+{% endblock %}

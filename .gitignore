@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Django / local database
+db.sqlite3
+*.sqlite3
+
+# Environment variables / secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# IDE / editors
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# User-uploaded media
+media/avatars/*
+media/game_posters/*
+
+# Keep media folders
+!media/avatars/.gitkeep
+!media/game_posters/.gitkeep

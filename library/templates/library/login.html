@@ -1,0 +1,102 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Вхід | GameVault{% endblock %}
+
+{% block content %}
+<section class="auth-page page-wide">
+
+    <div class="auth-card">
+        <div class="auth-info">
+            <div class="subtitle">Авторизація</div>
+
+            <h1>Вхід у GameVault</h1>
+
+            <p>
+                Увійдіть у систему, щоб керувати персональною бібліотекою,
+                залишати рецензії, отримувати рекомендації та взаємодіяти з друзями.
+            </p>
+
+            <div class="auth-benefits">
+                <div>
+                    <span>Library</span>
+                    <b>Персональна бібліотека</b>
+                </div>
+
+                <div>
+                    <span>Recommendations</span>
+                    <b>Рекомендації</b>
+                </div>
+
+                <div>
+                    <span>Social</span>
+                    <b>Друзі та заявки</b>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-form-wrapper">
+            <h2>Увійти</h2>
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                {% if error %}
+                <p class="form-error">{{ error }}</p>
+                {% endif %}
+
+                <label>
+                    <span>Логін</span>
+                    <input type="text" name="username" required placeholder="Введіть логін">
+                </label>
+
+                <label>
+                    <span>Пароль</span>
+                    <div class="password-field">
+                        <input type="password" name="password" id="login-password" required
+                            placeholder="Введіть пароль">
+                        <button type="button" class="password-toggle" data-target="login-password">
+                            Показати
+                        </button>
+                    </div>
+                </label>
+
+                <button class="pseudo-button" type="submit">
+                    <span>Увійти</span>
+                </button>
+            </form>
+
+            <p class="auth-bottom-text">
+                Ще немає акаунта?
+                <a href="{% url 'library:register' %}">Зареєструватися</a>
+            </p>
+        </div>
+    </div>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('.password-toggle');
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                const targetId = button.dataset.target;
+                const input = document.getElementById(targetId);
+
+                if (!input) {
+                    return;
+                }
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    button.textContent = 'Сховати';
+                } else {
+                    input.type = 'password';
+                    button.textContent = 'Показати';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

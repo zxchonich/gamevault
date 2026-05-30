@@ -1,0 +1,146 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Рекомендації | GameVault{% endblock %}
+
+{% block content %}
+<section class="recommendations-page page-wide">
+
+    <div class="dashboard-hero recommendations-hero">
+        <div>
+            <div class="subtitle">Персональний підбір</div>
+
+            <h1>Рекомендації для вас</h1>
+
+            <p>
+                Система формує добірку ігор на основі вашої бібліотеки, жанрових вподобань,
+                рецензій, оцінок, друзів та ігор, які є в їхніх бібліотеках.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Рекомендацій</span>
+            <b>{{ recommendations_count }}</b>
+            <p>Кількість ігор, підібраних для поточного користувача</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Найвища відповідність</span>
+            <b>{{ best_match_score|floatformat:0 }}%</b>
+            <p>Найкращий результат серед сформованих рекомендацій</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Середня відповідність</span>
+            <b>{{ average_match|floatformat:0 }}%</b>
+            <p>Середній показник відповідності рекомендованих ігор</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Як працює підбір</h2>
+            <span>Фактори рекомендацій</span>
+        </div>
+
+        <div class="recommendation-factors">
+            <article>
+                <span>01</span>
+                <h3>Жанрові збіги</h3>
+                <p>Система аналізує жанри ігор, які вже є у вашій бібліотеці.</p>
+            </article>
+
+            <article>
+                <span>02</span>
+                <h3>Ваші оцінки</h3>
+                <p>Високо оцінені ігри сильніше впливають на майбутні рекомендації.</p>
+            </article>
+
+            <article>
+                <span>03</span>
+                <h3>Бібліотеки друзів</h3>
+                <p>Якщо гра є у друзів або високо ними оцінена, вона отримує додаткові бали.</p>
+            </article>
+        </div>
+    </div>
+
+    <section class="recommendations-grid">
+        {% for recommendation in recommendations %}
+        <article class="recommendation-card">
+            <div class="recommendation-cover">
+                {% if recommendation.game.poster %}
+                <img src="{{ recommendation.game.poster.url }}" alt="{{ recommendation.game.title }}">
+                {% else %}
+                <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ recommendation.game.title }}">
+                {% endif %}
+
+                <div class="match-badge">
+                    {{ recommendation.match_score|floatformat:0 }}%
+                </div>
+            </div>
+
+            <div class="recommendation-content">
+                <span class="game-status active">
+                    Рекомендовано
+                </span>
+
+                <h3>
+                    <a class="recommendation-title-link" href="{% url 'library:game_detail' recommendation.game.id %}">
+                        {{ recommendation.game.title }}
+                    </a>
+                </h3>
+
+                <div class="game-card-genres recommendation-genres">
+                    {% for genre in recommendation.game.visible_genres %}
+                    <span>{{ genre.name }}</span>
+                    {% empty %}
+                    <span>Без жанру</span>
+                    {% endfor %}
+                </div>
+
+                <p class="recommendation-description">
+                    {% if recommendation.game.description %}
+                    {{ recommendation.game.description|truncatechars:135 }}
+                    {% else %}
+                    Опис гри поки що відсутній.
+                    {% endif %}
+                </p>
+
+                <div class="recommendation-reason">
+                    <b>Причина рекомендації:</b>
+                    <span>{{ recommendation.reason }}</span>
+                </div>
+
+                <div class="recommendation-actions">
+                    <a href="{% url 'library:game_detail' recommendation.game.id %}"
+                        class="recommendation-button recommendation-button-secondary">
+                        Детальніше
+                    </a>
+
+                    <a href="{% url 'library:add_to_library' recommendation.game.id %}"
+                        class="recommendation-button recommendation-button-primary">
+                        Додати в бібліотеку
+                    </a>
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="dashboard-section empty-recommendations">
+            <h2>Поки що немає рекомендацій</h2>
+
+            <p>
+                Щоб система могла сформувати персональні рекомендації, додайте кілька ігор
+                до бібліотеки, залиште рецензії або додайте друзів.
+            </p>
+
+            <a class="pseudo-button" href="{% url 'library:game_list' %}">
+                <span>Перейти до каталогу</span>
+            </a>
+        </div>
+        {% endfor %}
+    </section>
+
+</section>
+{% endblock %}

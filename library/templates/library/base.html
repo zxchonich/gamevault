@@ -1,0 +1,65 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <title>{% block title %}GameVault{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="description" content="GameVault — персональна ігрова бібліотека">
+    <meta name="keywords" content="GameVault, games, library, profile, friends">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'library/css/style.css' %}">
+</head>
+
+<body>
+    <main class="dashboard-page">
+
+        <header class="dashboard-header">
+            <a class="dashboard-logo" href="{% url 'library:home' %}">
+                <span>Game</span>Vault
+            </a>
+        
+            <nav class="dashboard-nav" aria-label="Головна навігація">
+                <a href="{% url 'library:home' %}">Головна</a>
+                <a href="{% url 'library:game_list' %}">Каталог</a>
+        
+                {% if current_library_user %}
+                <a href="{% url 'library:my_library' %}">Моя бібліотека</a>
+                <a href="{% url 'library:friends' %}">Друзі</a>
+                <a href="{% url 'library:profile' %}">Профіль</a>
+                {% endif %}
+        
+                {% if current_library_user and current_library_user.role.name == 'admin' %}
+                <a href="{% url 'library:moderation' %}">Модерація</a>
+                <a href="{% url 'library:admin_genre_list' %}">Жанри</a>
+                {% endif %}
+        
+                {% if current_library_user %}
+                <a href="{% url 'library:logout' %}">Вийти</a>
+                {% else %}
+                <a href="{% url 'library:login' %}">Вхід</a>
+                <a href="{% url 'library:register' %}">Реєстрація</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        {% if messages %}
+        <div class="dashboard-section">
+            {% for message in messages %}
+            <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+
+        <footer class="dashboard-footer">
+            &copy; 2026 GameVault
+        </footer>
+
+    </main>
+</body>
+
+</html>

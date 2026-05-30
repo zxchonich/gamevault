@@ -1,0 +1,275 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Профіль {{ profile_user.username }} | GameVault{% endblock %}
+
+{% block content %}
+<section class="profile-page page-wide">
+
+    <div class="profile-dashboard-hero">
+        <div class="profile-hero-left">
+            <div class="profile-avatar-big">
+                {% if profile_user.avatar %}
+                <img src="{{ profile_user.avatar.url }}" alt="{{ profile_user.username }}">
+                {% else %}
+                <div class="auto-avatar">
+                    {{ profile_user.username|slice:":1"|upper }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="profile-user-card-info">
+                <span>Профіль користувача</span>
+                <h1>{{ profile_user.username }}</h1>
+                <p>{{ profile_user.email }}</p>
+
+                <div class="profile-role-pill">
+                    {% if profile_user.role %}
+                    {{ profile_user.role.name }}
+                    {% else %}
+                    user
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-hero-right">
+            <div class="subtitle">Публічний профіль</div>
+
+            <h2>Профіль користувача</h2>
+
+            <p>
+                Тут відображається активність користувача: його бібліотека,
+                прогрес проходження, останні додані ігри, рецензії та соціальна інформація.
+            </p>
+
+            <div class="profile-main-actions">
+                <a class="pseudo-button" href="{% url 'library:user_library' profile_user.id %}">
+                    <span>Переглянути бібліотеку</span>
+                </a>
+
+                {% if connection %}
+                {% if connection.status == 'accepted' %}
+                <span class="profile-secondary-link">Ви вже друзі</span>
+                {% elif connection.status == 'pending' %}
+                <span class="profile-secondary-link">Заявка очікує підтвердження</span>
+                {% elif connection.status == 'rejected' %}
+                <span class="profile-secondary-link">Заявку було відхилено</span>
+                {% endif %}
+                {% else %}
+                <a class="profile-secondary-link" href="{% url 'library:add_friend' profile_user.id %}">
+                    Додати в друзі
+                </a>
+                {% endif %}
+
+                <a class="profile-secondary-link" href="{% url 'library:user_list' %}">
+                    До користувачів
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-stat-grid">
+        <div class="profile-stat-card">
+            <span>Ігор у бібліотеці</span>
+            <b>{{ library_count }}</b>
+            <p>Загальна кількість доданих ігор</p>
+        </div>
+
+        <div class="profile-stat-card">
+            <span>Рецензії</span>
+            <b>{{ review_count }}</b>
+            <p>Оцінки та текстові відгуки</p>
+        </div>
+
+        <div class="profile-stat-card">
+            <span>Друзі</span>
+            <b>{{ friends_count }}</b>
+            <p>Підтверджені соціальні зв’язки</p>
+        </div>
+
+        <div class="profile-stat-card">
+            <span>Середня оцінка</span>
+            <b>{{ average_score|floatformat:1 }}</b>
+            <p>Середній бал рецензій користувача</p>
+        </div>
+    </div>
+
+    <div class="profile-content-grid">
+        <section class="dashboard-section profile-progress-section">
+            <div class="section-head">
+                <h2>Прогрес бібліотеки</h2>
+                <span>Статуси проходження</span>
+            </div>
+
+            <div class="profile-progress-list">
+
+                <div class="profile-progress-item progress-completed">
+                    <div>
+                        <span>Пройдено</span>
+                        <b>{{ completed_count }} ігор</b>
+                    </div>
+
+                    <div class="profile-progress-line">
+                        <span style="width: {{ completed_percent }}%;"></span>
+                    </div>
+                </div>
+
+                <div class="profile-progress-item progress-playing">
+                    <div>
+                        <span>Грає зараз</span>
+                        <b>{{ playing_count }} ігор</b>
+                    </div>
+
+                    <div class="profile-progress-line">
+                        <span style="width: {{ playing_percent }}%;"></span>
+                    </div>
+                </div>
+
+                <div class="profile-progress-item progress-planned">
+                    <div>
+                        <span>Планує</span>
+                        <b>{{ planned_count }} ігор</b>
+                    </div>
+
+                    <div class="profile-progress-line">
+                        <span style="width: {{ planned_percent }}%;"></span>
+                    </div>
+                </div>
+
+                <div class="profile-progress-item progress-paused">
+                    <div>
+                        <span>Відкладено</span>
+                        <b>{{ paused_count }} ігор</b>
+                    </div>
+
+                    <div class="profile-progress-line">
+                        <span style="width: {{ paused_percent }}%;"></span>
+                    </div>
+                </div>
+
+                <div class="profile-progress-item progress-dropped">
+                    <div>
+                        <span>Закинуто</span>
+                        <b>{{ dropped_count }} ігор</b>
+                    </div>
+
+                    <div class="profile-progress-line">
+                        <span style="width: {{ dropped_percent }}%;"></span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="dashboard-section profile-mini-actions-section">
+            <div class="section-head">
+                <h2>Соціальна частина</h2>
+                <span>Дії з профілем</span>
+            </div>
+
+            <div class="profile-mini-actions">
+                <a href="{% url 'library:user_library' profile_user.id %}">
+                    <span>Library</span>
+                    <b>Бібліотека користувача</b>
+                </a>
+
+                {% if connection and connection.status == 'accepted' %}
+                <a href="{% url 'library:friends' %}">
+                    <span>Friends</span>
+                    <b>Ви вже друзі</b>
+                </a>
+                {% elif connection and connection.status == 'pending' %}
+                <a href="{% url 'library:friends' %}">
+                    <span>Pending</span>
+                    <b>Заявка очікує</b>
+                </a>
+                {% elif connection and connection.status == 'rejected' %}
+                <a href="{% url 'library:user_list' %}">
+                    <span>Rejected</span>
+                    <b>Заявку відхилено</b>
+                </a>
+                {% else %}
+                <a href="{% url 'library:add_friend' profile_user.id %}">
+                    <span>Add friend</span>
+                    <b>Додати в друзі</b>
+                </a>
+                {% endif %}
+
+                <a href="{% url 'library:user_list' %}">
+                    <span>Users</span>
+                    <b>Інші користувачі</b>
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Останні ігри в бібліотеці</h2>
+            <span>Нещодавно додані записи</span>
+        </div>
+
+        <div class="profile-recent-games">
+            {% for entry in recent_entries %}
+            <a class="profile-recent-game-card" href="{% url 'library:game_detail' entry.game.id %}">
+                {% if entry.game.poster %}
+                <img src="{{ entry.game.poster.url }}" alt="{{ entry.game.title }}">
+                {% else %}
+                <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ entry.game.title }}">
+                {% endif %}
+
+                <div>
+                    <span>{{ entry.status }}</span>
+                    <h3>{{ entry.game.title }}</h3>
+                    <p>{{ entry.added_at }}</p>
+                </div>
+            </a>
+            {% empty %}
+            <div class="empty-card profile-wide-empty">
+                <h3>У бібліотеці ще немає ігор</h3>
+                <p>Цей користувач поки що не додав жодної гри до бібліотеки.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Останні рецензії</h2>
+            <span>Нещодавні оцінки користувача</span>
+        </div>
+
+        <div class="profile-recent-reviews">
+            {% for review in recent_reviews %}
+            <article class="profile-review-card">
+                <div class="profile-review-head">
+                    <div>
+                        <span>{{ review.game.title }}</span>
+                        <h3>{{ review.score }}/10</h3>
+                    </div>
+
+                    <a href="{% url 'library:game_detail' review.game.id %}">
+                        Сторінка гри
+                    </a>
+                </div>
+
+                <p>
+                    {% if review.text %}
+                    {{ review.text|truncatechars:180 }}
+                    {% else %}
+                    Текстовий відгук не був доданий.
+                    {% endif %}
+                </p>
+            </article>
+            {% empty %}
+            <div class="empty-card profile-wide-empty">
+                <h3>Рецензій поки що немає</h3>
+                <p>Цей користувач ще не залишав оцінок або текстових відгуків.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</section>
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Модерація | GameVault{% endblock %}
+
+{% block content %}
+<section class="moderation-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Адміністративна панель</div>
+
+            <h1>Модерація заявок</h1>
+
+            <p>
+                На цій сторінці адміністратор перевіряє заявки користувачів
+                на додавання нових ігор до каталогу. Після схвалення гра автоматично
+                створюється в базі даних, а вибрані жанри записуються у проміжну
+                таблицю game_genres. Якщо потрібного жанру немає, його можна створити
+                на сторінці керування жанрами.
+            </p>
+
+            <div class="moderation-hero-actions">
+                <a class="profile-secondary-link" href="{% url 'library:admin_genre_list' %}">
+                    Керувати жанрами
+                </a>
+
+                <a class="profile-secondary-link" href="{% url 'library:admin_game_add' %}">
+                    Додати гру вручну
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Очікують</span>
+            <b>{{ pending_requests|length }}</b>
+            <p>Заявки, які ще не перевірені</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Схвалені</span>
+            <b>{{ approved_requests|length }}</b>
+            <p>Останні схвалені заявки</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Відхилені</span>
+            <b>{{ rejected_requests|length }}</b>
+            <p>Останні відхилені заявки</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Очікують перевірки</h2>
+            <span>Нові заявки від користувачів</span>
+        </div>
+
+        <div class="moderation-grid">
+            {% for request_item in pending_requests %}
+            <article class="moderation-card">
+                <div class="moderation-card-head">
+                    <span class="request-status status-pending">Очікує</span>
+                    <small>{{ request_item.created_at }}</small>
+                </div>
+
+                <h3>{{ request_item.title }}</h3>
+
+                <p>
+                    {% if request_item.description %}
+                    {{ request_item.description }}
+                    {% else %}
+                    Опис відсутній.
+                    {% endif %}
+                </p>
+
+                <div class="moderation-meta">
+                    <div>
+                        <span>Автор заявки</span>
+                        <b>{{ request_item.user.username }}</b>
+                    </div>
+
+                    <div>
+                        <span>Email</span>
+                        <b>{{ request_item.user.email }}</b>
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'library:approve_request' request_item.id %}"
+                    class="moderation-form">
+                    {% csrf_token %}
+
+                    <label>
+                        <span>Жанри гри</span>
+                        <a class="admin-genre-manage-link moderation-genre-link"
+                            href="{% url 'library:admin_genre_list' %}">
+                            Додати або змінити жанри
+                        </a>
+
+                        <div class="moderation-genres">
+                            {% for genre in genres %}
+                            <label>
+                                <input type="checkbox" name="genres" value="{{ genre.id }}">
+                                {{ genre.name }}
+                            </label>
+                            {% empty %}
+                            <p>Жанри ще не додані в базу.</p>
+                            {% endfor %}
+                        </div>
+                    </label>
+
+                    <div class="moderation-actions">
+                        <button type="submit">
+                            Схвалити
+                        </button>
+
+                        <a href="{% url 'library:reject_request' request_item.id %}">
+                            Відхилити
+                        </a>
+                    </div>
+                </form>
+            </article>
+            {% empty %}
+            <div class="empty-card">
+                <h3>Нових заявок немає</h3>
+                <p>
+                    Усі заявки вже перевірені. Нові пропозиції користувачів
+                    з’являться в цьому блоці.
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="moderation-history-grid">
+        <section class="dashboard-section">
+            <div class="section-head">
+                <h2>Останні схвалені</h2>
+                <span>Додані до каталогу</span>
+            </div>
+
+            <div class="history-list">
+                {% for request_item in approved_requests %}
+                <article class="history-card">
+                    <span class="request-status status-approved">Схвалено</span>
+
+                    <h3>{{ request_item.title }}</h3>
+
+                    <p>Автор: {{ request_item.user.username }}</p>
+
+                    {% if request_item.moderator %}
+                    <p>Модератор: {{ request_item.moderator.username }}</p>
+                    {% endif %}
+
+                    {% if request_item.reviewed_at %}
+                    <small>{{ request_item.reviewed_at }}</small>
+                    {% endif %}
+                </article>
+                {% empty %}
+                <p>Схвалених заявок поки що немає.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <div class="section-head">
+                <h2>Останні відхилені</h2>
+                <span>Не додані до каталогу</span>
+            </div>
+
+            <div class="history-list">
+                {% for request_item in rejected_requests %}
+                <article class="history-card">
+                    <span class="request-status status-rejected">Відхилено</span>
+
+                    <h3>{{ request_item.title }}</h3>
+
+                    <p>Автор: {{ request_item.user.username }}</p>
+
+                    {% if request_item.moderator %}
+                    <p>Модератор: {{ request_item.moderator.username }}</p>
+                    {% endif %}
+
+                    {% if request_item.reviewed_at %}
+                    <small>{{ request_item.reviewed_at }}</small>
+                    {% endif %}
+                </article>
+                {% empty %}
+                <p>Відхилених заявок поки що немає.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+</section>
+{% endblock %}

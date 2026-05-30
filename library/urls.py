@@ -1,0 +1,41 @@
+from django.urls import path
+from . import views
+
+app_name = 'library'
+
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('games/', views.game_list, name='game_list'),
+    path('games/<int:game_id>/', views.game_detail, name='game_detail'),
+    path('my-library/', views.my_library, name='my_library'),
+    path('games/<int:game_id>/add/', views.add_to_library, name='add_to_library'),
+    path('library/<int:entry_id>/status/', views.update_library_status, name='update_library_status'),
+    path('library/<int:entry_id>/delete/', views.delete_library_entry, name='delete_library_entry'),
+    path('games/<int:game_id>/review/', views.add_review, name='add_review'),
+    path('request-game/', views.request_game, name='request_game'),
+    path('my-requests/', views.my_requests, name='my_requests'),
+    path('recommendations/', views.recommendations, name='recommendations'),
+    path('users/', views.user_list, name='user_list'),
+    path('users/<int:user_id>/add-friend/', views.add_friend, name='add_friend'),
+    path('friends/', views.friends, name='friends'),
+    path('connections/<int:connection_id>/accept/', views.accept_connection, name='accept_connection'),
+    path('connections/<int:connection_id>/reject/', views.reject_connection, name='reject_connection'),
+    path('connections/<int:connection_id>/delete/', views.delete_connection, name='delete_connection'),
+    path('users/<int:user_id>/profile/', views.user_profile, name='user_profile'),
+    path('users/<int:user_id>/library/', views.user_library, name='user_library'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('profile/', views.profile, name='profile'),
+    path('my-reviews/', views.my_reviews, name='my_reviews'),
+    path('moderation/', views.moderation, name='moderation'),
+    path('moderation/<int:request_id>/approve/', views.approve_request, name='approve_request'),
+    path('moderation/<int:request_id>/reject/', views.reject_request, name='reject_request'),
+    path('manage/games/add/', views.admin_game_add, name='admin_game_add'),
+    path('manage/games/<int:game_id>/edit/', views.admin_game_edit, name='admin_game_edit'),
+    path('manage/games/<int:game_id>/delete/', views.admin_game_delete, name='admin_game_delete'),
+    path('manage/reviews/<int:review_id>/delete/', views.admin_review_delete, name='admin_review_delete'),
+    path('register/', views.register_view, name='register'),
+    path('edit-profile/', views.edit_profile, name='edit_profile'),
+    path('manage/genres/', views.admin_genre_list, name='admin_genre_list'),
+    path('manage/genres/<int:genre_id>/delete/', views.admin_genre_delete, name='admin_genre_delete'),
+]

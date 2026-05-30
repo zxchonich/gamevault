@@ -1,0 +1,310 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Друзі | GameVault{% endblock %}
+
+{% block content %}
+<section class="friends-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Соціальні зв’язки</div>
+
+            <h1>Друзі</h1>
+
+            <p>
+                На цій сторінці відображаються підтверджені друзі, вхідні заявки
+                та надіслані запити. Через профілі та бібліотеки друзів система також може
+                формувати точніші персональні рекомендації.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Друзі</span>
+            <b>{{ friends_count }}</b>
+            <p>Кількість підтверджених соціальних зв’язків</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Вхідні заявки</span>
+            <b>{{ received_requests_count }}</b>
+            <p>Заявки, які очікують вашого рішення</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Надіслані заявки</span>
+            <b>{{ sent_requests_count }}</b>
+            <p>Ваші заявки, які ще не підтвердили інші користувачі</p>
+        </div>
+    </div>
+
+    <div class="friends-grid">
+        <section class="friends-column">
+            <div class="section-head">
+                <h2>Мої друзі</h2>
+                <span>Підтверджені зв’язки</span>
+            </div>
+
+            <div class="friends-list">
+                {% for connection in accepted_connections %}
+
+                {% if connection.sender.id == current_user.id %}
+                {% with friend=connection.receiver %}
+                <article class="friend-card">
+                    <div class="friend-avatar">
+                        {% if friend.avatar %}
+                        <img src="{{ friend.avatar.url }}" alt="{{ friend.username }}">
+                        {% else %}
+                        <div class="auto-avatar">
+                            {{ friend.username|slice:":1"|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="friend-info">
+                        <h3>{{ friend.username }}</h3>
+                        <p>{{ friend.email }}</p>
+
+                        <div class="friend-actions friend-card-actions">
+                            <a href="{% url 'library:user_profile' friend.id %}">
+                                Профіль
+                            </a>
+
+                            <a href="{% url 'library:user_library' friend.id %}">
+                                Бібліотека
+                            </a>
+
+                            <form method="post" action="{% url 'library:delete_connection' connection.id %}"
+                                class="friend-delete-form">
+                                {% csrf_token %}
+
+                                <button type="submit" onclick="return confirm('Видалити користувача з друзів?');">
+                                    Видалити з друзів
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </article>
+                {% endwith %}
+                {% else %}
+                {% with friend=connection.sender %}
+                <article class="friend-card">
+                    <div class="friend-avatar">
+                        {% if friend.avatar %}
+                        <img src="{{ friend.avatar.url }}" alt="{{ friend.username }}">
+                        {% else %}
+                        <div class="auto-avatar">
+                            {{ friend.username|slice:":1"|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="friend-info">
+                        <h3>{{ friend.username }}</h3>
+                        <p>{{ friend.email }}</p>
+
+                        <div class="friend-actions friend-card-actions">
+                            <a href="{% url 'library:user_profile' friend.id %}">
+                                Профіль
+                            </a>
+
+                            <a href="{% url 'library:user_library' friend.id %}">
+                                Бібліотека
+                            </a>
+
+                            <form method="post" action="{% url 'library:delete_connection' connection.id %}"
+                                class="friend-delete-form">
+                                {% csrf_token %}
+
+                                <button type="submit" onclick="return confirm('Видалити користувача з друзів?');">
+                                    Видалити з друзів
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </article>
+                {% endwith %}
+                {% endif %}
+
+                {% empty %}
+                <div class="empty-card">
+                    <h3>Друзів поки що немає</h3>
+                    <p>Перейдіть до списку користувачів і надішліть заявку в друзі.</p>
+                    <a href="{% url 'library:user_list' %}">Знайти користувачів</a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="friends-column">
+            <div class="section-head">
+                <h2>Вхідні заявки</h2>
+                <span>Запити від інших користувачів</span>
+            </div>
+
+            <div class="friends-list">
+                {% for connection in received_requests %}
+                <article class="friend-card request-card">
+                    <div class="friend-avatar">
+                        {% if connection.sender.avatar %}
+                        <img src="{{ connection.sender.avatar.url }}" alt="{{ connection.sender.username }}">
+                        {% else %}
+                        <div class="auto-avatar">
+                            {{ connection.sender.username|slice:":1"|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="friend-info">
+                        <h3>{{ connection.sender.username }}</h3>
+                        <p>{{ connection.sender.email }}</p>
+
+                        <div class="request-actions">
+                            <a href="{% url 'library:user_profile' connection.sender.id %}">
+                                Профіль
+                            </a>
+
+                            <a href="{% url 'library:accept_connection' connection.id %}">
+                                Прийняти
+                            </a>
+
+                            <a class="danger-link" href="{% url 'library:reject_connection' connection.id %}">
+                                Відхилити
+                            </a>
+                        </div>
+                    </div>
+                </article>
+                {% empty %}
+                <div class="empty-card">
+                    <h3>Вхідних заявок немає</h3>
+                    <p>Нові запити на дружбу з’являться в цьому блоці.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Надіслані заявки</h2>
+            <span>Запити, які очікують відповіді</span>
+        </div>
+
+        <div class="sent-requests-grid">
+            {% for connection in sent_requests %}
+            <article class="compact-user-card">
+                <div class="compact-user-avatar">
+                    {% if connection.receiver.avatar %}
+                    <img src="{{ connection.receiver.avatar.url }}" alt="{{ connection.receiver.username }}">
+                    {% else %}
+                    <div class="auto-avatar">
+                        {{ connection.receiver.username|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="compact-user-info">
+                    <span class="compact-user-status">Очікує підтвердження</span>
+
+                    <h3>{{ connection.receiver.username }}</h3>
+                    <p>{{ connection.receiver.email }}</p>
+
+                    <div class="compact-user-actions">
+                        <a href="{% url 'library:user_profile' connection.receiver.id %}">
+                            Профіль
+                        </a>
+                    
+                        <a href="{% url 'library:user_library' connection.receiver.id %}">
+                            Бібліотека
+                        </a>
+                    
+                        <form method="post" action="{% url 'library:delete_connection' connection.id %}" class="friend-delete-form">
+                            {% csrf_token %}
+                    
+                            <button type="submit" onclick="return confirm('Скасувати заявку в друзі?');">
+                                Скасувати заявку
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="empty-card">
+                <h3>Надісланих заявок немає</h3>
+                <p>Коли ви надішлете заявку в друзі, вона з’явиться в цьому блоці.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Можливо, ви знайомі</h2>
+            <span>Користувачі, з якими ще немає соціального зв’язку</span>
+        </div>
+
+        <div class="suggested-users-grid">
+            {% for user in suggested_users %}
+            <article class="compact-user-card">
+                <div class="compact-user-avatar">
+                    {% if user.avatar %}
+                    <img src="{{ user.avatar.url }}" alt="{{ user.username }}">
+                    {% else %}
+                    <div class="auto-avatar">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="compact-user-info">
+                    <span class="compact-user-status">
+                        {% if user.role %}
+                        {{ user.role.name }}
+                        {% else %}
+                        user
+                        {% endif %}
+                    </span>
+
+                    <h3>{{ user.username }}</h3>
+                    <p>{{ user.email }}</p>
+
+                    <div class="compact-user-actions">
+                        <a href="{% url 'library:user_profile' user.id %}">
+                            Профіль
+                        </a>
+
+                        <a href="{% url 'library:add_friend' user.id %}">
+                            Додати в друзі
+                        </a>
+
+                        <a href="{% url 'library:user_library' user.id %}">
+                            Бібліотека
+                        </a>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="empty-card">
+                <h3>Немає нових користувачів</h3>
+                <p>
+                    Зараз немає користувачів, з якими можна створити новий соціальний зв’язок.
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="section-actions" style="margin-top: 22px;">
+            <a href="{% url 'library:user_list' %}">
+                Переглянути всіх користувачів
+            </a>
+
+            <a href="{% url 'library:recommendations' %}">
+                Мої рекомендації
+            </a>
+        </div>
+    </div>
+
+</section>
+{% endblock %}

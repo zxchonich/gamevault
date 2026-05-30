@@ -1,0 +1,116 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Користувачі | GameVault{% endblock %}
+
+{% block content %}
+<section class="users-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Соціальна система</div>
+
+            <h1>Користувачі GameVault</h1>
+
+            <p>
+                На цій сторінці можна переглядати інших користувачів системи,
+                надсилати заявки в друзі та відкривати їхні ігрові бібліотеки.
+                Соціальні зв’язки також використовуються в алгоритмі рекомендацій.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Поточний користувач</span>
+            <b>{{ current_user.username }}</b>
+            <p>Активний профіль системи</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Користувачі</span>
+            <b>{{ users_data|length }}</b>
+            <p>Інші зареєстровані користувачі</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Соціальні зв’язки</span>
+            <b>Friends</b>
+            <p>Заявки, друзі та перегляд бібліотек</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Список користувачів</h2>
+            <span>Додавання друзів та перегляд бібліотек</span>
+        </div>
+
+        <div class="users-grid">
+            {% for item in users_data %}
+            <article class="user-card">
+                <div class="user-card-avatar">
+                    {% if item.user.avatar %}
+                    <img src="{{ item.user.avatar.url }}" alt="{{ item.user.username }}">
+                    {% else %}
+                    <div class="auto-avatar">
+                        {{ item.user.username|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="user-card-content">
+                    <span class="user-role">
+                        {% if item.user.role %}
+                        {{ item.user.role.name }}
+                        {% else %}
+                        user
+                        {% endif %}
+                    </span>
+
+                    <h3>{{ item.user.username }}</h3>
+
+                    <p>{{ item.user.email }}</p>
+
+                    <div class="user-connection-status">
+                        {% if item.connection_status == 'accepted' %}
+                        <span class="status-approved">Ви вже друзі</span>
+                        {% elif item.connection_status == 'pending' %}
+                        <span class="status-pending">Заявка очікує підтвердження</span>
+                        {% elif item.connection_status == 'rejected' %}
+                        <span class="status-rejected">Заявку було відхилено</span>
+                        {% else %}
+                        <span>Зв’язок ще не створено</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="user-card-actions">
+                        <a href="{% url 'library:user_profile' item.user.id %}">
+                            Профіль
+                        </a>
+                        
+                        <a href="{% url 'library:user_library' item.user.id %}">
+                            Бібліотека
+                        </a>
+                        
+                        {% if not item.connection_status %}
+                        <a href="{% url 'library:add_friend' item.user.id %}">
+                            Додати в друзі
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="empty-card">
+                <h3>Інших користувачів поки що немає</h3>
+                <p>
+                    Коли в системі з’являться інші користувачі, їх буде показано тут.
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</section>
+{% endblock %}

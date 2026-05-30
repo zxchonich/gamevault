@@ -1,0 +1,136 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Мої заявки | GameVault{% endblock %}
+
+{% block content %}
+<section class="requests-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Заявки на додавання ігор</div>
+
+            <h1>Мої заявки</h1>
+
+            <p>
+                Тут відображаються ігри, які ви запропонували для додавання до каталогу.
+                Після перевірки адміністратором заявка отримує статус: очікує,
+                схвалено або відхилено.
+            </p>
+        </div>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Усього заявок</span>
+            <b>{{ total_requests_count }}</b>
+            <p>Кількість заявок, створених користувачем</p>
+        </div>
+    
+        <div class="stat-card">
+            <span>Очікують перевірки</span>
+            <b>{{ pending_requests_count }}</b>
+            <p>Заявки, які ще не розглянув адміністратор</p>
+        </div>
+    
+        <div class="stat-card">
+            <span>Схвалено</span>
+            <b>{{ approved_requests_count }}</b>
+            <p>Заявки, після яких ігри були додані до каталогу</p>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Список заявок</h2>
+            <span>Статус перевірки запропонованих ігор</span>
+        </div>
+
+        <div class="requests-grid">
+            {% for request_item in requests %}
+            <article class="request-card">
+                <div class="request-card-head">
+                    <span class="
+                            request-status
+                            {% if request_item.status == 'approved' %}
+                                status-approved
+                            {% elif request_item.status == 'rejected' %}
+                                status-rejected
+                            {% else %}
+                                status-pending
+                            {% endif %}
+                        ">
+                        {% if request_item.status == 'pending' %}
+                        Очікує
+                        {% elif request_item.status == 'approved' %}
+                        Схвалено
+                        {% elif request_item.status == 'rejected' %}
+                        Відхилено
+                        {% else %}
+                        {{ request_item.status }}
+                        {% endif %}
+                    </span>
+
+                    <small>{{ request_item.created_at }}</small>
+                </div>
+
+                <h3>{{ request_item.title }}</h3>
+
+                <p>
+                    {% if request_item.description %}
+                    {{ request_item.description|truncatechars:180 }}
+                    {% else %}
+                    Опис відсутній.
+                    {% endif %}
+                </p>
+
+                <div class="request-meta">
+                    {% if request_item.reviewed_at %}
+                    <div>
+                        <span>Дата перевірки</span>
+                        <b>{{ request_item.reviewed_at }}</b>
+                    </div>
+                    {% endif %}
+
+                    {% if request_item.moderator %}
+                    <div>
+                        <span>Модератор</span>
+                        <b>{{ request_item.moderator.username }}</b>
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+            {% empty %}
+            <div class="empty-card">
+                <h3>Заявок поки що немає</h3>
+                <p>
+                    Ви ще не пропонували нові ігри для каталогу.
+                    Створіть першу заявку через форму додавання гри.
+                </p>
+
+                <a href="{% url 'library:request_game' %}">
+                    Запропонувати гру
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Додати нову гру</h2>
+            <span>Створення нової заявки</span>
+        </div>
+
+        <p>
+            Якщо потрібної гри немає в каталозі, можна надіслати заявку.
+            Після схвалення адміністратором гра з’явиться в загальному списку.
+        </p>
+
+        <a class="pseudo-button" href="{% url 'library:request_game' %}">
+            <span>Запропонувати гру</span>
+        </a>
+    </div>
+
+</section>
+{% endblock %}

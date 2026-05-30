@@ -1,0 +1,298 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}{{ game.title }} | GameVault{% endblock %}
+
+{% block content %}
+<section class="game-layout">
+
+    <aside class="game-cover-card">
+        {% if game.poster %}
+        <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+        {% else %}
+        <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+        {% endif %}
+
+        <a class="game-back-link" href="{% url 'library:game_list' %}">
+            Повернутися до каталогу
+        </a>
+
+        {% if library_entry %}
+        <a class="game-back-link" href="{% url 'library:my_library' %}">
+            У моїй бібліотеці
+        </a>
+        {% else %}
+        <a class="game-back-link" href="{% url 'library:add_to_library' game.id %}">
+            Додати в бібліотеку
+        </a>
+        {% endif %}
+
+        {% if current_library_user and current_library_user.role.name == 'admin' %}
+        <a class="game-back-link" href="{% url 'library:admin_game_edit' game.id %}">
+            Редагувати гру
+        </a>
+
+        <form method="post" action="{% url 'library:admin_game_delete' game.id %}">
+            {% csrf_token %}
+            <button class="game-danger-button" type="submit" onclick="return confirm('Видалити гру з каталогу?');">
+                Видалити гру
+            </button>
+        </form>
+        {% endif %}
+    </aside>
+
+    <section class="game-content">
+        <div class="game-hero">
+            <span class="game-label">
+                Сторінка гри
+            </span>
+
+            <h1>{{ game.title }}</h1>
+
+            <p>
+                {% if game.description %}
+                {{ game.description }}
+                {% else %}
+                Опис гри поки що відсутній.
+                {% endif %}
+            </p>
+
+            <div class="game-genres-box">
+                <span>Жанри</span>
+
+                <div class="game-genres-list">
+                    {% for genre in game_genres %}
+                    <a href="{% url 'library:game_list' %}?genres={{ genre.id }}" class="game-genre-pill">
+                        {{ genre.name }}
+                    </a>
+                    {% empty %}
+                    <span class="game-genre-empty">Жанри не вказані</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="game-meta-grid">
+                <div>
+                    <span>Статус</span>
+                    <b>
+                        {% if library_entry %}
+                        {% if library_entry.status == 'planned' %}
+                        Планую
+                        {% elif library_entry.status == 'playing' %}
+                        Граю
+                        {% elif library_entry.status == 'completed' %}
+                        Пройдено
+                        {% elif library_entry.status == 'paused' %}
+                        Відкладено
+                        {% elif library_entry.status == 'dropped' %}
+                        Закинуто
+                        {% else %}
+                        {{ library_entry.status }}
+                        {% endif %}
+                        {% else %}
+                        Не додано
+                        {% endif %}
+                    </b>
+                </div>
+
+                <div>
+                    <span>Розробник</span>
+                    <b>
+                        {% if game.developer %}
+                        {{ game.developer }}
+                        {% else %}
+                        Не вказано
+                        {% endif %}
+                    </b>
+                </div>
+
+                <div>
+                    <span>Дата виходу</span>
+                    <b>
+                        {% if game.release_date %}
+                        {{ game.release_date }}
+                        {% else %}
+                        Не вказано
+                        {% endif %}
+                    </b>
+                </div>
+
+                <div>
+                    <span>Моя оцінка</span>
+                    <b>
+                        {% if user_review %}
+                        {{ user_review.score }}/10
+                        {% else %}
+                        Немає
+                        {% endif %}
+                    </b>
+                </div>
+            </div>
+
+            <div class="game-review-stats-grid">
+                <div>
+                    <span>Середня оцінка</span>
+                    <b>{{ average_score|floatformat:1 }}/10</b>
+                    <p>На основі рецензій користувачів</p>
+                </div>
+
+                <div>
+                    <span>Кількість рецензій</span>
+                    <b>{{ reviews_count }}</b>
+                    <p>Усі оцінки до цієї гри</p>
+                </div>
+
+                <div>
+                    <span>Ваша рецензія</span>
+                    <b>{{ user_review_status }}</b>
+                    <p>Поточний стан вашої оцінки</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-info-grid">
+            <article class="game-info-card">
+                <h2>Інформація в GameVault</h2>
+
+                <p>
+                    Ця сторінка містить основні дані про гру, її статус у бібліотеці
+                    поточного користувача, а також рецензії та оцінки інших користувачів.
+                </p>
+
+                <ul>
+                    {% if library_entry %}
+                    <li>Гра вже додана до вашої бібліотеки.</li>
+                    <li>
+                        Поточний статус:
+                        {% if library_entry.status == 'planned' %}
+                        Планую.
+                        {% elif library_entry.status == 'playing' %}
+                        Граю.
+                        {% elif library_entry.status == 'completed' %}
+                        Пройдено.
+                        {% elif library_entry.status == 'paused' %}
+                        Відкладено.
+                        {% elif library_entry.status == 'dropped' %}
+                        Закинуто.
+                        {% else %}
+                        {{ library_entry.status }}.
+                        {% endif %}
+                    </li>
+                    {% else %}
+                    <li>Гра ще не додана до вашої бібліотеки.</li>
+                    {% endif %}
+
+                    <li>Рецензії використовуються для формування рейтингу.</li>
+                    <li>Оцінки впливають на персональні рекомендації.</li>
+                </ul>
+            </article>
+
+            <article class="game-info-card">
+                <h2>Рецензія користувача</h2>
+
+                {% if current_library_user %}
+                <form method="post" action="{% url 'library:add_review' game.id %}" class="game-review-form">
+                    {% csrf_token %}
+
+                    <label class="rating-field">
+                        <span>Оцінка</span>
+
+                        <div class="custom-select-wrap rating-select-wrap">
+                            <span class="rating-star">★</span>
+
+                            <select name="score" class="custom-select rating-select" required>
+                                <option value="">Оберіть оцінку</option>
+                                <option value="1" {% if user_review and user_review.score == 1 %}selected{% endif %}>1/10
+                                    — Дуже погано
+                                </option>
+                                <option value="2" {% if user_review and user_review.score == 2 %}selected{% endif %}>2/10
+                                    — Погано</option>
+                                <option value="3" {% if user_review and user_review.score == 3 %}selected{% endif %}>3/10
+                                    — Слабко</option>
+                                <option value="4" {% if user_review and user_review.score == 4 %}selected{% endif %}>4/10
+                                    — Нижче середнього
+                                </option>
+                                <option value="5" {% if user_review and user_review.score == 5 %}selected{% endif %}>5/10
+                                    — Нормально</option>
+                                <option value="6" {% if user_review and user_review.score == 6 %}selected{% endif %}>6/10
+                                    — Непогано</option>
+                                <option value="7" {% if user_review and user_review.score == 7 %}selected{% endif %}>7/10
+                                    — Добре</option>
+                                <option value="8" {% if user_review and user_review.score == 8 %}selected{% endif %}>8/10
+                                    — Дуже добре
+                                </option>
+                                <option value="9" {% if user_review and user_review.score == 9 %}selected{% endif %}>9/10
+                                    — Майже ідеально
+                                </option>
+                                <option value="10" {% if user_review and user_review.score == 10 %}selected{% endif %}>
+                                    10/10 — Шедевр</option>
+                            </select>
+                        </div>
+                    </label>
+
+                    <label>
+                        Текст рецензії
+                        <textarea name="text" rows="5"
+                            placeholder="Напишіть короткий відгук...">{% if user_review %}{{ user_review.text }}{% endif %}</textarea>
+                    </label>
+
+                    <button class="game-back-link" type="submit">
+                        {% if user_review %}
+                        Оновити рецензію
+                        {% else %}
+                        Зберегти рецензію
+                        {% endif %}
+                    </button>
+                </form>
+                {% else %}
+                <p>
+                    Щоб залишити рецензію, потрібно
+                    <a href="{% url 'library:login' %}">увійти</a>.
+                </p>
+                {% endif %}
+            </article>
+        </div>
+
+        <section class="requirements-section">
+            <h2>Рецензії користувачів</h2>
+
+            <div class="requirements-grid">
+                {% for review in reviews %}
+                <article class="requirement-card review-card-with-delete">
+                    <div class="review-card-top">
+                        <h3>{{ review.user.username }} — {{ review.score }}/10</h3>
+
+                        {% if current_library_user %}
+                        {% if review.user.id == current_library_user.id or current_library_user.role.name == 'admin' %}
+                        <form method="post" action="{% url 'library:admin_review_delete' review.id %}"
+                            class="review-delete-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+
+                            <button type="submit" onclick="return confirm('Видалити цю рецензію?');">
+                                Видалити
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+
+                    {% if review.text %}
+                    <p>{{ review.text }}</p>
+                    {% else %}
+                    <p>Текстовий відгук відсутній.</p>
+                    {% endif %}
+
+                    <p><b>Дата:</b> {{ review.created_at }}</p>
+                </article>
+                {% empty %}
+                <article class="requirement-card">
+                    <h3>Рецензій ще немає</h3>
+                    <p>Будьте першим користувачем, який залишить оцінку цій грі.</p>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+    </section>
+    {% endblock %}

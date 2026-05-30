@@ -1,0 +1,417 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Моя бібліотека | GameVault{% endblock %}
+
+{% block content %}
+<section class="library-dashboard-page page-wide">
+
+    <div class="library-dashboard-hero">
+        <div class="library-hero-info">
+            <div class="subtitle">Персональна бібліотека</div>
+
+            <h1>Моя бібліотека</h1>
+
+            <p>
+                Тут зібрані всі ігри, які ви додали до GameVault. Можна швидко
+                фільтрувати бібліотеку за статусом, жанрами, назвою гри та керувати
+                проходженням без переходу на інші сторінки.
+            </p>
+
+            <div class="library-hero-actions">
+                <a class="pseudo-button" href="{% url 'library:game_list' %}">
+                    <span>Додати ігри</span>
+                </a>
+
+                <a class="profile-secondary-link" href="{% url 'library:recommendations' %}">
+                    Рекомендації
+                </a>
+
+                <a class="profile-secondary-link" href="{% url 'library:my_reviews' %}">
+                    Мої рецензії
+                </a>
+            </div>
+        </div>
+
+        <div class="library-summary-card">
+            <span>У бібліотеці</span>
+            <b>{{ library_count }}</b>
+            <p>загальна кількість ігор</p>
+
+            <div class="library-mini-statuses">
+                <div>
+                    <strong>{{ playing_count }}</strong>
+                    <span>граю</span>
+                </div>
+
+                <div>
+                    <strong>{{ completed_count }}</strong>
+                    <span>пройдено</span>
+                </div>
+
+                <div>
+                    <strong>{{ planned_count }}</strong>
+                    <span>планую</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="library-status-overview">
+        <a class="library-status-tile status-playing" href="{% url 'library:my_library' %}?status=playing">
+            <span>Граю зараз</span>
+            <b>{{ playing_count }}</b>
+        </a>
+
+        <a class="library-status-tile status-completed" href="{% url 'library:my_library' %}?status=completed">
+            <span>Пройдено</span>
+            <b>{{ completed_count }}</b>
+        </a>
+
+        <a class="library-status-tile status-planned" href="{% url 'library:my_library' %}?status=planned">
+            <span>Планую</span>
+            <b>{{ planned_count }}</b>
+        </a>
+
+        <a class="library-status-tile status-paused" href="{% url 'library:my_library' %}?status=paused">
+            <span>Відкладено</span>
+            <b>{{ paused_count }}</b>
+        </a>
+
+        <a class="library-status-tile status-dropped" href="{% url 'library:my_library' %}?status=dropped">
+            <span>Закинуто</span>
+            <b>{{ dropped_count }}</b>
+        </a>
+    </div>
+
+    <div class="dashboard-section library-filter-section">
+        <div class="section-head">
+            <h2>Фільтри бібліотеки</h2>
+            <span>Знайдено ігор: {{ filtered_count }}</span>
+        </div>
+
+        <form method="get" class="library-advanced-filter library-filter-redesign">
+
+            <label class="filter-field">
+                <span>Пошук гри</span>
+                <input type="text" name="q" value="{{ query }}" placeholder="Введіть назву гри...">
+            </label>
+
+            <label class="filter-field">
+                <span>Статус</span>
+
+                <div class="custom-select-wrap">
+                    <span class="select-icon">▾</span>
+
+                    <select name="status" class="custom-select unified-filter-control">
+                        <option value="" {% if not selected_status %}selected{% endif %}>Усі статуси</option>
+
+                        {% for status in status_choices %}
+                        <option value="{{ status.value }}" {% if selected_status == status.value %}selected{% endif %}>
+                            {{ status.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </label>
+
+            <div class="filter-field genre-multiselect" data-multiselect>
+                <span class="filter-label">Жанри</span>
+
+                <button class="genre-multiselect-toggle unified-filter-control" type="button" data-toggle>
+                    <span class="genre-toggle-value" data-placeholder>Виберіть жанри</span>
+                    <b>▾</b>
+                </button>
+
+                <div class="selected-genres-hidden" data-selected>
+                    {% for genre in genres %}
+                    {% if genre.id|stringformat:"s" in selected_genres %}
+                    <input type="hidden" name="genres" value="{{ genre.id }}" data-hidden-genre="{{ genre.id }}"
+                        data-hidden-name="{{ genre.name }}">
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="genre-dropdown" data-dropdown>
+                    <input type="text" class="genre-search-input" placeholder="Пошук жанру..." data-search>
+
+                    <div class="genre-options-list">
+                        {% for genre in genres %}
+                        <button type="button"
+                            class="genre-option {% if genre.id|stringformat:'s' in selected_genres %}selected{% endif %}"
+                            data-genre-id="{{ genre.id }}" data-genre-name="{{ genre.name }}">
+                            <span>{{ genre.name }}</span>
+                            <b>✓</b>
+                        </button>
+                        {% empty %}
+                        <p class="genre-empty-text">Жанри ще не додані.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <label class="filter-field">
+                <span>Сортування</span>
+
+                <div class="custom-select-wrap">
+                    <span class="select-icon">▾</span>
+
+                    <select name="sort" class="custom-select unified-filter-control">
+                        <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Нові спочатку
+                        </option>
+                        <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Старі спочатку
+                        </option>
+                        <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>За назвою</option>
+                    </select>
+                </div>
+            </label>
+
+            <div class="library-filter-actions">
+                <button class="pseudo-button filter-button" type="submit">
+                    <span>Застосувати</span>
+                </button>
+
+                <a class="reset-filter-link unified-filter-control" href="{% url 'library:my_library' %}">
+                    Скинути
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Ігри бібліотеки</h2>
+            <span>Керування статусами проходження</span>
+        </div>
+
+        <section class="library-grid">
+            {% for entry in entries %}
+            <article class="library-game-card my-library-card">
+                <a class="my-library-cover-link" href="{% url 'library:game_detail' entry.game.id %}">
+                    {% if entry.game.poster %}
+                    <img src="{{ entry.game.poster.url }}" alt="{{ entry.game.title }}">
+                    {% else %}
+                    <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ entry.game.title }}">
+                    {% endif %}
+                </a>
+
+                <div class="library-game-content">
+                    <div class="my-library-card-head">
+                        <span class="game-status active">
+                            {% if entry.status == 'planned' %}
+                            Планую
+                            {% elif entry.status == 'playing' %}
+                            Граю
+                            {% elif entry.status == 'completed' %}
+                            Пройдено
+                            {% elif entry.status == 'paused' %}
+                            Відкладено
+                            {% elif entry.status == 'dropped' %}
+                            Закинуто
+                            {% else %}
+                            {{ entry.status }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <h3>
+                        <a class="plain-title-link" href="{% url 'library:game_detail' entry.game.id %}">
+                            {{ entry.game.title }}
+                        </a>
+                    </h3>
+                    <div class="game-card-genres">
+                        {% for genre in entry.game.visible_genres %}
+                        <span>{{ genre.name }}</span>
+                        {% empty %}
+                        <span>Без жанру</span>
+                        {% endfor %}
+                    </div>
+
+                    <p>
+                        {% if entry.game.description %}
+                        {{ entry.game.description|truncatechars:120 }}
+                        {% else %}
+                        Опис гри поки що відсутній.
+                        {% endif %}
+                    </p>
+
+                    <div class="my-library-actions">
+                        <form method="post" action="{% url 'library:update_library_status' entry.id %}"
+                            class="my-library-status-form">
+                            {% csrf_token %}
+
+                            <div class="custom-select-wrap status-select-wrap">
+                                <span class="select-icon">▾</span>
+
+                                <select name="status" class="custom-select">
+                                    <option value="planned" {% if entry.status == 'planned' %}selected{% endif %}>Планую
+                                    </option>
+                                    <option value="playing" {% if entry.status == 'playing' %}selected{% endif %}>Граю
+                                    </option>
+                                    <option value="completed" {% if entry.status == 'completed' %}selected{% endif %}>
+                                        Пройдено</option>
+                                    <option value="paused" {% if entry.status == 'paused' %}selected{% endif %}>Відкладено
+                                    </option>
+                                    <option value="dropped" {% if entry.status == 'dropped' %}selected{% endif %}>Закинуто
+                                    </option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="small-action-button">
+                                Оновити
+                            </button>
+                        </form>
+
+                        <div class="my-library-secondary-actions">
+                            <a href="{% url 'library:game_detail' entry.game.id %}" class="secondary-action-link">
+                                Сторінка гри
+                            </a>
+
+                            <form method="post" action="{% url 'library:delete_library_entry' entry.id %}"
+                                class="delete-entry-form">
+                                {% csrf_token %}
+
+                                <button type="submit" class="secondary-action-link danger-link-button"
+                                    onclick="return confirm('Видалити гру з бібліотеки?');">
+                                    Видалити
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="library-empty-panel">
+                <h2>Ігри не знайдені</h2>
+
+                <p>
+                    У бібліотеці немає ігор за вибраними фільтрами.
+                    Спробуйте змінити статус, жанри або пошуковий запит.
+                </p>
+
+                <a class="pseudo-button" href="{% url 'library:game_list' %}">
+                    <span>Перейти до каталогу</span>
+                </a>
+            </div>
+            {% endfor %}
+        </section>
+    </div>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const multiselect = document.querySelector('[data-multiselect]');
+
+        if (!multiselect) {
+            return;
+        }
+
+        const toggle = multiselect.querySelector('[data-toggle]');
+        const search = multiselect.querySelector('[data-search]');
+        const selectedBox = multiselect.querySelector('[data-selected]');
+        const placeholder = multiselect.querySelector('[data-placeholder]');
+        const options = multiselect.querySelectorAll('.genre-option');
+
+        function getSelectedInputs() {
+            return Array.from(selectedBox.querySelectorAll('[data-hidden-genre]'));
+        }
+
+        function updatePlaceholder() {
+            const selectedInputs = getSelectedInputs();
+
+            if (selectedInputs.length === 0) {
+                placeholder.textContent = 'Виберіть жанри';
+                return;
+            }
+
+            const names = selectedInputs.map(function (input) {
+                return input.dataset.hiddenName;
+            });
+
+            const visible = names.slice(0, 3);
+            const extraCount = names.length - 3;
+
+            let text = visible.join(', ');
+
+            if (extraCount > 0) {
+                text += ' +' + extraCount;
+            }
+
+            placeholder.textContent = text;
+        }
+
+        function removeGenre(id) {
+            const hiddenInput = selectedBox.querySelector('[data-hidden-genre="' + id + '"]');
+            const option = multiselect.querySelector('[data-genre-id="' + id + '"]');
+
+            if (hiddenInput) {
+                hiddenInput.remove();
+            }
+
+            if (option) {
+                option.classList.remove('selected');
+            }
+
+            updatePlaceholder();
+        }
+
+        function addGenre(id, name) {
+            const existing = selectedBox.querySelector('[data-hidden-genre="' + id + '"]');
+
+            if (existing) {
+                removeGenre(id);
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'genres';
+            input.value = id;
+            input.dataset.hiddenGenre = id;
+            input.dataset.hiddenName = name;
+            selectedBox.appendChild(input);
+
+            const option = multiselect.querySelector('[data-genre-id="' + id + '"]');
+
+            if (option) {
+                option.classList.add('selected');
+            }
+
+            updatePlaceholder();
+        }
+
+        toggle.addEventListener('click', function () {
+            multiselect.classList.toggle('open');
+
+            if (multiselect.classList.contains('open')) {
+                search.focus();
+            }
+        });
+
+        options.forEach(function (option) {
+            option.addEventListener('click', function () {
+                addGenre(option.dataset.genreId, option.dataset.genreName);
+            });
+        });
+
+        search.addEventListener('input', function () {
+            const value = search.value.toLowerCase().trim();
+
+            options.forEach(function (option) {
+                const name = option.dataset.genreName.toLowerCase();
+                option.style.display = name.includes(value) ? '' : 'none';
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!multiselect.contains(event.target)) {
+                multiselect.classList.remove('open');
+            }
+        });
+
+        updatePlaceholder();
+    });
+</script>
+{% endblock %}

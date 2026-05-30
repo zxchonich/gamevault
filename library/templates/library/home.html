@@ -1,0 +1,356 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Головна | GameVault{% endblock %}
+
+{% block content %}
+<section class="home-page page-wide">
+
+    <section class="home-dashboard-hero">
+        <div class="home-dashboard-content">
+            <div class="subtitle">GameVault Dashboard</div>
+
+            {% if current_library_user %}
+            <h1>Вітаємо, {{ current_library_user.username }}</h1>
+            <p>
+                Це головна панель GameVault. Тут зібрано статистику каталогу,
+                активність користувачів, популярні ігри, рейтинги та швидкі переходи
+                до основних розділів системи.
+            </p>
+            {% else %}
+            <h1>GameVault</h1>
+            <p>
+                Персональна система для зберігання ігрової бібліотеки, рецензій,
+                соціальних зв’язків та рекомендацій на основі активності користувачів.
+            </p>
+            {% endif %}
+
+            <div class="home-hero-actions">
+                <a class="pseudo-button" href="{% url 'library:game_list' %}">
+                    <span>Перейти до каталогу</span>
+                </a>
+
+                {% if current_library_user %}
+                <a class="home-secondary-link" href="{% url 'library:my_library' %}">
+                    Моя бібліотека
+                </a>
+                {% else %}
+                <a class="home-secondary-link" href="{% url 'library:login' %}">
+                    Увійти в акаунт
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="home-user-panel">
+            {% if current_library_user %}
+            <a class="home-user-panel home-user-panel-link" href="{% url 'library:profile' %}">
+                <div class="home-user-avatar">
+                    {% if current_library_user.avatar %}
+                    <img src="{{ current_library_user.avatar.url }}" alt="{{ current_library_user.username }}">
+                    {% else %}
+                    <div class="auto-avatar">
+                        {{ current_library_user.username|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <span>Ваш профіль</span>
+                    <h2>{{ current_library_user.username }}</h2>
+                    <p>{{ current_library_user.email }}</p>
+                </div>
+
+                <div class="home-profile-stats">
+                    <div class="home-profile-stat">
+                        <span>Ігор у бібліотеці</span>
+                        <b>{{ user_library_count }}</b>
+                    </div>
+
+                    <div class="home-profile-stat">
+                        <span>Рецензій</span>
+                        <b>{{ user_review_count }}</b>
+                    </div>
+
+                    <div class="home-profile-stat">
+                        <span>Друзів</span>
+                        <b>{{ user_friends_count }}</b>
+                    </div>
+                </div>
+            </a>
+            {% else %}
+            <div class="home-user-panel">
+                <span>Гість</span>
+                <h2>Створіть акаунт</h2>
+                <p>
+                    Після входу ви зможете додавати ігри до бібліотеки,
+                    залишати рецензії, знаходити друзів та отримувати рекомендації.
+                </p>
+
+                <a class="pseudo-button" href="{% url 'library:register' %}">
+                    <span>Реєстрація</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <span>Ігор у каталозі</span>
+            <b>{{ total_games_count }}</b>
+            <p>Загальна кількість ігор у базі GameVault</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Додавань у бібліотеки</span>
+            <b>{{ total_library_entries_count }}</b>
+            <p>Скільки разів ігри були додані користувачами</p>
+        </div>
+
+        <div class="stat-card">
+            <span>Рецензій</span>
+            <b>{{ total_reviews_count }}</b>
+            <p>Оцінки та відгуки користувачів</p>
+        </div>
+    </div>
+
+    <section class="home-leaderboard-grid">
+
+        <div class="dashboard-section home-board">
+            <div class="section-head">
+                <h2>Топ за рейтингом</h2>
+                <span>Ігри з найкращими оцінками</span>
+            </div>
+
+            <div class="leaderboard-list">
+                {% for game in top_rated_games %}
+                <a class="leaderboard-item" href="{% url 'library:game_detail' game.id %}">
+                    <div class="leaderboard-rank">{{ forloop.counter }}</div>
+
+                    <div class="leaderboard-cover">
+                        {% if game.poster %}
+                        <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+                        {% else %}
+                        <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+                        {% endif %}
+                    </div>
+
+                    <div class="leaderboard-info">
+                        <h3>{{ game.title }}</h3>
+                        <p>Середня оцінка</p>
+                    </div>
+
+                    <strong>
+                        {% if game.avg_score %}
+                        {{ game.avg_score|floatformat:1 }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </strong>
+                </a>
+                {% empty %}
+                <div class="empty-card">
+                    <h3>Рейтинг ще не сформовано</h3>
+                    <p>Потрібні рецензії користувачів.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="dashboard-section home-board">
+            <div class="section-head">
+                <h2>Популярні в бібліотеках</h2>
+                <span>Найчастіше додані ігри</span>
+            </div>
+
+            <div class="leaderboard-list">
+                {% for game in most_added_games %}
+                <a class="leaderboard-item" href="{% url 'library:game_detail' game.id %}">
+                    <div class="leaderboard-rank">{{ forloop.counter }}</div>
+
+                    <div class="leaderboard-cover">
+                        {% if game.poster %}
+                        <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+                        {% else %}
+                        <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+                        {% endif %}
+                    </div>
+
+                    <div class="leaderboard-info">
+                        <h3>{{ game.title }}</h3>
+                        <p>Додавань у бібліотеки</p>
+                    </div>
+
+                    <strong>{{ game.library_count }}</strong>
+                </a>
+                {% empty %}
+                <div class="empty-card">
+                    <h3>Популярність ще не визначена</h3>
+                    <p>Користувачі ще не додавали ігри до бібліотек.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </section>
+
+    <section class="dashboard-section home-users-top-section">
+        <div class="section-head">
+            <h2>Топ користувачів</h2>
+            <span>Лідери активності GameVault</span>
+        </div>
+
+        <div class="users-top-list">
+            {% for user in active_users %}
+            <a class="users-top-item top-place-{{ forloop.counter }}" href="{% url 'library:user_profile' user.id %}">
+                <div class="users-top-rank">
+                    #{{ forloop.counter }}
+                </div>
+
+                <div class="users-top-avatar">
+                    {% if user.avatar %}
+                    <img src="{{ user.avatar.url }}" alt="{{ user.username }}">
+                    {% else %}
+                    <div class="auto-avatar">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="users-top-info">
+                    <span>
+                        {% if user.role %}
+                        {{ user.role.name }}
+                        {% else %}
+                        user
+                        {% endif %}
+                    </span>
+
+                    <h3>{{ user.username }}</h3>
+                    <p>{{ user.email }}</p>
+                </div>
+
+                <div class="users-top-stats">
+                    <div>
+                        <b>{{ user.library_count }}</b>
+                        <span>ігор</span>
+                    </div>
+
+                    <div>
+                        <b>{{ user.review_count }}</b>
+                        <span>рецензій</span>
+                    </div>
+
+                    <div class="users-top-score">
+                        <b>{{ user.activity_score }}</b>
+                        <span>очок</span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="empty-card">
+                <h3>Топ ще не сформовано</h3>
+                <p>
+                    Коли користувачі почнуть додавати ігри та залишати рецензії,
+                    рейтинг активності з’явиться тут.
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Швидкі дії</h2>
+            <span>Основні розділи GameVault</span>
+        </div>
+
+        <div class="home-action-grid">
+            <a class="home-action-card" href="{% url 'library:game_list' %}">
+                <span>Catalog</span>
+                <h3>Каталог ігор</h3>
+                <p>Перегляд усіх ігор, фільтрація за жанрами, пошук та сортування.</p>
+            </a>
+
+            {% if current_library_user %}
+            <a class="home-action-card" href="{% url 'library:my_library' %}">
+                <span>Library</span>
+                <h3>Моя бібліотека</h3>
+                <p>Список доданих ігор, статуси проходження та керування бібліотекою.</p>
+            </a>
+
+            <a class="home-action-card" href="{% url 'library:recommendations' %}">
+                <span>Recommendations</span>
+                <h3>Рекомендації</h3>
+                <p>Персональний підбір ігор на основі жанрів, оцінок і друзів.</p>
+            </a>
+
+            <a class="home-action-card" href="{% url 'library:friends' %}">
+                <span>Social</span>
+                <h3>Друзі</h3>
+                <p>Заявки, профілі інших користувачів та перегляд їхніх бібліотек.</p>
+            </a>
+            {% else %}
+            <a class="home-action-card" href="{% url 'library:login' %}">
+                <span>Login</span>
+                <h3>Вхід</h3>
+                <p>Увійдіть в акаунт, щоб користуватися персональною бібліотекою.</p>
+            </a>
+
+            <a class="home-action-card" href="{% url 'library:register' %}">
+                <span>Register</span>
+                <h3>Реєстрація</h3>
+                <p>Створіть профіль і почніть збирати власну ігрову бібліотеку.</p>
+            </a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Останні додані ігри</h2>
+            <span>Нові записи в каталозі</span>
+        </div>
+
+        <section class="library-grid">
+            {% for game in games %}
+            <a class="library-game-card clickable-game-card" href="{% url 'library:game_detail' game.id %}">
+                {% if game.poster %}
+                <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+                {% else %}
+                <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+                {% endif %}
+
+                <div class="library-game-content">
+                    <span class="game-status active">У каталозі</span>
+
+                    <h3>{{ game.title }}</h3>
+                    <div class="game-card-genres">
+                        {% for genre in game.visible_genres %}
+                        <span>{{ genre.name }}</span>
+                        {% empty %}
+                        <span>Без жанру</span>
+                        {% endfor %}
+                    </div>
+
+                    <p>
+                        {% if game.description %}
+                        {{ game.description|truncatechars:130 }}
+                        {% else %}
+                        Опис гри поки що відсутній.
+                        {% endif %}
+                    </p>
+                </div>
+            </a>
+            {% empty %}
+            <div class="empty-card library-empty-wide">
+                <h3>Ігор поки що немає</h3>
+                <p>Додайте ігри через адмінку або через модерацію заявок.</p>
+            </div>
+            {% endfor %}
+        </section>
+    </section>
+
+</section>
+{% endblock %}

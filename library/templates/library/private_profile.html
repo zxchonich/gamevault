@@ -1,0 +1,66 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Профіль {{ profile_user.username }} | GameVault{% endblock %}
+
+{% block content %}
+<section class="private-profile-page page-wide">
+
+    <div class="private-profile-card">
+        <div class="private-profile-top">
+            <div class="private-profile-avatar">
+                {% if profile_user.avatar %}
+                <img src="{{ profile_user.avatar.url }}" alt="{{ profile_user.username }}">
+                {% else %}
+                <div class="auto-avatar">
+                    {{ profile_user.username|slice:":1"|upper }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="private-profile-info">
+                <div class="subtitle">Профіль користувача</div>
+
+                <h1>{{ profile_user.username }}</h1>
+
+                <div class="private-profile-stats">
+                    <div>
+                        <span>Ігор у бібліотеці</span>
+                        <b>{{ library_count }}</b>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="private-profile-message">
+            <h2>Профіль закритий</h2>
+
+            <p>
+                Користувач обмежив доступ до свого профілю та бібліотеки.
+                Детальна інформація доступна тільки друзям.
+            </p>
+
+            <div class="profile-actions">
+                {% if connection and connection.status == 'pending' %}
+                <span class="profile-secondary-link">
+                    Заявка в друзі вже надіслана
+                </span>
+                {% elif connection and connection.status == 'rejected' %}
+                <span class="profile-secondary-link">
+                    Заявку було відхилено
+                </span>
+                {% else %}
+                <a class="pseudo-button" href="{% url 'library:add_friend' profile_user.id %}">
+                    <span>Додати в друзі</span>
+                </a>
+                {% endif %}
+
+                <a class="profile-secondary-link" href="{% url 'library:user_list' %}">
+                    До користувачів
+                </a>
+            </div>
+        </div>
+    </div>
+
+</section>
+{% endblock %}

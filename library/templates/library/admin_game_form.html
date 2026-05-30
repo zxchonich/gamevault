@@ -1,0 +1,242 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}{{ form_title }} | GameVault{% endblock %}
+
+{% block content %}
+<section class="admin-game-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Адміністрування каталогу</div>
+            <h1>{{ form_title }}</h1>
+            <p>
+                На цій сторінці адміністратор може додати або змінити гру,
+                вказати опис, розробника, дату виходу, постер та жанри.
+            </p>
+        </div>
+    </div>
+
+    <div class="admin-game-layout">
+        <section class="admin-game-form-card">
+            <div class="section-head">
+                <h2>Дані гри</h2>
+                <span>Основна інформація для каталогу</span>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="admin-game-form">
+                {% csrf_token %}
+
+                <label>
+                    <span>Назва гри</span>
+                    <input type="text" name="title" required value="{% if game %}{{ game.title }}{% endif %}"
+                        placeholder="Наприклад, Elden Ring">
+                </label>
+
+                <label>
+                    <span>Опис</span>
+                    <textarea name="description" rows="7"
+                        placeholder="Короткий опис гри...">{% if game %}{{ game.description }}{% endif %}</textarea>
+                </label>
+
+                <label>
+                    <span>Розробник</span>
+                    <input type="text" name="developer" value="{% if game %}{{ game.developer }}{% endif %}"
+                        placeholder="Наприклад, FromSoftware">
+                </label>
+
+                <label>
+                    <span>Дата виходу</span>
+                    <input type="date" name="release_date"
+                        value="{% if game.release_date %}{{ game.release_date|date:'Y-m-d' }}{% endif %}">
+                </label>
+
+                <label>
+                    <span>Постер гри</span>
+                    <input type="file" name="poster" accept="image/*">
+                </label>
+
+                <div class="filter-field genre-multiselect admin-genre-multiselect" data-multiselect>
+                    <span class="filter-label">Жанри</span>
+
+                    <a class="admin-genre-manage-link" href="{% url 'library:admin_genre_list' %}">
+                        Керувати жанрами
+                    </a>
+
+                    <button class="genre-multiselect-toggle unified-filter-control" type="button" data-toggle>
+                        <span class="genre-toggle-value" data-placeholder>Виберіть жанри</span>
+                        <b>▾</b>
+                    </button>
+
+                    <div class="selected-genres-hidden" data-selected>
+                        {% for genre in genres %}
+                        {% if genre.id in selected_genre_ids %}
+                        <input type="hidden" name="genres" value="{{ genre.id }}" data-hidden-genre="{{ genre.id }}"
+                            data-hidden-name="{{ genre.name }}">
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="genre-dropdown" data-dropdown>
+                        <input type="text" class="genre-search-input" placeholder="Пошук жанру..." data-search>
+
+                        <div class="genre-options-list">
+                            {% for genre in genres %}
+                            <button type="button"
+                                class="genre-option {% if genre.id in selected_genre_ids %}selected{% endif %}"
+                                data-genre-id="{{ genre.id }}" data-genre-name="{{ genre.name }}">
+                                <span>{{ genre.name }}</span>
+                                <b>✓</b>
+                            </button>
+                            {% empty %}
+                            <p class="genre-empty-text">Жанри ще не додані.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <button class="pseudo-button" type="submit">
+                    <span>{{ button_text }}</span>
+                </button>
+            </form>
+        </section>
+
+        <aside class="admin-game-preview-card">
+            <div class="panel-title">Поточний постер</div>
+
+            {% if game and game.poster %}
+            <img src="{{ game.poster.url }}" alt="{{ game.title }}">
+            {% else %}
+            <div class="poster-placeholder">
+                Poster
+            </div>
+            {% endif %}
+
+            <a class="game-back-link" href="{% url 'library:game_list' %}">
+                Назад до каталогу
+            </a>
+        </aside>
+    </div>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const multiselect = document.querySelector('[data-multiselect]');
+
+        if (!multiselect) {
+            return;
+        }
+
+        const toggle = multiselect.querySelector('[data-toggle]');
+        const search = multiselect.querySelector('[data-search]');
+        const selectedBox = multiselect.querySelector('[data-selected]');
+        const placeholder = multiselect.querySelector('[data-placeholder]');
+        const options = multiselect.querySelectorAll('.genre-option');
+
+        function getSelectedInputs() {
+            return Array.from(selectedBox.querySelectorAll('[data-hidden-genre]'));
+        }
+
+        function updatePlaceholder() {
+            const selectedInputs = getSelectedInputs();
+
+            if (selectedInputs.length === 0) {
+                placeholder.textContent = 'Виберіть жанри';
+                return;
+            }
+
+            const names = selectedInputs.map(function (input) {
+                return input.dataset.hiddenName;
+            });
+
+            const visible = names.slice(0, 3);
+            const extraCount = names.length - 3;
+
+            let text = visible.join(', ');
+
+            if (extraCount > 0) {
+                text += ' +' + extraCount;
+            }
+
+            placeholder.textContent = text;
+        }
+
+        function removeGenre(id) {
+            const hiddenInput = selectedBox.querySelector('[data-hidden-genre="' + id + '"]');
+            const option = multiselect.querySelector('[data-genre-id="' + id + '"]');
+
+            if (hiddenInput) {
+                hiddenInput.remove();
+            }
+
+            if (option) {
+                option.classList.remove('selected');
+            }
+
+            updatePlaceholder();
+        }
+
+        function addGenre(id, name) {
+            const existing = selectedBox.querySelector('[data-hidden-genre="' + id + '"]');
+
+            if (existing) {
+                removeGenre(id);
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'genres';
+            input.value = id;
+            input.dataset.hiddenGenre = id;
+            input.dataset.hiddenName = name;
+            selectedBox.appendChild(input);
+
+            const option = multiselect.querySelector('[data-genre-id="' + id + '"]');
+
+            if (option) {
+                option.classList.add('selected');
+            }
+
+            updatePlaceholder();
+        }
+
+        toggle.addEventListener('click', function () {
+            multiselect.classList.toggle('open');
+
+            if (multiselect.classList.contains('open')) {
+                search.focus();
+            }
+        });
+
+        options.forEach(function (option) {
+            option.addEventListener('click', function () {
+                addGenre(option.dataset.genreId, option.dataset.genreName);
+            });
+        });
+
+        search.addEventListener('input', function () {
+            const value = search.value.toLowerCase().trim();
+
+            options.forEach(function (option) {
+                const name = option.dataset.genreName.toLowerCase();
+
+                if (name.includes(value)) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!multiselect.contains(event.target)) {
+                multiselect.classList.remove('open');
+            }
+        });
+
+        updatePlaceholder();
+    });
+</script>
+{% endblock %}

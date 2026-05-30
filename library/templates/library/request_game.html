@@ -1,0 +1,88 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Запропонувати гру | GameVault{% endblock %}
+
+{% block content %}
+<section class="request-game-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Нова заявка</div>
+
+            <h1>Запропонувати гру</h1>
+
+            <p>
+                Якщо потрібної гри ще немає в каталозі GameVault, ви можете створити заявку
+                на її додавання. Після перевірки адміністратором гра може бути додана до бази.
+            </p>
+        </div>
+    </div>
+
+    <div class="request-game-layout">
+        <section class="request-form-card">
+            <div class="section-head">
+                <h2>Форма заявки</h2>
+                <span>Назва та короткий опис гри</span>
+            </div>
+
+            {% if user %}
+            <form method="post" class="request-game-form">
+                {% csrf_token %}
+
+                <label>
+                    <span>Назва гри</span>
+                    <input type="text" name="title" placeholder="Наприклад, Hollow Knight" required>
+                </label>
+
+                <label>
+                    <span>Опис гри</span>
+                    <textarea name="description" rows="7"
+                        placeholder="Коротко опишіть гру, її жанр, особливості або чому її варто додати до каталогу..."></textarea>
+                </label>
+
+                <button class="pseudo-button" type="submit">
+                    <span>Надіслати заявку</span>
+                </button>
+            </form>
+            {% else %}
+            <div class="empty-card">
+                <h3>Потрібен вхід</h3>
+                <p>Щоб створити заявку на додавання гри, необхідно увійти в систему.</p>
+
+                <a href="{% url 'library:login' %}">
+                    Увійти
+                </a>
+            </div>
+            {% endif %}
+        </section>
+
+        <aside class="request-info-card">
+            <div class="panel-title">Як це працює</div>
+
+            <div class="activity-card">
+                <span>Крок 1</span>
+                <b>Користувач створює заявку</b>
+                <p>Вказується назва гри та короткий опис.</p>
+            </div>
+
+            <div class="activity-card">
+                <span>Крок 2</span>
+                <b>Адміністратор перевіряє</b>
+                <p>Заявка проходить модерацію та отримує статус.</p>
+            </div>
+
+            <div class="activity-card">
+                <span>Крок 3</span>
+                <b>Гра додається в каталог</b>
+                <p>Після схвалення гра з’являється у загальному списку GameVault.</p>
+            </div>
+
+            <a class="request-side-link" href="{% url 'library:my_requests' %}">
+                Переглянути мої заявки
+            </a>
+        </aside>
+    </div>
+
+</section>
+{% endblock %}

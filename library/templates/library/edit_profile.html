@@ -1,0 +1,163 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Редагування профілю | GameVault{% endblock %}
+
+{% block content %}
+<section class="edit-profile-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Налаштування акаунта</div>
+
+            <h1>Редагування профілю</h1>
+
+            <p>
+                Тут можна оновити основні дані акаунта, змінити пароль та завантажити
+                новий аватар. Зміни будуть відображатися у профілі, бібліотеці,
+                рецензіях та соціальній частині сайту.
+            </p>
+        </div>
+    </div>
+
+    <div class="edit-profile-card">
+
+        <aside class="edit-profile-preview">
+            <div class="edit-profile-avatar">
+                {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" alt="{{ user.username }}">
+                {% else %}
+                <div class="auto-avatar">
+                    {{ user.username|slice:":1"|upper }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="edit-profile-user-info">
+                <span>Поточний профіль</span>
+                <h2>{{ user.username }}</h2>
+                <p>{{ user.email }}</p>
+
+                <div class="edit-profile-role">
+                    {% if user.role %}
+                    {{ user.role.name }}
+                    {% else %}
+                    user
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <div class="edit-profile-form-area">
+            <div class="section-head">
+                <h2>Дані користувача</h2>
+                <span>Оновлення профілю</span>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="edit-profile-form">
+                {% csrf_token %}
+
+                {% if error %}
+                <p class="form-error">{{ error }}</p>
+                {% endif %}
+
+                <label class="avatar-upload-box">
+                    <span>Аватар</span>
+
+                    <div class="avatar-upload-content">
+                        <b>Завантажити нове зображення</b>
+                        <p>Оберіть файл з комп’ютера. Найкраще виглядає квадратне зображення.</p>
+                    </div>
+
+                    <input type="file" name="avatar" accept="image/*">
+                </label>
+
+                <div class="edit-form-grid">
+                    <label>
+                        <span>Логін</span>
+                        <input type="text" name="username" value="{{ user.username }}" required>
+                    </label>
+
+                    <label>
+                        <span>Email</span>
+                        <input type="email" name="email" value="{{ user.email }}" required>
+                    </label>
+                </div>
+
+                <div class="edit-form-grid">
+                    <label>
+                        <span>Новий пароль</span>
+                        <div class="password-field">
+                            <input type="password" name="password" id="edit-password"
+                                placeholder="Залиште порожнім, якщо не хочете змінювати">
+                            <button type="button" class="password-toggle" data-target="edit-password">
+                                Показати
+                            </button>
+                        </div>
+                    </label>
+
+                    <label>
+                        <span>Повторіть новий пароль</span>
+                        <div class="password-field">
+                            <input type="password" name="password_confirm" id="edit-password-confirm"
+                                placeholder="Повторіть новий пароль">
+                            <button type="button" class="password-toggle" data-target="edit-password-confirm">
+                                Показати
+                            </button>
+                        </div>
+                    </label>
+                </div>
+
+                <label class="privacy-toggle">
+                    <input type="checkbox" name="is_private" {% if user.is_private %}checked{% endif %}>
+
+                    <div>
+                        <span>Закритий профіль</span>
+                        <p>
+                            Якщо увімкнено, інші користувачі не зможуть переглядати ваш профіль
+                            і бібліотеку, окрім друзів.
+                        </p>
+                    </div>
+                </label>
+
+                <div class="edit-profile-actions">
+                    <button class="pseudo-button" type="submit">
+                        <span>Зберегти зміни</span>
+                    </button>
+
+                    <a class="profile-secondary-link" href="{% url 'library:profile' %}">
+                        До профілю
+                    </a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('.password-toggle');
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                const targetId = button.dataset.target;
+                const input = document.getElementById(targetId);
+
+                if (!input) {
+                    return;
+                }
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    button.textContent = 'Сховати';
+                } else {
+                    input.type = 'password';
+                    button.textContent = 'Показати';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

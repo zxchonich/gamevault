@@ -1,0 +1,118 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Реєстрація | GameVault{% endblock %}
+
+{% block content %}
+<section class="auth-page page-wide">
+
+    <div class="auth-card">
+        <div class="auth-info">
+            <div class="subtitle">Новий акаунт</div>
+
+            <h1>Реєстрація в GameVault</h1>
+
+            <p>
+                Створіть акаунт, щоб додавати ігри до персональної бібліотеки,
+                залишати рецензії, отримувати рекомендації та взаємодіяти з іншими користувачами.
+            </p>
+
+            <div class="auth-benefits">
+                <div>
+                    <span>Profile</span>
+                    <b>Особистий профіль</b>
+                </div>
+
+                <div>
+                    <span>Library</span>
+                    <b>Своя бібліотека</b>
+                </div>
+
+                <div>
+                    <span>Reviews</span>
+                    <b>Оцінки та відгуки</b>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-form-wrapper">
+            <h2>Створити акаунт</h2>
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+
+                {% if error %}
+                <p class="form-error">{{ error }}</p>
+                {% endif %}
+
+                <label>
+                    <span>Логін</span>
+                    <input type="text" name="username" required placeholder="Введіть логін">
+                </label>
+
+                <label>
+                    <span>Email</span>
+                    <input type="email" name="email" required placeholder="Введіть email">
+                </label>
+
+                <label>
+                    <span>Пароль</span>
+                    <div class="password-field">
+                        <input type="password" name="password" id="register-password" required
+                            placeholder="Введіть пароль">
+                        <button type="button" class="password-toggle" data-target="register-password">
+                            Показати
+                        </button>
+                    </div>
+                </label>
+
+                <label>
+                    <span>Повторіть пароль</span>
+                    <div class="password-field">
+                        <input type="password" name="password_confirm" id="register-password-confirm" required
+                            placeholder="Повторіть пароль">
+                        <button type="button" class="password-toggle" data-target="register-password-confirm">
+                            Показати
+                        </button>
+                    </div>
+                </label>
+
+                <button class="pseudo-button" type="submit">
+                    <span>Зареєструватися</span>
+                </button>
+            </form>
+
+            <p class="auth-bottom-text">
+                Уже маєте акаунт?
+                <a href="{% url 'library:login' %}">Увійти</a>
+            </p>
+        </div>
+    </div>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('.password-toggle');
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                const targetId = button.dataset.target;
+                const input = document.getElementById(targetId);
+
+                if (!input) {
+                    return;
+                }
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    button.textContent = 'Сховати';
+                } else {
+                    input.type = 'password';
+                    button.textContent = 'Показати';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

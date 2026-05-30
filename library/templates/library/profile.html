@@ -1,0 +1,257 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Профіль {{ user.username }} | GameVault{% endblock %}
+
+{% block content %}
+<section class="profile-page page-wide">
+
+    <div class="profile-dashboard-hero">
+        <div class="profile-hero-left">
+            <div class="profile-avatar-big">
+                {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" alt="{{ user.username }}">
+                {% else %}
+                <div class="auto-avatar">
+                    {{ user.username|slice:":1"|upper }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="profile-user-card-info">
+                <span>Поточний профіль</span>
+                <h1>{{ user.username }}</h1>
+                <p>{{ user.email }}</p>
+
+                <div class="profile-role-pill">
+                    {% if user.role %}
+                    {{ user.role.name }}
+                    {% else %}
+                    user
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-hero-right">
+            <div class="subtitle">Особистий кабінет</div>
+
+            <h2>Твій GameVault-профіль</h2>
+
+            <p>
+                Тут зібрана основна активність користувача: бібліотека, прогрес проходження,
+                останні додані ігри, рецензії, друзі та швидкі переходи до головних розділів.
+            </p>
+
+            <div class="profile-main-actions">
+                <a class="pseudo-button" href="{% url 'library:edit_profile' %}">
+                    <span>Редагувати профіль</span>
+                </a>
+
+                <a class="profile-secondary-link" href="{% url 'library:my_library' %}">
+                    Моя бібліотека
+                </a>
+
+                <a class="profile-secondary-link" href="{% url 'library:recommendations' %}">
+                    Рекомендації
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-stat-grid">
+        <div class="profile-stat-card">
+            <span>Ігор у бібліотеці</span>
+            <b>{{ library_count }}</b>
+            <p>Загальна кількість доданих ігор</p>
+        </div>
+
+        <div class="profile-stat-card">
+            <span>Рецензії</span>
+            <b>{{ review_count }}</b>
+            <p>Оцінки та текстові відгуки</p>
+        </div>
+
+        <div class="profile-stat-card">
+            <span>Друзі</span>
+            <b>{{ friends_count }}</b>
+            <p>Підтверджені соціальні зв’язки</p>
+        </div>
+
+        <div class="profile-stat-card">
+            <span>Середня оцінка</span>
+            <b>{{ average_score|floatformat:1 }}</b>
+            <p>Середній бал ваших рецензій</p>
+        </div>
+    </div>
+
+    <div class="profile-content-grid">
+        <section class="dashboard-section profile-progress-section">
+            <div class="section-head">
+                <h2>Прогрес бібліотеки</h2>
+                <span>Статуси проходження</span>
+            </div>
+        
+            <div class="profile-progress-list">
+        
+                <div class="profile-progress-item progress-completed">
+                    <div>
+                        <span>Пройдено</span>
+                        <b>{{ completed_count }} ігор</b>
+                    </div>
+        
+                    <div class="profile-progress-line">
+                        <span style="width: {{ completed_percent }}%;"></span>
+                    </div>
+                </div>
+        
+                <div class="profile-progress-item progress-playing">
+                    <div>
+                        <span>Граю зараз</span>
+                        <b>{{ playing_count }} ігор</b>
+                    </div>
+        
+                    <div class="profile-progress-line">
+                        <span style="width: {{ playing_percent }}%;"></span>
+                    </div>
+                </div>
+        
+                <div class="profile-progress-item progress-planned">
+                    <div>
+                        <span>Планую</span>
+                        <b>{{ planned_count }} ігор</b>
+                    </div>
+        
+                    <div class="profile-progress-line">
+                        <span style="width: {{ planned_percent }}%;"></span>
+                    </div>
+                </div>
+        
+                <div class="profile-progress-item progress-paused">
+                    <div>
+                        <span>Відкладено</span>
+                        <b>{{ paused_count }} ігор</b>
+                    </div>
+        
+                    <div class="profile-progress-line">
+                        <span style="width: {{ paused_percent }}%;"></span>
+                    </div>
+                </div>
+        
+                <div class="profile-progress-item progress-dropped">
+                    <div>
+                        <span>Закинуто</span>
+                        <b>{{ dropped_count }} ігор</b>
+                    </div>
+        
+                    <div class="profile-progress-line">
+                        <span style="width: {{ dropped_percent }}%;"></span>
+                    </div>
+                </div>
+        
+            </div>
+        </section>
+
+        <section class="dashboard-section profile-mini-actions-section">
+            <div class="section-head">
+                <h2>Швидкі дії</h2>
+                <span>Персональні розділи</span>
+            </div>
+
+            <div class="profile-mini-actions">
+                <a href="{% url 'library:my_library' %}">
+                    <span>Library</span>
+                    <b>Моя бібліотека</b>
+                </a>
+
+                <a href="{% url 'library:my_reviews' %}">
+                    <span>Reviews</span>
+                    <b>Мої рецензії</b>
+                </a>
+
+                <a href="{% url 'library:friends' %}">
+                    <span>Social</span>
+                    <b>Друзі</b>
+                </a>
+
+                <a href="{% url 'library:my_requests' %}">
+                    <span>Requests</span>
+                    <b>Мої заявки</b>
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Останні ігри в бібліотеці</h2>
+            <span>Нещодавно додані записи</span>
+        </div>
+
+        <div class="profile-recent-games">
+            {% for entry in recent_entries %}
+            <a class="profile-recent-game-card" href="{% url 'library:game_detail' entry.game.id %}">
+                {% if entry.game.poster %}
+                <img src="{{ entry.game.poster.url }}" alt="{{ entry.game.title }}">
+                {% else %}
+                <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ entry.game.title }}">
+                {% endif %}
+
+                <div>
+                    <span>{{ entry.status }}</span>
+                    <h3>{{ entry.game.title }}</h3>
+                    <p>{{ entry.added_at }}</p>
+                </div>
+            </a>
+            {% empty %}
+            <div class="empty-card profile-wide-empty">
+                <h3>У бібліотеці ще немає ігор</h3>
+                <p>Перейдіть до каталогу та додайте перші ігри до власної бібліотеки.</p>
+
+                <a href="{% url 'library:game_list' %}">
+                    Перейти до каталогу
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Останні рецензії</h2>
+            <span>Нещодавні оцінки користувача</span>
+        </div>
+
+        <div class="profile-recent-reviews">
+            {% for review in recent_reviews %}
+            <article class="profile-review-card">
+                <div class="profile-review-head">
+                    <div>
+                        <span>{{ review.game.title }}</span>
+                        <h3>{{ review.score }}/10</h3>
+                    </div>
+
+                    <a href="{% url 'library:game_detail' review.game.id %}">
+                        Сторінка гри
+                    </a>
+                </div>
+
+                <p>
+                    {% if review.text %}
+                    {{ review.text|truncatechars:180 }}
+                    {% else %}
+                    Текстовий відгук не був доданий.
+                    {% endif %}
+                </p>
+            </article>
+            {% empty %}
+            <div class="empty-card profile-wide-empty">
+                <h3>Рецензій поки що немає</h3>
+                <p>Залиште оцінку на сторінці гри, щоб вона з’явилася у профілі.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</section>
+{% endblock %}
