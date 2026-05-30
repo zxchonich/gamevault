@@ -28,6 +28,6 @@ GameVault — веб-застосунок для агрегації персон
 1. Створити віртуальне середовище.
 2. Встановити залежності:
 
-```pip install -r requirements.txt
-
+```bash
+pip install -r requirements.txt
 ```
