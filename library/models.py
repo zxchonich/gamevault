@@ -250,6 +250,7 @@ class Recommendation(models.Model):
         return f'{self.user.username} - {self.game.title}'
     
 class ExternalAccount(models.Model):
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -276,6 +277,7 @@ class ExternalAccount(models.Model):
 
 
 class ExternalLibraryItem(models.Model):
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -293,7 +295,7 @@ class ExternalLibraryItem(models.Model):
     game_title = models.CharField(max_length=150)
     playtime_minutes = models.IntegerField(default=0)
     launch_url = models.CharField(max_length=255, blank=True, null=True)
-    synced_at = models.DateTimeField(auto_now_add=True)
+    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "external_library_items"

@@ -199,15 +199,21 @@
                 <b>{{ steam_games_count }} ігор</b>
             </a>
             
-            <a href="{% url 'library:steam_disconnect' %}">
+            <form class="inline-post-form" method="post" action="{% url 'library:steam_disconnect' %}">
+                {% csrf_token %}
+                <button type="submit" class="link-button">
                 <span>Steam</span>
                 <b>Відв'язати</b>
-            </a>
+            </button>
+            </form>
 
-            <a href="{% url 'library:steam_sync_library' %}">
+            <form class="inline-post-form" method="post" action="{% url 'library:steam_sync_library' %}">
+                {% csrf_token %}
+                <button type="submit" class="link-button">
                 <span>Steam</span>
                 <b>Синхронізувати</b>
-            </a>
+            </button>
+            </form>
             {% else %}
             <a href="{% url 'library:steam_connect' %}">
                 <span>Steam</span>

@@ -44,9 +44,12 @@
                     <span class="profile-secondary-link">Заявку відхилено</span>
                     {% endif %}
                     {% else %}
-                    <a class="profile-secondary-link" href="{% url 'library:add_friend' profile_user.id %}">
+                    <form class="inline-post-form" method="post" action="{% url 'library:add_friend' profile_user.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button profile-secondary-link">
                         Додати в друзі
-                    </a>
+                    </button>
+                    </form>
                     {% endif %}
 
                     <a class="profile-secondary-link" href="{% url 'library:user_list' %}">

@@ -22,9 +22,12 @@
             У моїй бібліотеці
         </a>
         {% else %}
-        <a class="game-back-link" href="{% url 'library:add_to_library' game.id %}">
+        <form class="inline-post-form" method="post" action="{% url 'library:add_to_library' game.id %}">
+            {% csrf_token %}
+            <button type="submit" class="link-button game-back-link">
             Додати в бібліотеку
-        </a>
+        </button>
+        </form>
         {% endif %}
 
         {% if current_library_user and current_library_user.role.name == 'admin' %}

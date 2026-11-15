@@ -6,6 +6,8 @@ from .models import Game, Genre, Review, User, LibraryEntry, GameRequest, Social
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.contrib.auth.hashers import make_password, check_password
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 import urllib.parse
 from .services.steam_service import (
     build_steam_login_url,
@@ -14,6 +16,7 @@ from .services.steam_service import (
     get_steam_profile,
     get_owned_games,
     sync_steam_library,
+    SteamError,
 )
 
 
@@ -352,6 +355,7 @@ def my_library(request):
 
     return render(request, 'library/my_library.html', context)
 
+@require_POST
 def add_to_library(request, game_id):
     user = get_current_user(request)
 
@@ -675,6 +679,7 @@ def user_list(request):
 
     return render(request, 'library/user_list.html', context)
 
+@require_POST
 def add_friend(request, user_id):
     current_user = get_current_user(request)
     target_user = get_object_or_404(User, id=user_id)
@@ -798,6 +803,7 @@ def friends(request):
     return render(request, 'library/friends.html', context)
 
 
+@require_POST
 def accept_connection(request, connection_id):
     current_user = get_current_user(request)
     connection = get_object_or_404(SocialConnection, id=connection_id)
@@ -810,6 +816,7 @@ def accept_connection(request, connection_id):
     return redirect('library:friends')
 
 
+@require_POST
 def reject_connection(request, connection_id):
     current_user = get_current_user(request)
     connection = get_object_or_404(SocialConnection, id=connection_id)
@@ -965,26 +972,21 @@ def login_view(request):
         user = User.objects.filter(username=username).first()
 
         if user and check_password(password, user.password_hash):
+            # Новий ключ сесії після входу (захист від фіксації сесії).
+            request.session.cycle_key()
             request.session['library_user_id'] = user.id
             return redirect('library:home')
 
-        elif user and password == user.password_hash:
-            user.password_hash = make_password(password)
-            user.save(update_fields=['password_hash'])
-
-            request.session['library_user_id'] = user.id
-            return redirect('library:home')
-
-        else:
-            error = 'Неправильний логін або пароль.'
+        error = 'Неправильний логін або пароль.'
 
     return render(request, 'library/login.html', {
         'error': error,
     })
 
 
+@require_POST
 def logout_view(request):
-    request.session.pop('library_user_id', None)
+    request.session.flush()
     return redirect('library:home')
 
 def profile(request):
@@ -1230,6 +1232,7 @@ def moderation(request):
     return render(request, 'library/moderation.html', context)
 
 
+@require_POST
 def approve_request(request, request_id):
     user = get_current_user(request)
 
@@ -1265,6 +1268,7 @@ def approve_request(request, request_id):
     return redirect('library:moderation')
 
 
+@require_POST
 def reject_request(request, request_id):
     user = get_current_user(request)
 
@@ -1590,7 +1594,11 @@ def admin_review_delete(request, review_id):
         messages.success(request, 'Рецензію видалено.')
 
         next_url = request.POST.get('next')
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
             return redirect(next_url)
 
         return redirect('library:game_detail', game_id=game_id)
@@ -1666,80 +1674,98 @@ def admin_genre_delete(request, genre_id):
     return redirect('library:admin_genre_list')
 
 def steam_connect(request):
-    user_id = request.session.get("library_user_id")
+    user = get_current_user(request)
 
-    if not user_id:
+    if user is None:
         return redirect("library:login")
 
-    steam_login_url = build_steam_login_url(request)
-
-    return redirect(steam_login_url)
+    return redirect(build_steam_login_url(request))
 
 
 def steam_callback(request):
-    user_id = request.session.get("library_user_id")
+    user = get_current_user(request)
 
-    if not user_id:
+    if user is None:
         return redirect("library:login")
 
-    is_valid = validate_steam_openid_response(request)
-
-    if not is_valid:
+    if not validate_steam_openid_response(request):
+        messages.error(request, "Не вдалося підтвердити вхід через Steam. Спробуйте ще раз.")
         return redirect("library:profile")
 
     steam_id = extract_steam_id_from_openid(request)
 
     if not steam_id:
+        messages.error(request, "Steam повернув некоректний ідентифікатор акаунта.")
         return redirect("library:profile")
-    
+
+    linked_to_other_user = (
+        ExternalAccount.objects
+        .filter(provider="steam", external_user_id=steam_id)
+        .exclude(user=user)
+        .exists()
+    )
+
+    if linked_to_other_user:
+        messages.error(request, "Цей Steam-акаунт уже прив'язаний до іншого користувача GameVault.")
+        return redirect("library:profile")
+
     steam_profile = get_steam_profile(steam_id)
 
     ExternalAccount.objects.update_or_create(
-    user_id=user_id,
-    provider="steam",
-    defaults={
-        "external_user_id": steam_id,
-        "username": steam_profile["username"] if steam_profile else f"Steam user {steam_id}",
-        "profile_url": steam_profile["profile_url"] if steam_profile else f"https://steamcommunity.com/profiles/{steam_id}",
-        "avatar_url": steam_profile["avatar_url"] if steam_profile else None,
-    }
-)
+        user=user,
+        provider="steam",
+        defaults={
+            "external_user_id": steam_id,
+            "username": steam_profile["username"] if steam_profile else f"Steam user {steam_id}",
+            "profile_url": steam_profile["profile_url"] if steam_profile else f"https://steamcommunity.com/profiles/{steam_id}",
+            "avatar_url": steam_profile["avatar_url"] if steam_profile else None,
+        }
+    )
 
+    messages.success(request, "Steam-акаунт підключено.")
     return redirect("library:profile")
 
-def steam_disconnect(request):
-    user_id = request.session.get("library_user_id")
 
-    if not user_id:
+@require_POST
+def steam_disconnect(request):
+    user = get_current_user(request)
+
+    if user is None:
         return redirect("library:login")
 
-    ExternalAccount.objects.filter(
-        user_id=user_id,
-        provider="steam"
-    ).delete()
+    # Імпортовані ігри Steam (external_library_items) видаляються каскадно;
+    # записи в бібліотеці GameVault залишаються.
+    ExternalAccount.objects.filter(user=user, provider="steam").delete()
 
+    messages.success(request, "Steam-акаунт відв'язано.")
     return redirect("library:profile")
 
+
+@require_POST
 def steam_sync_library(request):
     user = get_current_user(request)
 
     if user is None:
         return redirect("library:login")
 
-    steam_account = ExternalAccount.objects.filter(
-        user=user,
-        provider="steam"
-    ).first()
+    steam_account = ExternalAccount.objects.filter(user=user, provider="steam").first()
 
     if not steam_account:
+        messages.error(request, "Спочатку підключіть Steam-акаунт.")
         return redirect("library:profile")
 
-    result = sync_steam_library(user, steam_account)
+    try:
+        result = sync_steam_library(user, steam_account)
+    except SteamError as exc:
+        messages.error(request, str(exc))
+        return redirect("library:profile")
 
-    messages.success(
-        request,
+    text = (
         f"Steam синхронізовано: {result['synced_count']} ігор отримано, "
         f"{result['added_to_library_count']} додано до бібліотеки GameVault."
     )
+    if result["removed_count"]:
+        text += f" Прибрано ігор, яких більше немає в Steam: {result['removed_count']}."
 
+    messages.success(request, text)
     return redirect("library:profile")

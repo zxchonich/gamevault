@@ -36,7 +36,10 @@
                 {% endif %}
         
                 {% if current_library_user %}
-                <a href="{% url 'library:logout' %}">Вийти</a>
+                <form class="inline-post-form" method="post" action="{% url 'library:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="link-button">Вийти</button>
+                </form>
                 {% else %}
                 <a href="{% url 'library:login' %}">Вхід</a>
                 <a href="{% url 'library:register' %}">Реєстрація</a>

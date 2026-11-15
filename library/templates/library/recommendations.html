@@ -119,10 +119,12 @@
                         Детальніше
                     </a>
 
-                    <a href="{% url 'library:add_to_library' recommendation.game.id %}"
-                        class="recommendation-button recommendation-button-primary">
+                    <form class="inline-post-form" method="post" action="{% url 'library:add_to_library' recommendation.game.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button recommendation-button recommendation-button-primary">
                         Додати в бібліотеку
-                    </a>
+                    </button>
+                    </form>
                 </div>
             </div>
         </article>

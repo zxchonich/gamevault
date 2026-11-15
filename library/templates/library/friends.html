@@ -166,13 +166,19 @@
                                 Профіль
                             </a>
 
-                            <a href="{% url 'library:accept_connection' connection.id %}">
+                            <form class="inline-post-form" method="post" action="{% url 'library:accept_connection' connection.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="link-button">
                                 Прийняти
-                            </a>
+                            </button>
+                            </form>
 
-                            <a class="danger-link" href="{% url 'library:reject_connection' connection.id %}">
+                            <form class="inline-post-form" method="post" action="{% url 'library:reject_connection' connection.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="link-button danger-link">
                                 Відхилити
-                            </a>
+                            </button>
+                            </form>
                         </div>
                     </div>
                 </article>
@@ -275,9 +281,12 @@
                             Профіль
                         </a>
 
-                        <a href="{% url 'library:add_friend' user.id %}">
+                        <form class="inline-post-form" method="post" action="{% url 'library:add_friend' user.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="link-button">
                             Додати в друзі
-                        </a>
+                        </button>
+                        </form>
 
                         <a href="{% url 'library:user_library' user.id %}">
                             Бібліотека

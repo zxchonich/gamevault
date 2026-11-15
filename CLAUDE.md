@@ -23,18 +23,21 @@ python manage.py test library.tests.SomeTestCase.test_method
 
 ## База данных
 
-- MySQL (`game_library_db` на localhost:3306, utf8mb4), параметры заданы прямо в [config/settings.py](config/settings.py). `db.sqlite3` не используется (и игнорируется git).
+- MySQL (`game_library_db` на localhost:3306, utf8mb4). Параметры БД, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` и `STEAM_API_KEY` читаются из `.env` (не в git; шаблон — [.env.example](.env.example)) через `python-dotenv` в [config/settings.py](config/settings.py). `db.sqlite3` не используется. Служба MySQL на этой машине (`MySQL96`) запускается вручную и требует прав администратора: `net start MySQL96`.
+- Изменения схемы оформляются SQL-файлами в [database/migrations/](database/migrations/) (`001_steam.sql` и т.д.). Дамп в репозитории отстаёт от локальной БД (там уже есть, например, `games.poster`, utf8mb4 и таблицы Steam); при расхождениях источник истины — живая БД (`SHOW CREATE TABLE`).
 - Структура таблиц задаётся SQL-дампом [database/gamevault_dump.sql](database/gamevault_dump.sql), **а не** миграциями Django. Все модели в [library/models.py](library/models.py) имеют `managed = False` и явный `db_table`, а в `library/migrations/` миграций нет. Сначала загрузите дамп в MySQL, затем `python manage.py migrate` — только для создания встроенных таблиц Django (sessions, contenttypes, admin, auth).
-- Изменения схемы делаются в MySQL (с повторным экспортом дампа) и вручную переносятся в модель; `makemigrations` эти таблицы не изменит. В текущем дампе нет таблиц `external_accounts` и `external_library_items`, которые использует интеграция со Steam.
+- Изменения схемы вручную переносятся в модель; `makemigrations` эти таблицы не изменит.
 - Местами используется сырой SQL (например, `add_game_genres` в views.py вставляет строки в `game_genres` через `connection.cursor()`), так как `GameGenre` отображает связующую таблицу с составным первичным ключом.
 
 ## Архитектура
 
 Один Django-проект `config/` с одним приложением `library/`. Все представления — функции, находятся в [library/views.py](library/views.py) (~1750 строк); маршруты в пространстве имён `library:` в [library/urls.py](library/urls.py).
 
-**Аутентификация собственная, не `django.contrib.auth`.** `library.models.User` — неуправляемая модель над таблицей `users` с полем `password_hash`. При входе в сессию записывается `request.session['library_user_id']`; представления получают пользователя через `get_current_user(request)` и перенаправляют на `library:login`, если он `None`. Контекстный процессор [library/context_processors.py](library/context_processors.py) передаёт `current_library_user` во все шаблоны. Пароли хешируются через `make_password`/`check_password` из Django; `login_view` при успешном входе также переводит старые пароли в открытом виде на хеш. Не используйте `request.user`, `@login_required` или `django.contrib.auth.models.User` для пользователей приложения.
+**Аутентификация собственная, не `django.contrib.auth`.** `library.models.User` — неуправляемая модель над таблицей `users` с полем `password_hash`. При входе в сессию записывается `request.session['library_user_id']`; представления получают пользователя через `get_current_user(request)` и перенаправляют на `library:login`, если он `None`. Контекстный процессор [library/context_processors.py](library/context_processors.py) передаёт `current_library_user` во все шаблоны. Пароли хешируются через `make_password`/`check_password` из Django; оставшиеся пароли в открытом виде хешируются командой `python manage.py hash_plain_passwords [--dry-run]`. Не используйте `request.user`, `@login_required` или `django.contrib.auth.models.User` для пользователей приложения.
 
 **Авторизация** основана на ролях из таблицы `roles`: `is_admin_user(user)` проверяет `user.role.name == 'admin'`; новые пользователи при регистрации получают роль `user`. Админские представления (модерация, управление играми/жанрами/рецензиями в `manage/...`) проверяют это вручную. Django-админка на `/admin/` — отдельная и работает через собственную аутентификацию Django.
+
+**Действия, меняющие данные, — только POST.** Такие view помечены `@require_POST`, а в шаблонах вызываются формой `<form class="inline-post-form" method="post">` с `{% csrf_token %}` и `<button class="link-button ...">`, а не ссылкой. `.inline-post-form` (`display: contents`) и `:where(.link-button)` в конце style.css делают кнопку визуально идентичной ссылке; если кнопка стоит в контейнере, где ссылки стилизуются через `.X a`, добавьте в это правило `.X .link-button`.
 
 **Ключевые моменты модели данных:**
 - `Game` ↔ `Genre` — связь многие-ко-многим через `GameGenre` (`game_genres`). Хелперы `attach_visible_genres_to_*` в views.py прикрепляют к играм/записям ограниченный список жанров для шаблонов.
@@ -42,6 +45,6 @@ python manage.py test library.tests.SomeTestCase.test_method
 - `User.is_private` управляет видимостью профиля и библиотеки для тех, кто не в друзьях.
 - Рекомендации (представление `recommendations`) вычисляются в Python по жанрам игр из библиотеки пользователя и игр, которые он оценил на ≥ 8.
 
-**Интеграция со Steam** находится в [library/services/steam_service.py](library/services/steam_service.py): вход через Steam OpenID (`steam/connect/` → `steam/callback/`), получение профиля и списка игр через Steam Web API и `sync_steam_library`, которая переносит игры в `ExternalLibraryItem`/`LibraryEntry`. Требуется переменная окружения `STEAM_API_KEY` и пакет `requests` (пока не указан в requirements.txt).
+**Интеграция со Steam** находится в [library/services/steam_service.py](library/services/steam_service.py): вход через Steam OpenID (`steam/connect/` → `steam/callback/`), получение профиля и списка игр через Steam Web API и `sync_steam_library`, которая переносит игры в `ExternalLibraryItem` (удаляя пропавшие из Steam) и добавляет совпавшие по `Game.steam_appid` игры в `LibraryEntry` (только новые записи; статусы существующих не меняются). Ошибки Steam (нет ключа, сеть, закрытый профиль) выбрасываются как `SteamError` с текстом для пользователя. Требуется `STEAM_API_KEY` в `.env`.
 
 **Шаблоны и статика:** шаблоны в `library/templates/library/` наследуют `base.html`; единственный файл стилей — `library/static/library/css/style.css`. Загружаемые пользователями файлы (аватары, постеры игр) сохраняются в `media/` и раздаются Django только при `DEBUG = True`.

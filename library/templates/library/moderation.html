@@ -116,9 +116,10 @@
                             Схвалити
                         </button>
 
-                        <a href="{% url 'library:reject_request' request_item.id %}">
+                        <button type="submit" class="link-button"
+                            formaction="{% url 'library:reject_request' request_item.id %}">
                             Відхилити
-                        </a>
+                        </button>
                     </div>
                 </form>
             </article>

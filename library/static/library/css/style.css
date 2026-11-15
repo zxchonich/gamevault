@@ -100,7 +100,7 @@ img {
     gap: 10px;
 }
 
-.dashboard-nav a, .dashboard-nav span {
+.dashboard-nav a, .dashboard-nav span, .dashboard-nav .link-button {
     padding: 10px 15px;
     border-radius: 999px;
     border: 1px solid transparent;
@@ -110,7 +110,7 @@ img {
     font-weight: 700;
 }
 
-.dashboard-nav a:hover, .dashboard-nav .active {
+.dashboard-nav a:hover, .dashboard-nav .active, .dashboard-nav .link-button:hover {
     color: #ffffff;
     background: linear-gradient(135deg, rgba(77, 183, 255, 0.24), rgba(139, 92, 246, 0.24));
     border-color: rgba(77, 183, 255, 0.28);
@@ -924,7 +924,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         gap: 8px;
     }
 
-    .dashboard-nav a, .dashboard-nav span {
+    .dashboard-nav a, .dashboard-nav span, .dashboard-nav .link-button {
         padding: 10px 8px;
         font-size: 12px;
         text-align: center;
@@ -1004,7 +1004,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         gap: 8px;
     }
 
-    .dashboard-nav a, .dashboard-nav span {
+    .dashboard-nav a, .dashboard-nav span, .dashboard-nav .link-button {
         min-height: 42px;
         padding: 10px 8px;
         font-size: 12px;
@@ -2326,13 +2326,13 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     flex-wrap: wrap;
 }
 
-.user-card-actions a {
+.user-card-actions a, .user-card-actions .link-button {
     color: var(--accent);
     text-decoration: none;
     font-weight: 700;
 }
 
-.user-card-actions a:hover {
+.user-card-actions a:hover, .user-card-actions .link-button:hover {
     text-decoration: underline;
 }
 
@@ -2596,13 +2596,13 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     font-weight: 800;
 }
 
-.moderation-actions a {
+.moderation-actions a, .moderation-actions .link-button {
     color: #fca5a5;
     text-decoration: none;
     font-weight: 700;
 }
 
-.moderation-actions a:hover {
+.moderation-actions a:hover, .moderation-actions .link-button:hover {
     text-decoration: underline;
 }
 
@@ -3594,7 +3594,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     margin-top: 12px;
 }
 
-.compact-user-actions a {
+.compact-user-actions a, .compact-user-actions .link-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3608,7 +3608,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     font-weight: 800;
 }
 
-.compact-user-actions a:hover {
+.compact-user-actions a:hover, .compact-user-actions .link-button:hover {
     background: rgba(77, 183, 255, 0.20);
 }
 
@@ -5627,7 +5627,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     gap: 12px;
 }
 
-.profile-mini-actions a {
+.profile-mini-actions a, .profile-mini-actions .link-button {
     padding: 15px;
     border-radius: 18px;
     background: rgba(8, 12, 20, 0.72);
@@ -5636,7 +5636,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     transition: 0.22s ease;
 }
 
-.profile-mini-actions a:hover {
+.profile-mini-actions a:hover, .profile-mini-actions .link-button:hover {
     transform: translateY(-3px);
     border-color: rgba(77, 183, 255, 0.34);
     background: rgba(77, 183, 255, 0.08);
@@ -7664,7 +7664,7 @@ span.profile-secondary-link:hover {
     margin-top: 12px;
 }
 
-.request-actions a {
+.request-actions a, .request-actions .link-button {
     min-height: 40px;
     padding: 0 16px;
     display: inline-flex;
@@ -7680,7 +7680,7 @@ span.profile-secondary-link:hover {
     transition: 0.22s ease;
 }
 
-.request-actions a:hover {
+.request-actions a:hover, .request-actions .link-button:hover {
     color: #ffffff;
     background: rgba(77, 183, 255, 0.16);
     border-color: rgba(77, 183, 255, 0.40);
@@ -7705,7 +7705,7 @@ span.profile-secondary-link:hover {
         align-items: stretch;
     }
 
-    .request-actions a {
+    .request-actions a, .request-actions .link-button {
         width: 100%;
     }
 }
@@ -7748,7 +7748,7 @@ span.profile-secondary-link:hover {
     margin-top: 14px !important;
 }
 
-.friends-page .compact-user-card .compact-user-actions a, .friends-page .compact-user-card .compact-user-actions button {
+.friends-page .compact-user-card .compact-user-actions a, .friends-page .compact-user-card .compact-user-actions button, .friends-page .compact-user-card .compact-user-actions .link-button {
     height: 42px !important;
     min-height: 42px !important;
 }
@@ -7759,7 +7759,7 @@ span.profile-secondary-link:hover {
         align-items: stretch !important;
     }
 
-    .friends-page .friend-actions a, .friends-page .friend-card-actions a, .friends-page .request-actions a, .friends-page .compact-user-actions a, .friends-page .friend-delete-form, .friends-page .friend-delete-form button, .friends-page .danger-link, .friends-page .danger-link-button {
+    .friends-page .friend-actions a, .friends-page .friend-card-actions a, .friends-page .request-actions a, .friends-page .compact-user-actions a, .friends-page .friend-delete-form, .friends-page .friend-delete-form button, .friends-page .danger-link, .friends-page .danger-link-button, .friends-page .request-actions .link-button, .friends-page .compact-user-actions .link-button {
         width: 100% !important;
     }
 }
@@ -7857,7 +7857,7 @@ span.profile-secondary-link:hover {
     margin-top: 14px !important;
 }
 
-.friends-page .friend-actions a, .friends-page .friend-card-actions a, .friends-page .request-actions a, .friends-page .compact-user-actions a {
+.friends-page .friend-actions a, .friends-page .friend-card-actions a, .friends-page .request-actions a, .friends-page .compact-user-actions a, .friends-page .request-actions .link-button, .friends-page .compact-user-actions .link-button {
     min-width: 116px !important;
     height: 44px !important;
     min-height: 44px !important;
@@ -7877,7 +7877,7 @@ span.profile-secondary-link:hover {
     transition: 0.22s ease !important;
 }
 
-.friends-page .friend-actions a:hover, .friends-page .friend-card-actions a:hover, .friends-page .request-actions a:hover, .friends-page .compact-user-actions a:hover {
+.friends-page .friend-actions a:hover, .friends-page .friend-card-actions a:hover, .friends-page .request-actions a:hover, .friends-page .compact-user-actions a:hover, .friends-page .request-actions .link-button:hover, .friends-page .compact-user-actions .link-button:hover {
     color: #ffffff !important;
     background: rgba(77, 183, 255, 0.16) !important;
     border-color: rgba(77, 183, 255, 0.42) !important;
@@ -7967,7 +7967,7 @@ span.profile-secondary-link:hover {
         align-items: stretch !important;
     }
 
-    .friends-page .friend-actions a, .friends-page .friend-card-actions a, .friends-page .request-actions a, .friends-page .compact-user-actions a, .friends-page .friend-delete-form, .friends-page .friend-delete-form button, .friends-page .request-actions a.danger-link {
+    .friends-page .friend-actions a, .friends-page .friend-card-actions a, .friends-page .request-actions a, .friends-page .compact-user-actions a, .friends-page .friend-delete-form, .friends-page .friend-delete-form button, .friends-page .request-actions a.danger-link, .friends-page .request-actions .link-button, .friends-page .compact-user-actions .link-button {
         width: 100% !important;
     }
 }
@@ -8001,4 +8001,29 @@ span.profile-secondary-link:hover {
     background: rgba(33, 150, 243, .15);
     border: 1px solid rgba(33, 150, 243, .4);
     color: #90CAF9;
+}
+
+/* POST-дії (додати в друзі, вийти, Steam тощо), оформлені як посилання.
+   :where() має нульову специфічність, тож будь-які стилі компонентів її перекривають. */
+.inline-post-form {
+    display: contents;
+}
+
+:where(.link-button) {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+
+.moderation-actions .link-button {
+    padding: 0;
+    border-radius: 0;
+    background: none;
 }
