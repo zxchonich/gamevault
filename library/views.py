@@ -10,13 +10,13 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 import urllib.parse
 from .services.steam_service import (
-    build_steam_login_url,
-    extract_steam_id_from_openid,
-    validate_steam_openid_response,
-    get_steam_profile,
-    get_owned_games,
-    sync_steam_library,
     SteamError,
+    download_steam_poster,
+    fetch_store_details,
+    get_steam_summary,
+    is_valid_appid,
+    link_game_to_steam_owners,
+    steam_items_by_appid,
 )
 
 
@@ -181,8 +181,11 @@ def game_detail(request, game_id):
     if library_entry:
         library_status_label = get_status_label(library_entry.status)
 
+    steam_item = steam_items_by_appid(user, [game.steam_appid]).get(game.steam_appid)
+
     context = {
         'game': game,
+        'steam_item': steam_item,
         'reviews': reviews,
         'game_genres': game_genres,
         'library_entry': library_entry,
@@ -202,6 +205,13 @@ def get_current_user(request):
         return None
 
     return User.objects.filter(id=user_id).first()
+
+def can_view_profile(viewer, owner):
+    """Чи може viewer бачити профіль/бібліотеку owner (з урахуванням приватності)."""
+    if viewer is None:
+        return False
+    return viewer.id == owner.id or not owner.is_private or are_friends(viewer, owner)
+
 
 def are_friends(user1, user2):
     return SocialConnection.objects.filter(
@@ -320,8 +330,11 @@ def my_library(request):
 
     entries = list(entries)
 
+    steam_items = steam_items_by_appid(user, [entry.game.steam_appid for entry in entries])
+
     for entry in entries:
         entry.status_label = get_status_label(entry.status)
+        entry.steam_item = steam_items.get(entry.game.steam_appid)
 
     entries = attach_visible_genres_to_entries(entries)
 
@@ -1045,19 +1058,6 @@ def profile(request):
     recent_entries = entries[:4]
     recent_reviews = reviews[:3]
 
-    steam_account = ExternalAccount.objects.filter(
-        user=user,
-        provider='steam'
-    ).first()
-
-    steam_games_count = 0
-
-    if steam_account:
-        steam_games_count = ExternalLibraryItem.objects.filter(
-            user=user,
-            provider='steam'
-        ).count()
-
     context = {
         'user': user,
         'profile_user': user,
@@ -1083,8 +1083,7 @@ def profile(request):
 
         'recent_entries': recent_entries,
         'recent_reviews': recent_reviews,
-        'steam_account': steam_account,
-        'steam_games_count': steam_games_count,
+        'steam_summary': get_steam_summary(user),
     }
 
     return render(request, 'library/profile.html', context)
@@ -1190,6 +1189,7 @@ def user_profile(request, user_id):
 
         'recent_entries': recent_entries,
         'recent_reviews': recent_reviews,
+        'steam_summary': get_steam_summary(profile_user),
     }
 
     return render(request, 'library/user_profile.html', context)
@@ -1246,24 +1246,59 @@ def approve_request(request, request_id):
 
     if game_request.status == 'pending':
         selected_genres = request.POST.getlist('genres')
-
-        game = Game.objects.create(
-            title=game_request.title,
-            description=game_request.description,
-            developer=None,
-            release_date=None,
-            created_at=timezone.now(),
-        )
-
-        if selected_genres:
-            add_game_genres(game.id, selected_genres)
+        appid = game_request.steam_appid
+        existing_game = Game.objects.filter(steam_appid=appid).first() if appid else None
 
         game_request.status = 'approved'
         game_request.moderator = user
         game_request.reviewed_at = timezone.now()
+
+        if existing_game:
+            game_request.save()
+            messages.info(
+                request,
+                f'Заявку "{game_request.title}" схвалено, але гра з цим Steam AppID '
+                f'вже є в каталозі ("{existing_game.title}").'
+            )
+            return redirect('library:moderation')
+
+        game = Game(
+            title=game_request.title,
+            description=game_request.description,
+            developer=None,
+            release_date=None,
+            steam_appid=appid or None,
+            created_at=timezone.now(),
+        )
+
+        steam_note = ''
+
+        if appid:
+            # Доповнюємо картку гри даними зі Steam Store.
+            try:
+                details = fetch_store_details(appid)
+                game.description = game.description or details['description']
+                game.developer = details['developer'] or None
+                game.release_date = details['release_date']
+                if not download_steam_poster(game, details['header_image']):
+                    steam_note = ' Постер зі Steam завантажити не вдалося.'
+            except SteamError as exc:
+                steam_note = f' Дані Steam не отримано: {exc}'
+
+        game.save()
+
+        if selected_genres:
+            add_game_genres(game.id, selected_genres)
+
         game_request.save()
 
-        messages.success(request, f'Заявку "{game_request.title}" схвалено. Гру додано до каталогу.')
+        added = link_game_to_steam_owners(game) if appid else 0
+
+        messages.success(
+            request,
+            f'Заявку "{game_request.title}" схвалено. Гру додано до каталогу.'
+            + _steam_link_message(added) + steam_note
+        )
 
     return redirect('library:moderation')
 
@@ -1442,6 +1477,126 @@ def edit_profile(request):
     }
 
     return render(request, 'library/edit_profile.html', context)
+GAME_FORM_FIELDS = ('title', 'description', 'developer', 'release_date', 'steam_appid')
+
+
+def _game_form_initial(game=None):
+    if game is None:
+        return {field: '' for field in GAME_FORM_FIELDS}
+
+    return {
+        'title': game.title or '',
+        'description': game.description or '',
+        'developer': game.developer or '',
+        'release_date': game.release_date.isoformat() if game.release_date else '',
+        'steam_appid': game.steam_appid or '',
+    }
+
+
+def _game_form_from_post(request):
+    form_data = {field: request.POST.get(field, '').strip() for field in GAME_FORM_FIELDS}
+    form_data['steam_header_image'] = request.POST.get('steam_header_image', '').strip()
+    form_data['download_steam_poster'] = request.POST.get('download_steam_poster') == '1'
+    return form_data
+
+
+def _apply_steam_prefill(request, form_data):
+    """Заповнює форму гри даними Steam Store, якщо передано ?steam_appid=..."""
+    appid = request.GET.get('steam_appid', '').strip()
+
+    if not appid:
+        return
+
+    if not is_valid_appid(appid):
+        messages.error(request, 'Steam AppID має складатися лише з цифр.')
+        return
+
+    form_data['steam_appid'] = appid
+
+    try:
+        details = fetch_store_details(appid)
+    except SteamError as exc:
+        messages.error(request, str(exc))
+        return
+
+    for field in ('title', 'description', 'developer'):
+        if details[field]:
+            form_data[field] = details[field]
+
+    if details['release_date']:
+        form_data['release_date'] = details['release_date'].isoformat()
+
+    form_data['steam_header_image'] = details['header_image']
+    form_data['download_steam_poster'] = True
+
+    messages.info(request, 'Дані заповнено зі Steam. Перевірте їх і збережіть форму.')
+
+
+def _validate_game_form(form_data, game=None):
+    if not form_data['title']:
+        return 'Назва гри обов’язкова.'
+
+    appid = form_data['steam_appid']
+
+    if appid:
+        if not is_valid_appid(appid):
+            return 'Steam AppID має складатися лише з цифр.'
+
+        duplicate = Game.objects.filter(steam_appid=appid)
+        if game is not None:
+            duplicate = duplicate.exclude(id=game.id)
+        duplicate = duplicate.first()
+
+        if duplicate:
+            return f'Steam AppID {appid} уже прив’язаний до гри "{duplicate.title}".'
+
+    return None
+
+
+def _save_game_from_form(request, game, form_data, selected_genres):
+    """Зберігає гру з форми. Повертає кількість бібліотек, куди гру додано через Steam."""
+    old_appid = game.steam_appid
+
+    game.title = form_data['title']
+    game.description = form_data['description']
+    game.developer = form_data['developer']
+    game.release_date = form_data['release_date'] or None
+    game.steam_appid = form_data['steam_appid'] or None
+
+    poster = request.FILES.get('poster')
+    if poster:
+        game.poster = poster
+    elif form_data['download_steam_poster'] and game.steam_appid:
+        if not download_steam_poster(game, form_data['steam_header_image']):
+            messages.warning(request, 'Не вдалося завантажити постер зі Steam.')
+
+    game.save()
+
+    GameGenre.objects.filter(game=game).delete()
+    for genre_id in selected_genres:
+        GameGenre.objects.create(game=game, genre_id=genre_id)
+
+    if game.steam_appid and game.steam_appid != old_appid:
+        return link_game_to_steam_owners(game)
+
+    return 0
+
+
+def _render_game_form(request, game, form_data, genres, selected_genre_ids, form_title, button_text):
+    return render(request, 'library/admin_game_form.html', {
+        'game': game,
+        'form_data': form_data,
+        'genres': genres,
+        'selected_genre_ids': selected_genre_ids,
+        'form_title': form_title,
+        'button_text': button_text,
+    })
+
+
+def _steam_link_message(added):
+    return f' Додано до бібліотек власників у Steam: {added}.' if added else ''
+
+
 def admin_game_add(request):
     user = get_current_user(request)
 
@@ -1451,48 +1606,25 @@ def admin_game_add(request):
     genres = Genre.objects.all().order_by('name')
 
     if request.method == 'POST':
-        title = request.POST.get('title')
-        description = request.POST.get('description')
-        developer = request.POST.get('developer')
-        release_date = request.POST.get('release_date')
+        form_data = _game_form_from_post(request)
         selected_genres = request.POST.getlist('genres')
-        poster = request.FILES.get('poster')
+        error = _validate_game_form(form_data)
 
-        if not title:
-            messages.error(request, 'Назва гри обов’язкова.')
-            return redirect('library:admin_game_add')
+        if error:
+            messages.error(request, error)
+            selected_ids = {int(g) for g in selected_genres if g.isdigit()}
+            return _render_game_form(request, None, form_data, genres, selected_ids, 'Додати гру', 'Додати гру')
 
-        game = Game(
-            title=title,
-            description=description,
-            developer=developer,
-            created_at=timezone.now()
-        )
+        game = Game(created_at=timezone.now())
+        added = _save_game_from_form(request, game, form_data, selected_genres)
 
-        if release_date:
-            game.release_date = release_date
-
-        if poster:
-            game.poster = poster
-
-        game.save()
-
-        for genre_id in selected_genres:
-            GameGenre.objects.create(
-                game=game,
-                genre_id=genre_id
-            )
-
-        messages.success(request, 'Гру додано до каталогу.')
+        messages.success(request, 'Гру додано до каталогу.' + _steam_link_message(added))
         return redirect('library:game_detail', game_id=game.id)
 
-    context = {
-        'genres': genres,
-        'form_title': 'Додати гру',
-        'button_text': 'Додати гру',
-    }
+    form_data = _game_form_initial()
+    _apply_steam_prefill(request, form_data)
 
-    return render(request, 'library/admin_game_form.html', context)
+    return _render_game_form(request, None, form_data, genres, set(), 'Додати гру', 'Додати гру')
 
 
 def admin_game_edit(request, game_id):
@@ -1511,44 +1643,24 @@ def admin_game_edit(request, game_id):
     )
 
     if request.method == 'POST':
-        game.title = request.POST.get('title')
-        game.description = request.POST.get('description')
-        game.developer = request.POST.get('developer')
-
-        release_date = request.POST.get('release_date')
-        if release_date:
-            game.release_date = release_date
-        else:
-            game.release_date = None
-
-        poster = request.FILES.get('poster')
-        if poster:
-            game.poster = poster
-
-        game.save()
-
+        form_data = _game_form_from_post(request)
         selected_genres = request.POST.getlist('genres')
+        error = _validate_game_form(form_data, game)
 
-        GameGenre.objects.filter(game=game).delete()
+        if error:
+            messages.error(request, error)
+            selected_ids = {int(g) for g in selected_genres if g.isdigit()}
+            return _render_game_form(request, game, form_data, genres, selected_ids, 'Редагувати гру', 'Зберегти зміни')
 
-        for genre_id in selected_genres:
-            GameGenre.objects.create(
-                game=game,
-                genre_id=genre_id
-            )
+        added = _save_game_from_form(request, game, form_data, selected_genres)
 
-        messages.success(request, 'Гру оновлено.')
+        messages.success(request, 'Гру оновлено.' + _steam_link_message(added))
         return redirect('library:game_detail', game_id=game.id)
 
-    context = {
-        'game': game,
-        'genres': genres,
-        'selected_genre_ids': selected_genre_ids,
-        'form_title': 'Редагувати гру',
-        'button_text': 'Зберегти зміни',
-    }
+    form_data = _game_form_initial(game)
+    _apply_steam_prefill(request, form_data)
 
-    return render(request, 'library/admin_game_form.html', context)
+    return _render_game_form(request, game, form_data, genres, selected_genre_ids, 'Редагувати гру', 'Зберегти зміни')
 
 
 def admin_game_delete(request, game_id):
@@ -1672,100 +1784,3 @@ def admin_genre_delete(request, genre_id):
             messages.success(request, f'Жанр "{genre_name}" видалено.')
 
     return redirect('library:admin_genre_list')
-
-def steam_connect(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
-
-    return redirect(build_steam_login_url(request))
-
-
-def steam_callback(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
-
-    if not validate_steam_openid_response(request):
-        messages.error(request, "Не вдалося підтвердити вхід через Steam. Спробуйте ще раз.")
-        return redirect("library:profile")
-
-    steam_id = extract_steam_id_from_openid(request)
-
-    if not steam_id:
-        messages.error(request, "Steam повернув некоректний ідентифікатор акаунта.")
-        return redirect("library:profile")
-
-    linked_to_other_user = (
-        ExternalAccount.objects
-        .filter(provider="steam", external_user_id=steam_id)
-        .exclude(user=user)
-        .exists()
-    )
-
-    if linked_to_other_user:
-        messages.error(request, "Цей Steam-акаунт уже прив'язаний до іншого користувача GameVault.")
-        return redirect("library:profile")
-
-    steam_profile = get_steam_profile(steam_id)
-
-    ExternalAccount.objects.update_or_create(
-        user=user,
-        provider="steam",
-        defaults={
-            "external_user_id": steam_id,
-            "username": steam_profile["username"] if steam_profile else f"Steam user {steam_id}",
-            "profile_url": steam_profile["profile_url"] if steam_profile else f"https://steamcommunity.com/profiles/{steam_id}",
-            "avatar_url": steam_profile["avatar_url"] if steam_profile else None,
-        }
-    )
-
-    messages.success(request, "Steam-акаунт підключено.")
-    return redirect("library:profile")
-
-
-@require_POST
-def steam_disconnect(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
-
-    # Імпортовані ігри Steam (external_library_items) видаляються каскадно;
-    # записи в бібліотеці GameVault залишаються.
-    ExternalAccount.objects.filter(user=user, provider="steam").delete()
-
-    messages.success(request, "Steam-акаунт відв'язано.")
-    return redirect("library:profile")
-
-
-@require_POST
-def steam_sync_library(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
-
-    steam_account = ExternalAccount.objects.filter(user=user, provider="steam").first()
-
-    if not steam_account:
-        messages.error(request, "Спочатку підключіть Steam-акаунт.")
-        return redirect("library:profile")
-
-    try:
-        result = sync_steam_library(user, steam_account)
-    except SteamError as exc:
-        messages.error(request, str(exc))
-        return redirect("library:profile")
-
-    text = (
-        f"Steam синхронізовано: {result['synced_count']} ігор отримано, "
-        f"{result['added_to_library_count']} додано до бібліотеки GameVault."
-    )
-    if result["removed_count"]:
-        text += f" Прибрано ігор, яких більше немає в Steam: {result['removed_count']}."
-
-    messages.success(request, text)
-    return redirect("library:profile")

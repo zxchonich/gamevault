@@ -99,6 +99,7 @@ class GameRequest(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
+    steam_appid = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     created_at = models.DateTimeField()
     reviewed_at = models.DateTimeField(blank=True, null=True)
@@ -294,6 +295,8 @@ class ExternalLibraryItem(models.Model):
     external_game_id = models.CharField(max_length=100)
     game_title = models.CharField(max_length=150)
     playtime_minutes = models.IntegerField(default=0)
+    playtime_2weeks_minutes = models.IntegerField(default=0)
+    last_played_at = models.DateTimeField(blank=True, null=True)
     launch_url = models.CharField(max_length=255, blank=True, null=True)
     synced_at = models.DateTimeField(auto_now=True)
 
@@ -303,6 +306,24 @@ class ExternalLibraryItem(models.Model):
         unique_together = (
             ("user", "provider", "external_game_id"),
         )
+
+    @property
+    def playtime_hours(self):
+        return round((self.playtime_minutes or 0) / 60, 1)
+
+    @property
+    def playtime_2weeks_hours(self):
+        return round((self.playtime_2weeks_minutes or 0) / 60, 1)
+
+    @property
+    def cover_url(self):
+        from library.services.steam_service import steam_cover_url
+        return steam_cover_url(self.external_game_id)
+
+    @property
+    def store_url(self):
+        from library.services.steam_service import steam_store_url
+        return steam_store_url(self.external_game_id)
 
     def __str__(self):
         return f"{self.provider}: {self.game_title}"

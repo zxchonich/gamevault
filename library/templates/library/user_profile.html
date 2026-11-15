@@ -210,6 +210,59 @@
         </section>
     </div>
 
+    {% if steam_summary %}
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Steam</h2>
+            <span>{{ steam_summary.games_count }} ігор · {{ steam_summary.total_hours }} год у грі</span>
+        </div>
+
+        <div class="profile-mini-actions">
+            <a href="{% url 'library:user_steam_library' profile_user.id %}">
+                <span>Library</span>
+                <b>Steam-бібліотека</b>
+            </a>
+
+            <a href="{{ steam_summary.account.profile_url }}" target="_blank" rel="noopener">
+                <span>Steam</span>
+                <b>Профіль у Steam</b>
+            </a>
+        </div>
+
+        {% if steam_summary.recent_games %}
+        <h3 class="steam-subhead">Нещодавно грав (2 тижні)</h3>
+        <div class="steam-mini-list">
+            {% for item in steam_summary.recent_games %}
+            <a class="steam-mini-card" href="{{ item.store_url }}" target="_blank" rel="noopener">
+                <img src="{{ item.cover_url }}" alt="{{ item.game_title }}" loading="lazy"
+                    onerror="this.remove()">
+                <div>
+                    <b>{{ item.game_title }}</b>
+                    <span>{{ item.playtime_2weeks_hours }} год за 2 тижні</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if steam_summary.top_games %}
+        <h3 class="steam-subhead">Найбільше годин</h3>
+        <div class="steam-mini-list">
+            {% for item in steam_summary.top_games %}
+            <a class="steam-mini-card" href="{{ item.store_url }}" target="_blank" rel="noopener">
+                <img src="{{ item.cover_url }}" alt="{{ item.game_title }}" loading="lazy"
+                    onerror="this.remove()">
+                <div>
+                    <b>{{ item.game_title }}</b>
+                    <span>{{ item.playtime_hours }} год</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
     <section class="dashboard-section">
         <div class="section-head">
             <h2>Останні ігри в бібліотеці</h2>

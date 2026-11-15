@@ -98,6 +98,21 @@
                     </b>
                 </div>
 
+                {% if game.steam_appid %}
+                <div>
+                    <span>Steam</span>
+                    <b>
+                        {% if steam_item %}
+                        {{ steam_item.playtime_hours }} год у грі ·
+                        <a href="{{ steam_item.launch_url }}">Запустити</a>
+                        {% else %}
+                        <a href="https://store.steampowered.com/app/{{ game.steam_appid }}/" target="_blank"
+                            rel="noopener">Сторінка в Steam</a>
+                        {% endif %}
+                    </b>
+                </div>
+                {% endif %}
+
                 <div>
                     <span>Розробник</span>
                     <b>

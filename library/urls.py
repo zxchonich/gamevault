@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import steam_views, views
 
 app_name = 'library'
 
@@ -38,8 +38,13 @@ urlpatterns = [
     path('edit-profile/', views.edit_profile, name='edit_profile'),
     path('manage/genres/', views.admin_genre_list, name='admin_genre_list'),
     path('manage/genres/<int:genre_id>/delete/', views.admin_genre_delete, name='admin_genre_delete'),
-    path("steam/connect/", views.steam_connect, name="steam_connect"),
-    path("steam/callback/", views.steam_callback, name="steam_callback"),
-    path("steam/disconnect/", views.steam_disconnect, name="steam_disconnect"),
-    path("steam/sync/", views.steam_sync_library, name="steam_sync_library"),
+    path("steam/connect/", steam_views.steam_connect, name="steam_connect"),
+    path("steam/callback/", steam_views.steam_callback, name="steam_callback"),
+    path("steam/disconnect/", steam_views.steam_disconnect, name="steam_disconnect"),
+    path("steam/sync/", steam_views.steam_sync_library, name="steam_sync_library"),
+    path("steam/library/", steam_views.steam_library, name="steam_library"),
+    path("steam/suggest/<int:appid>/", steam_views.steam_suggest_game, name="steam_suggest_game"),
+    path("users/<int:user_id>/steam/", steam_views.user_steam_library, name="user_steam_library"),
+    path("manage/steam-matching/", steam_views.admin_steam_matching, name="admin_steam_matching"),
+    path("manage/steam-matching/<int:game_id>/link/", steam_views.admin_steam_link, name="admin_steam_link"),
 ]

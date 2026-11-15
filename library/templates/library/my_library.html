@@ -213,6 +213,12 @@
                             {{ entry.status }}
                             {% endif %}
                         </span>
+
+                        {% if entry.steam_item %}
+                        <span class="game-status steam-badge" title="Час у Steam">
+                            Steam · {{ entry.steam_item.playtime_hours }} год
+                        </span>
+                        {% endif %}
                     </div>
 
                     <h3>
@@ -267,6 +273,12 @@
                             <a href="{% url 'library:game_detail' entry.game.id %}" class="secondary-action-link">
                                 Сторінка гри
                             </a>
+
+                            {% if entry.steam_item %}
+                            <a href="{{ entry.steam_item.launch_url }}" class="secondary-action-link">
+                                Запустити
+                            </a>
+                            {% endif %}
 
                             <form method="post" action="{% url 'library:delete_library_entry' entry.id %}"
                                 class="delete-entry-form">

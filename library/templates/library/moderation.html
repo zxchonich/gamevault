@@ -28,6 +28,10 @@
                 <a class="profile-secondary-link" href="{% url 'library:admin_game_add' %}">
                     Додати гру вручну
                 </a>
+
+                <a class="profile-secondary-link" href="{% url 'library:admin_steam_matching' %}">
+                    Зіставлення зі Steam
+                </a>
             </div>
         </div>
     </div>
@@ -86,7 +90,24 @@
                         <span>Email</span>
                         <b>{{ request_item.user.email }}</b>
                     </div>
+
+                    {% if request_item.steam_appid %}
+                    <div>
+                        <span>Steam</span>
+                        <b>
+                            <a href="https://store.steampowered.com/app/{{ request_item.steam_appid }}/" target="_blank"
+                                rel="noopener">AppID {{ request_item.steam_appid }}</a>
+                        </b>
+                    </div>
+                    {% endif %}
                 </div>
+
+                {% if request_item.steam_appid %}
+                <p class="steam-note">
+                    Після схвалення опис, розробник, дата виходу та постер підтягнуться зі Steam,
+                    а гра з'явиться в бібліотеках усіх, у кого вона є в Steam.
+                </p>
+                {% endif %}
 
                 <form method="post" action="{% url 'library:approve_request' request_item.id %}"
                     class="moderation-form">

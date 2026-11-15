@@ -1,8 +1,11 @@
+import datetime
 import os
 import re
+import unicodedata
 import urllib.parse
 
 import requests
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
@@ -12,6 +15,11 @@ from library.models import Game, LibraryEntry, ExternalLibraryItem
 STEAM_OPENID_URL = "https://steamcommunity.com/openid/login"
 STEAM_PLAYER_SUMMARIES_URL = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/"
 STEAM_OWNED_GAMES_URL = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
+STEAM_APP_DETAILS_URL = "https://store.steampowered.com/api/appdetails"
+STEAM_CDN_APP_URL = "https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/{file}"
+
+STEAM_APPID_RE = re.compile(r"^\d{1,10}$")
+MAX_POSTER_BYTES = 5 * 1024 * 1024
 
 # Steam повертає claimed_id виду https://steamcommunity.com/openid/id/<SteamID64>
 STEAM_CLAIMED_ID_RE = re.compile(r"^https?://steamcommunity\.com/openid/id/(\d{17})$")
@@ -143,6 +151,7 @@ def sync_steam_library(user, steam_account):
             appid = str(appid)
             playtime = game.get("playtime_forever") or 0
             playtime_by_appid[appid] = playtime
+            last_played = game.get("rtime_last_played") or 0
 
             ExternalLibraryItem.objects.update_or_create(
                 user=user,
@@ -152,6 +161,11 @@ def sync_steam_library(user, steam_account):
                     "external_account": steam_account,
                     "game_title": name,
                     "playtime_minutes": playtime,
+                    "playtime_2weeks_minutes": game.get("playtime_2weeks") or 0,
+                    "last_played_at": (
+                        datetime.datetime.fromtimestamp(last_played, tz=datetime.timezone.utc)
+                        if last_played else None
+                    ),
                     "launch_url": f"steam://run/{appid}",
                     "synced_at": now,
                 }
@@ -171,22 +185,187 @@ def sync_steam_library(user, steam_account):
         catalog_games = Game.objects.filter(steam_appid__in=playtime_by_appid.keys())
 
         for catalog_game in catalog_games:
-            status = "playing" if playtime_by_appid[catalog_game.steam_appid] > 0 else "planned"
-
-            _, created = LibraryEntry.objects.get_or_create(
-                user=user,
-                game=catalog_game,
-                defaults={
-                    "status": status,
-                    "added_at": now,
-                }
-            )
-
-            if created:
+            if _add_to_library(user.id, catalog_game, playtime_by_appid[catalog_game.steam_appid], now):
                 added_to_library_count += 1
 
     return {
         "synced_count": len(playtime_by_appid),
         "added_to_library_count": added_to_library_count,
         "removed_count": removed_count,
+    }
+
+
+def is_valid_appid(value):
+    return bool(value) and bool(STEAM_APPID_RE.match(value))
+
+
+def steam_cover_url(appid):
+    """Горизонтальна обкладинка за appid. Для частини нових ігор її немає за цим шляхом,
+    тому в шаблонах потрібен запасний варіант (onerror)."""
+    return STEAM_CDN_APP_URL.format(appid=appid, file="header.jpg")
+
+
+def steam_store_url(appid):
+    return f"https://store.steampowered.com/app/{appid}/"
+
+
+def normalize_title(title):
+    """Назва для порівняння: без регістру, ™/®/©, пунктуації та зайвих пробілів."""
+    title = unicodedata.normalize("NFKC", title or "").casefold()
+    title = re.sub(r"[™®©]", "", title)
+    title = re.sub(r"[^\w]+", " ", title)
+    return " ".join(title.split())
+
+
+def _add_to_library(user_id, game, playtime_minutes, added_at):
+    """Додає гру до бібліотеки GameVault, якщо її там ще немає. Повертає True, якщо додано."""
+    _, created = LibraryEntry.objects.get_or_create(
+        user_id=user_id,
+        game=game,
+        defaults={
+            "status": "playing" if playtime_minutes > 0 else "planned",
+            "added_at": added_at,
+        }
+    )
+    return created
+
+
+def link_game_to_steam_owners(game):
+    """Після призначення грі steam_appid додає її до бібліотек усіх, у кого вона є в Steam."""
+    if not game.steam_appid:
+        return 0
+
+    now = timezone.now()
+    added = 0
+    owners = (
+        ExternalLibraryItem.objects
+        .filter(provider="steam", external_game_id=game.steam_appid)
+        .values_list("user_id", "playtime_minutes")
+    )
+
+    with transaction.atomic():
+        for user_id, playtime in owners:
+            if _add_to_library(user_id, game, playtime, now):
+                added += 1
+
+    return added
+
+
+def _parse_store_date(value):
+    for fmt in ("%d %b, %Y", "%b %d, %Y", "%d %B, %Y", "%B %d, %Y"):
+        try:
+            return datetime.datetime.strptime(value, fmt).date()
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _fetch_app_data(appid, language):
+    try:
+        response = requests.get(
+            STEAM_APP_DETAILS_URL,
+            params={"appids": appid, "l": language},
+            timeout=REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json().get(str(appid)) or {}
+    except (requests.RequestException, ValueError) as exc:
+        raise SteamError("Не вдалося отримати дані гри зі Steam Store. Спробуйте пізніше.") from exc
+
+    if not payload.get("success"):
+        raise SteamError(f"Гру з appid {appid} не знайдено в Steam Store.")
+
+    return payload.get("data") or {}
+
+
+def fetch_store_details(appid):
+    """Дані гри зі Steam Store: назва, опис, розробник, дата виходу, URL зображення."""
+    data = _fetch_app_data(appid, "english")
+
+    description = data.get("short_description") or ""
+    try:
+        # Український опис, якщо Steam його має (інакше Steam поверне англійський).
+        description = _fetch_app_data(appid, "ukrainian").get("short_description") or description
+    except SteamError:
+        pass
+
+    release = data.get("release_date") or {}
+
+    return {
+        "steam_appid": str(appid),
+        "title": data.get("name") or "",
+        "description": description,
+        "developer": ", ".join(data.get("developers") or []),
+        "release_date": None if release.get("coming_soon") else _parse_store_date(release.get("date")),
+        "header_image": data.get("header_image") or "",
+    }
+
+
+def _download_image(url):
+    try:
+        response = requests.get(url, timeout=REQUEST_TIMEOUT, stream=True)
+        if response.status_code != 200 or not response.headers.get("Content-Type", "").startswith("image/"):
+            return None
+
+        content = response.raw.read(MAX_POSTER_BYTES + 1, decode_content=True)
+    except requests.RequestException:
+        return None
+
+    if not content or len(content) > MAX_POSTER_BYTES:
+        return None
+
+    return content
+
+
+def download_steam_poster(game, header_image_url=""):
+    """Завантажує постер гри зі Steam у game.poster (вертикальний, інакше header).
+    Повертає True, якщо постер збережено. Сам game не зберігає."""
+    appid = game.steam_appid
+
+    candidates = [STEAM_CDN_APP_URL.format(appid=appid, file="library_600x900.jpg")]
+    if header_image_url:
+        candidates.append(header_image_url)
+
+    for url in candidates:
+        content = _download_image(url)
+        if content:
+            game.poster.save(f"steam_{appid}.jpg", ContentFile(content), save=False)
+            return True
+
+    return False
+
+
+def steam_items_by_appid(user, appids):
+    """{appid: ExternalLibraryItem} для ігор користувача зі списку appid."""
+    appids = [a for a in appids if a]
+    if not user or not appids:
+        return {}
+
+    items = ExternalLibraryItem.objects.filter(
+        user=user, provider="steam", external_game_id__in=appids
+    )
+    return {item.external_game_id: item for item in items}
+
+
+def get_steam_summary(user, top_limit=5):
+    """Зведення по Steam для профілю. None, якщо Steam не підключено."""
+    from django.db.models import Max, Sum
+    from library.models import ExternalAccount
+
+    account = ExternalAccount.objects.filter(user=user, provider="steam").first()
+    if account is None:
+        return None
+
+    items = ExternalLibraryItem.objects.filter(user=user, provider="steam")
+    totals = items.aggregate(minutes=Sum("playtime_minutes"), last_synced=Max("synced_at"))
+
+    return {
+        "account": account,
+        "games_count": items.count(),
+        "total_hours": round((totals["minutes"] or 0) / 60),
+        "last_synced_at": totals["last_synced"],
+        "top_games": list(items.filter(playtime_minutes__gt=0).order_by("-playtime_minutes")[:top_limit]),
+        "recent_games": list(
+            items.filter(playtime_2weeks_minutes__gt=0).order_by("-playtime_2weeks_minutes")[:top_limit]
+        ),
     }

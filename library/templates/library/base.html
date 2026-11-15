@@ -33,6 +33,7 @@
                 {% if current_library_user and current_library_user.role.name == 'admin' %}
                 <a href="{% url 'library:moderation' %}">Модерація</a>
                 <a href="{% url 'library:admin_genre_list' %}">Жанри</a>
+                <a href="{% url 'library:admin_steam_matching' %}">Steam</a>
                 {% endif %}
         
                 {% if current_library_user %}

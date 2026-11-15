@@ -184,35 +184,42 @@
     <section class="dashboard-section">
         <div class="section-head">
             <h2>Підключені сервіси</h2>
-            <span>Імпорт бібліотек та запуск ігор</span>
+            <span>
+                {% if steam_summary and steam_summary.last_synced_at %}
+                Остання синхронізація Steam: {{ steam_summary.last_synced_at|date:"d.m.Y H:i" }}
+                {% else %}
+                Імпорт бібліотек та запуск ігор
+                {% endif %}
+            </span>
         </div>
-    
+
         <div class="profile-mini-actions">
-            {% if steam_account %}
-            <a href="{{ steam_account.profile_url }}" target="_blank">
+            {% if steam_summary %}
+            <a href="{{ steam_summary.account.profile_url }}" target="_blank" rel="noopener">
                 <span>Steam</span>
-                <b>Підключено</b>
+                <b>{{ steam_summary.account.username }}</b>
             </a>
-            
-            <a href="#">
-                <span>Library</span>
-                <b>{{ steam_games_count }} ігор</b>
+
+            <a href="{% url 'library:steam_library' %}">
+                <span>Library · {{ steam_summary.total_hours }} год</span>
+                <b>{{ steam_summary.games_count }} ігор</b>
             </a>
-            
-            <form class="inline-post-form" method="post" action="{% url 'library:steam_disconnect' %}">
-                {% csrf_token %}
-                <button type="submit" class="link-button">
-                <span>Steam</span>
-                <b>Відв'язати</b>
-            </button>
-            </form>
 
             <form class="inline-post-form" method="post" action="{% url 'library:steam_sync_library' %}">
                 {% csrf_token %}
                 <button type="submit" class="link-button">
-                <span>Steam</span>
-                <b>Синхронізувати</b>
-            </button>
+                    <span>Steam</span>
+                    <b>Синхронізувати</b>
+                </button>
+            </form>
+
+            <form class="inline-post-form" method="post" action="{% url 'library:steam_disconnect' %}">
+                {% csrf_token %}
+                <button type="submit" class="link-button"
+                    onclick="return confirm('Відв\'язати Steam? Імпортовані ігри Steam буде видалено, бібліотека GameVault залишиться.');">
+                    <span>Steam</span>
+                    <b>Відв'язати</b>
+                </button>
             </form>
             {% else %}
             <a href="{% url 'library:steam_connect' %}">
@@ -221,6 +228,38 @@
             </a>
             {% endif %}
         </div>
+
+        {% if steam_summary.recent_games %}
+        <h3 class="steam-subhead">Нещодавно грав (2 тижні)</h3>
+        <div class="steam-mini-list">
+            {% for item in steam_summary.recent_games %}
+            <a class="steam-mini-card" href="{{ item.store_url }}" target="_blank" rel="noopener">
+                <img src="{{ item.cover_url }}" alt="{{ item.game_title }}" loading="lazy"
+                    onerror="this.remove()">
+                <div>
+                    <b>{{ item.game_title }}</b>
+                    <span>{{ item.playtime_2weeks_hours }} год за 2 тижні</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if steam_summary.top_games %}
+        <h3 class="steam-subhead">Найбільше годин</h3>
+        <div class="steam-mini-list">
+            {% for item in steam_summary.top_games %}
+            <a class="steam-mini-card" href="{{ item.store_url }}" target="_blank" rel="noopener">
+                <img src="{{ item.cover_url }}" alt="{{ item.game_title }}" loading="lazy"
+                    onerror="this.remove()">
+                <div>
+                    <b>{{ item.game_title }}</b>
+                    <span>{{ item.playtime_hours }} год</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
     </section>
     <section class="dashboard-section">
         <div class="section-head">
