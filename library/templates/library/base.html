@@ -47,7 +47,9 @@
         {% if messages %}
         <div class="dashboard-section">
             {% for message in messages %}
-            <p>{{ message }}</p>
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
             {% endfor %}
         </div>
         {% endif %}

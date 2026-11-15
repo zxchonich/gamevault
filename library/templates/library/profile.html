@@ -181,7 +181,41 @@
             </div>
         </section>
     </div>
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Підключені сервіси</h2>
+            <span>Імпорт бібліотек та запуск ігор</span>
+        </div>
+    
+        <div class="profile-mini-actions">
+            {% if steam_account %}
+            <a href="{{ steam_account.profile_url }}" target="_blank">
+                <span>Steam</span>
+                <b>Підключено</b>
+            </a>
+            
+            <a href="#">
+                <span>Library</span>
+                <b>{{ steam_games_count }} ігор</b>
+            </a>
+            
+            <a href="{% url 'library:steam_disconnect' %}">
+                <span>Steam</span>
+                <b>Відв'язати</b>
+            </a>
 
+            <a href="{% url 'library:steam_sync_library' %}">
+                <span>Steam</span>
+                <b>Синхронізувати</b>
+            </a>
+            {% else %}
+            <a href="{% url 'library:steam_connect' %}">
+                <span>Steam</span>
+                <b>Підключити Steam</b>
+            </a>
+            {% endif %}
+        </div>
+    </section>
     <section class="dashboard-section">
         <div class="section-head">
             <h2>Останні ігри в бібліотеці</h2>

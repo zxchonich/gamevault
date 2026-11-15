@@ -2,10 +2,19 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.db import models, connection
 from django.db.models import Avg
-from .models import Game, Genre, Review, User, LibraryEntry, GameRequest, SocialConnection, Role, Recommendation, GameGenre
+from .models import Game, Genre, Review, User, LibraryEntry, GameRequest, SocialConnection, Role, Recommendation, GameGenre, ExternalAccount, ExternalLibraryItem
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.contrib.auth.hashers import make_password, check_password
+import urllib.parse
+from .services.steam_service import (
+    build_steam_login_url,
+    extract_steam_id_from_openid,
+    validate_steam_openid_response,
+    get_steam_profile,
+    get_owned_games,
+    sync_steam_library,
+)
 
 
 def home(request):
@@ -1034,6 +1043,19 @@ def profile(request):
     recent_entries = entries[:4]
     recent_reviews = reviews[:3]
 
+    steam_account = ExternalAccount.objects.filter(
+        user=user,
+        provider='steam'
+    ).first()
+
+    steam_games_count = 0
+
+    if steam_account:
+        steam_games_count = ExternalLibraryItem.objects.filter(
+            user=user,
+            provider='steam'
+        ).count()
+
     context = {
         'user': user,
         'profile_user': user,
@@ -1059,6 +1081,8 @@ def profile(request):
 
         'recent_entries': recent_entries,
         'recent_reviews': recent_reviews,
+        'steam_account': steam_account,
+        'steam_games_count': steam_games_count,
     }
 
     return render(request, 'library/profile.html', context)
@@ -1640,3 +1664,82 @@ def admin_genre_delete(request, genre_id):
             messages.success(request, f'Жанр "{genre_name}" видалено.')
 
     return redirect('library:admin_genre_list')
+
+def steam_connect(request):
+    user_id = request.session.get("library_user_id")
+
+    if not user_id:
+        return redirect("library:login")
+
+    steam_login_url = build_steam_login_url(request)
+
+    return redirect(steam_login_url)
+
+
+def steam_callback(request):
+    user_id = request.session.get("library_user_id")
+
+    if not user_id:
+        return redirect("library:login")
+
+    is_valid = validate_steam_openid_response(request)
+
+    if not is_valid:
+        return redirect("library:profile")
+
+    steam_id = extract_steam_id_from_openid(request)
+
+    if not steam_id:
+        return redirect("library:profile")
+    
+    steam_profile = get_steam_profile(steam_id)
+
+    ExternalAccount.objects.update_or_create(
+    user_id=user_id,
+    provider="steam",
+    defaults={
+        "external_user_id": steam_id,
+        "username": steam_profile["username"] if steam_profile else f"Steam user {steam_id}",
+        "profile_url": steam_profile["profile_url"] if steam_profile else f"https://steamcommunity.com/profiles/{steam_id}",
+        "avatar_url": steam_profile["avatar_url"] if steam_profile else None,
+    }
+)
+
+    return redirect("library:profile")
+
+def steam_disconnect(request):
+    user_id = request.session.get("library_user_id")
+
+    if not user_id:
+        return redirect("library:login")
+
+    ExternalAccount.objects.filter(
+        user_id=user_id,
+        provider="steam"
+    ).delete()
+
+    return redirect("library:profile")
+
+def steam_sync_library(request):
+    user = get_current_user(request)
+
+    if user is None:
+        return redirect("library:login")
+
+    steam_account = ExternalAccount.objects.filter(
+        user=user,
+        provider="steam"
+    ).first()
+
+    if not steam_account:
+        return redirect("library:profile")
+
+    result = sync_steam_library(user, steam_account)
+
+    messages.success(
+        request,
+        f"Steam синхронізовано: {result['synced_count']} ігор отримано, "
+        f"{result['added_to_library_count']} додано до бібліотеки GameVault."
+    )
+
+    return redirect("library:profile")

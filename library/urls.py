@@ -38,4 +38,8 @@ urlpatterns = [
     path('edit-profile/', views.edit_profile, name='edit_profile'),
     path('manage/genres/', views.admin_genre_list, name='admin_genre_list'),
     path('manage/genres/<int:genre_id>/delete/', views.admin_genre_delete, name='admin_genre_delete'),
+    path("steam/connect/", views.steam_connect, name="steam_connect"),
+    path("steam/callback/", views.steam_callback, name="steam_callback"),
+    path("steam/disconnect/", views.steam_disconnect, name="steam_disconnect"),
+    path("steam/sync/", views.steam_sync_library, name="steam_sync_library"),
 ]

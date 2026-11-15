@@ -38,6 +38,7 @@ class User(models.Model):
 
 class Game(models.Model):
     id = models.AutoField(primary_key=True)
+    steam_appid = models.CharField(max_length=100, unique=True, blank=True, null=True)
     title = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
     developer = models.CharField(max_length=100, blank=True, null=True)
@@ -247,3 +248,59 @@ class Recommendation(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.game.title}'
+    
+class ExternalAccount(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_column="user_id",
+        related_name="external_accounts"
+    )
+    provider = models.CharField(max_length=30)
+    external_user_id = models.CharField(max_length=100)
+    username = models.CharField(max_length=100, blank=True, null=True)
+    profile_url = models.CharField(max_length=255, blank=True, null=True)
+    avatar_url = models.CharField(max_length=255, blank=True, null=True)
+    connected_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "external_accounts"
+        managed = False
+        unique_together = (
+            ("provider", "external_user_id"),
+            ("user", "provider"),
+        )
+
+    def __str__(self):
+        return f"{self.provider}: {self.username or self.external_user_id}"
+
+
+class ExternalLibraryItem(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_column="user_id",
+        related_name="external_library_items"
+    )
+    external_account = models.ForeignKey(
+        ExternalAccount,
+        on_delete=models.CASCADE,
+        db_column="external_account_id",
+        related_name="library_items"
+    )
+    provider = models.CharField(max_length=30)
+    external_game_id = models.CharField(max_length=100)
+    game_title = models.CharField(max_length=150)
+    playtime_minutes = models.IntegerField(default=0)
+    launch_url = models.CharField(max_length=255, blank=True, null=True)
+    synced_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "external_library_items"
+        managed = False
+        unique_together = (
+            ("user", "provider", "external_game_id"),
+        )
+
+    def __str__(self):
+        return f"{self.provider}: {self.game_title}"
