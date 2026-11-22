@@ -12,7 +12,8 @@ from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 
-from library.models import ActivityEvent, ExternalLibraryItem, Game, SocialConnection
+from library.access import friend_ids
+from library.models import ActivityEvent, ExternalLibraryItem, Game
 from library.services.steam_service import attach_steam_apps
 
 # Повторні зміни статусу чи оцінки тієї самої гри протягом цього часу зливаються в одну подію.
@@ -113,16 +114,6 @@ class FeedItem:
     @property
     def extra_games_count(self):
         return max(0, len(self.games) - 3)
-
-
-def friend_ids(user):
-    rows = (
-        SocialConnection.objects
-        .filter(status="accepted")
-        .filter(models.Q(sender=user) | models.Q(receiver=user))
-        .values_list("sender_id", "receiver_id")
-    )
-    return {receiver if sender == user.id else sender for sender, receiver in rows}
 
 
 def _visible_to(viewer, queryset):

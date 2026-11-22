@@ -29,6 +29,14 @@ class PostOnlyActionsTests(GameVaultTestCase):
             reverse("library:steam_sync_library"),
             reverse("library:steam_suggest_game", args=[730]),
             reverse("library:admin_steam_link", args=[self.game.id]),
+            reverse("library:update_library_status", args=[1]),
+            reverse("library:delete_library_entry", args=[1]),
+            reverse("library:add_review", args=[self.game.id]),
+            reverse("library:delete_connection", args=[1]),
+            reverse("library:admin_game_delete", args=[self.game.id]),
+            reverse("library:admin_review_delete", args=[1]),
+            reverse("library:admin_genre_delete", args=[1]),
+            reverse("library:dismiss_recommendation", args=[self.game.id]),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -125,3 +133,27 @@ class OwnershipTests(GameVaultTestCase):
         )
 
         self.assertRedirects(response, reverse("library:my_reviews"), fetch_redirect_response=False)
+
+
+class AnonymousAccessTests(GameVaultTestCase):
+    def test_anonymous_actions_and_admin_pages_redirect_to_login(self):
+        target = self.make_user("bob")
+        game = self.make_game("Hades")
+
+        for url in [reverse("library:add_friend", args=[target.id]),
+                    reverse("library:add_to_library", args=[game.id])]:
+            with self.subTest(url=url):
+                self.assertRedirects(self.client.post(url), reverse("library:login"))
+
+        for name in ["library:moderation", "library:admin_game_add", "library:admin_steam_matching"]:
+            with self.subTest(page=name):
+                self.assertRedirects(self.client.get(reverse(name)), reverse("library:login"))
+
+    def test_cannot_befriend_yourself(self):
+        alice = self.make_user("alice")
+        self.login(alice)
+
+        response = self.client.post(reverse("library:add_friend", args=[alice.id]), follow=True)
+
+        self.assertIn("Не можна додати в друзі самого себе.", self.messages_of(response))
+

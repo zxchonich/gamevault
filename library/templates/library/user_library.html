@@ -1,5 +1,6 @@
 {% extends 'library/base.html' %}
 {% load static %}
+{% load library_extras %}
 
 {% block title %}Бібліотека {{ profile_user.username }} | GameVault{% endblock %}
 
@@ -231,19 +232,7 @@
 
                 <div class="library-game-content">
                     <span class="game-status active">
-                        {% if entry.status == 'planned' %}
-                        Планує
-                        {% elif entry.status == 'playing' %}
-                        Грає
-                        {% elif entry.status == 'completed' %}
-                        Пройдено
-                        {% elif entry.status == 'paused' %}
-                        Відкладено
-                        {% elif entry.status == 'dropped' %}
-                        Закинуто
-                        {% else %}
-                        {{ entry.status }}
-                        {% endif %}
+                        {{ entry.status|status_label_other }}
                     </span>
 
                     <h3>{{ entry.game.title }}</h3>

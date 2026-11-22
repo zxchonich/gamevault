@@ -109,10 +109,10 @@ class RecordingTests(GameVaultTestCase):
         self.make_steam_account(self.user)
         result = {"synced_count": 30, "added_to_library_count": 12, "removed_count": 0,
                   "details_fetched": 0, "details_pending": 0}
-        with mock.patch("library.steam_views.sync_steam_library", return_value=result):
+        with mock.patch("library.views.steam.sync_steam_library", return_value=result):
             self.client.post(reverse("library:steam_sync_library"))
         result["added_to_library_count"] = 0
-        with mock.patch("library.steam_views.sync_steam_library", return_value=result):
+        with mock.patch("library.views.steam.sync_steam_library", return_value=result):
             self.client.post(reverse("library:steam_sync_library"))
 
         events = events_of(self.user, ActivityEvent.STEAM_IMPORT)

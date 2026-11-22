@@ -1,5 +1,6 @@
 {% extends 'library/base.html' %}
 {% load static %}
+{% load library_extras %}
 
 {% block title %}Профіль {{ user.username }} | GameVault{% endblock %}
 
@@ -294,7 +295,7 @@
                 {% endif %}
 
                 <div>
-                    <span>{{ entry.status }}</span>
+                    <span>{{ entry.status|status_label }}</span>
                     <h3>{{ entry.game.title }}</h3>
                     <p>{{ entry.added_at }}</p>
                 </div>

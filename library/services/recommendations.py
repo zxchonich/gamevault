@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 from django.db import models
 
+from library.access import friend_ids as get_friend_ids
 from library.models import (
     DismissedRecommendation,
     ExternalLibraryItem,
@@ -22,7 +23,6 @@ from library.models import (
     GameGenre,
     LibraryEntry,
     Review,
-    SocialConnection,
     SteamApp,
     User,
 )
@@ -113,16 +113,6 @@ def _join_names(names, limit=2):
     return text
 
 
-def _friend_ids(user):
-    rows = (
-        SocialConnection.objects
-        .filter(status="accepted")
-        .filter(models.Q(sender=user) | models.Q(receiver=user))
-        .values_list("sender_id", "receiver_id")
-    )
-    return {receiver if sender == user.id else sender for sender, receiver in rows}
-
-
 def build_recommendations(user, limit=None):
     games = {game.id: game for game in Game.objects.all()}
     game_by_appid = {g.steam_appid: g.id for g in games.values() if g.steam_appid}
@@ -197,7 +187,7 @@ def build_recommendations(user, limit=None):
     liked.sort(key=lambda entry: (-entry[1], entry[0]))
 
     # --- Дані друзів ------------------------------------------------------------
-    friend_ids = _friend_ids(user)
+    friend_ids = get_friend_ids(user)
     friend_names = dict(User.objects.filter(id__in=friend_ids).values_list("id", "username"))
 
     friend_owners = {}  # game_id -> set(friend_id)

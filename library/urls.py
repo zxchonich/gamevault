@@ -1,53 +1,69 @@
 from django.urls import path
-from . import steam_views, views
+
+from .views import accounts, catalog, catalog_admin, discover, library, moderation, social, steam
 
 app_name = 'library'
 
 urlpatterns = [
-    path('', views.home, name='home'),
-    path('games/', views.game_list, name='game_list'),
-    path('games/<int:game_id>/', views.game_detail, name='game_detail'),
-    path('my-library/', views.my_library, name='my_library'),
-    path('games/<int:game_id>/add/', views.add_to_library, name='add_to_library'),
-    path('library/<int:entry_id>/status/', views.update_library_status, name='update_library_status'),
-    path('library/<int:entry_id>/delete/', views.delete_library_entry, name='delete_library_entry'),
-    path('games/<int:game_id>/review/', views.add_review, name='add_review'),
-    path('request-game/', views.request_game, name='request_game'),
-    path('my-requests/', views.my_requests, name='my_requests'),
-    path('recommendations/', views.recommendations, name='recommendations'),
-    path('feed/', views.feed, name='feed'),
-    path('recommendations/<int:game_id>/dismiss/', views.dismiss_recommendation, name='dismiss_recommendation'),
-    path('recommendations/<int:game_id>/restore/', views.restore_recommendation, name='restore_recommendation'),
-    path('users/', views.user_list, name='user_list'),
-    path('users/<int:user_id>/add-friend/', views.add_friend, name='add_friend'),
-    path('friends/', views.friends, name='friends'),
-    path('connections/<int:connection_id>/accept/', views.accept_connection, name='accept_connection'),
-    path('connections/<int:connection_id>/reject/', views.reject_connection, name='reject_connection'),
-    path('connections/<int:connection_id>/delete/', views.delete_connection, name='delete_connection'),
-    path('users/<int:user_id>/profile/', views.user_profile, name='user_profile'),
-    path('users/<int:user_id>/library/', views.user_library, name='user_library'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('profile/', views.profile, name='profile'),
-    path('my-reviews/', views.my_reviews, name='my_reviews'),
-    path('moderation/', views.moderation, name='moderation'),
-    path('moderation/<int:request_id>/approve/', views.approve_request, name='approve_request'),
-    path('moderation/<int:request_id>/reject/', views.reject_request, name='reject_request'),
-    path('manage/games/add/', views.admin_game_add, name='admin_game_add'),
-    path('manage/games/<int:game_id>/edit/', views.admin_game_edit, name='admin_game_edit'),
-    path('manage/games/<int:game_id>/delete/', views.admin_game_delete, name='admin_game_delete'),
-    path('manage/reviews/<int:review_id>/delete/', views.admin_review_delete, name='admin_review_delete'),
-    path('register/', views.register_view, name='register'),
-    path('edit-profile/', views.edit_profile, name='edit_profile'),
-    path('manage/genres/', views.admin_genre_list, name='admin_genre_list'),
-    path('manage/genres/<int:genre_id>/delete/', views.admin_genre_delete, name='admin_genre_delete'),
-    path("steam/connect/", steam_views.steam_connect, name="steam_connect"),
-    path("steam/callback/", steam_views.steam_callback, name="steam_callback"),
-    path("steam/disconnect/", steam_views.steam_disconnect, name="steam_disconnect"),
-    path("steam/sync/", steam_views.steam_sync_library, name="steam_sync_library"),
-    path("steam/library/", steam_views.steam_library, name="steam_library"),
-    path("steam/suggest/<int:appid>/", steam_views.steam_suggest_game, name="steam_suggest_game"),
-    path("users/<int:user_id>/steam/", steam_views.user_steam_library, name="user_steam_library"),
-    path("manage/steam-matching/", steam_views.admin_steam_matching, name="admin_steam_matching"),
-    path("manage/steam-matching/<int:game_id>/link/", steam_views.admin_steam_link, name="admin_steam_link"),
+    # Каталог
+    path('', catalog.home, name='home'),
+    path('games/', catalog.game_list, name='game_list'),
+    path('games/<int:game_id>/', catalog.game_detail, name='game_detail'),
+
+    # Бібліотека та рецензії
+    path('my-library/', library.my_library, name='my_library'),
+    path('games/<int:game_id>/add/', library.add_to_library, name='add_to_library'),
+    path('library/<int:entry_id>/status/', library.update_library_status, name='update_library_status'),
+    path('library/<int:entry_id>/delete/', library.delete_library_entry, name='delete_library_entry'),
+    path('games/<int:game_id>/review/', library.add_review, name='add_review'),
+    path('my-reviews/', library.my_reviews, name='my_reviews'),
+    path('users/<int:user_id>/library/', library.user_library, name='user_library'),
+
+    # Заявки на ігри та модерація
+    path('request-game/', moderation.request_game, name='request_game'),
+    path('my-requests/', moderation.my_requests, name='my_requests'),
+    path('moderation/', moderation.moderation, name='moderation'),
+    path('moderation/<int:request_id>/approve/', moderation.approve_request, name='approve_request'),
+    path('moderation/<int:request_id>/reject/', moderation.reject_request, name='reject_request'),
+
+    # Рекомендації та стрічка
+    path('recommendations/', discover.recommendations, name='recommendations'),
+    path('recommendations/<int:game_id>/dismiss/', discover.dismiss_recommendation, name='dismiss_recommendation'),
+    path('recommendations/<int:game_id>/restore/', discover.restore_recommendation, name='restore_recommendation'),
+    path('feed/', discover.feed, name='feed'),
+
+    # Користувачі, друзі, профілі
+    path('users/', social.user_list, name='user_list'),
+    path('users/<int:user_id>/add-friend/', social.add_friend, name='add_friend'),
+    path('friends/', social.friends, name='friends'),
+    path('connections/<int:connection_id>/accept/', social.accept_connection, name='accept_connection'),
+    path('connections/<int:connection_id>/reject/', social.reject_connection, name='reject_connection'),
+    path('connections/<int:connection_id>/delete/', social.delete_connection, name='delete_connection'),
+    path('users/<int:user_id>/profile/', social.user_profile, name='user_profile'),
+    path('profile/', social.profile, name='profile'),
+    path('edit-profile/', social.edit_profile, name='edit_profile'),
+
+    # Акаунт
+    path('login/', accounts.login_view, name='login'),
+    path('logout/', accounts.logout_view, name='logout'),
+    path('register/', accounts.register_view, name='register'),
+
+    # Адміністрування каталогу
+    path('manage/games/add/', catalog_admin.admin_game_add, name='admin_game_add'),
+    path('manage/games/<int:game_id>/edit/', catalog_admin.admin_game_edit, name='admin_game_edit'),
+    path('manage/games/<int:game_id>/delete/', catalog_admin.admin_game_delete, name='admin_game_delete'),
+    path('manage/reviews/<int:review_id>/delete/', catalog_admin.admin_review_delete, name='admin_review_delete'),
+    path('manage/genres/', catalog_admin.admin_genre_list, name='admin_genre_list'),
+    path('manage/genres/<int:genre_id>/delete/', catalog_admin.admin_genre_delete, name='admin_genre_delete'),
+
+    # Steam
+    path("steam/connect/", steam.steam_connect, name="steam_connect"),
+    path("steam/callback/", steam.steam_callback, name="steam_callback"),
+    path("steam/disconnect/", steam.steam_disconnect, name="steam_disconnect"),
+    path("steam/sync/", steam.steam_sync_library, name="steam_sync_library"),
+    path("steam/library/", steam.steam_library, name="steam_library"),
+    path("steam/suggest/<int:appid>/", steam.steam_suggest_game, name="steam_suggest_game"),
+    path("users/<int:user_id>/steam/", steam.user_steam_library, name="user_steam_library"),
+    path("manage/steam-matching/", steam.admin_steam_matching, name="admin_steam_matching"),
+    path("manage/steam-matching/<int:game_id>/link/", steam.admin_steam_link, name="admin_steam_link"),
 ]

@@ -155,10 +155,10 @@ class SteamAccountViewsTests(GameVaultTestCase):
         self.login(self.user)
 
     def callback(self, steam_id="76561197960287930"):
-        with mock.patch("library.steam_views.validate_steam_openid_response", return_value=True), \
-                mock.patch("library.steam_views.extract_steam_id_from_openid", return_value=steam_id), \
-                mock.patch("library.steam_views.get_steam_profile", return_value=None), \
-                mock.patch("library.steam_views.sync_steam_library",
+        with mock.patch("library.views.steam.validate_steam_openid_response", return_value=True), \
+                mock.patch("library.views.steam.extract_steam_id_from_openid", return_value=steam_id), \
+                mock.patch("library.views.steam.get_steam_profile", return_value=None), \
+                mock.patch("library.views.steam.sync_steam_library",
                            return_value={"synced_count": 0, "added_to_library_count": 0,
                                          "removed_count": 0}) as sync_mock:
             response = self.client.get(reverse("library:steam_callback"))
@@ -182,7 +182,7 @@ class SteamAccountViewsTests(GameVaultTestCase):
 
     def test_sync_shows_steam_error(self):
         self.make_steam_account(self.user)
-        with mock.patch("library.steam_views.sync_steam_library", side_effect=SteamError("Steam недоступний")):
+        with mock.patch("library.views.steam.sync_steam_library", side_effect=SteamError("Steam недоступний")):
             response = self.client.post(reverse("library:steam_sync_library"), follow=True)
 
         self.assertIn("Steam недоступний", self.messages_of(response))
@@ -292,8 +292,8 @@ class SteamAdminTests(GameVaultTestCase):
         self.make_steam_item(self.account, 578080, "PUBG: BATTLEGROUNDS", playtime=120)
         self.login(self.admin)
 
-    @mock.patch("library.views.download_steam_poster", return_value=True)
-    @mock.patch("library.views.fetch_store_details", return_value=STORE_DETAILS)
+    @mock.patch("library.views.moderation.download_steam_poster", return_value=True)
+    @mock.patch("library.views.moderation.fetch_store_details", return_value=STORE_DETAILS)
     def test_approve_steam_request_fills_data_and_links_owners(self, fetch_mock, poster_mock):
         request = GameRequest.objects.create(
             user=self.alice, title="PUBG: BATTLEGROUNDS", steam_appid="578080",
@@ -344,7 +344,7 @@ class SteamAdminTests(GameVaultTestCase):
         self.assertEqual(game.steam_appid, "578080")
         self.assertTrue(LibraryEntry.objects.filter(user=self.alice, game=game).exists())
 
-    @mock.patch("library.views.fetch_store_details", return_value=STORE_DETAILS)
+    @mock.patch("library.views.catalog_admin.fetch_store_details", return_value=STORE_DETAILS)
     def test_game_form_prefill_from_steam(self, fetch_mock):
         response = self.client.get(reverse("library:admin_game_add") + "?steam_appid=578080")
 

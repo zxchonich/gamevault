@@ -6,11 +6,13 @@ from django.core.paginator import Paginator
 from django.db import models
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry, User
-from .services.steam_service import (
+from ..access import admin_required, can_view_profile, library_login_required, redirect_to_next
+from ..models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry, User
+from ..selectors import get_status_label
+from ..services import activity
+from ..services.steam_service import (
     SteamError,
     attach_steam_apps,
     build_steam_login_url,
@@ -22,19 +24,8 @@ from .services.steam_service import (
     sync_steam_library,
     validate_steam_openid_response,
 )
-from .services import activity
-from .views import can_view_profile, get_current_user, get_status_label, is_admin_user
 
 STEAM_LIBRARY_PAGE_SIZE = 24
-
-
-def _redirect_back(request, fallback, *args):
-    next_url = request.POST.get("next") or request.GET.get("next")
-    if next_url and url_has_allowed_host_and_scheme(
-        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
-    ):
-        return redirect(next_url)
-    return redirect(fallback, *args)
 
 
 def _sync_and_report(request, user, steam_account):
@@ -63,20 +54,16 @@ def _sync_and_report(request, user, steam_account):
 
 # --- Підключення та синхронізація ---------------------------------------------
 
+@library_login_required
 def steam_connect(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
+    user = request.library_user
 
     return redirect(build_steam_login_url(request))
 
 
+@library_login_required
 def steam_callback(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
+    user = request.library_user
 
     if not validate_steam_openid_response(request):
         messages.error(request, "Не вдалося підтвердити вхід через Steam. Спробуйте ще раз.")
@@ -121,11 +108,9 @@ def steam_callback(request):
 
 
 @require_POST
+@library_login_required
 def steam_disconnect(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
+    user = request.library_user
 
     # Імпортовані ігри Steam (external_library_items) видаляються каскадно;
     # записи в бібліотеці GameVault залишаються.
@@ -136,11 +121,9 @@ def steam_disconnect(request):
 
 
 @require_POST
+@library_login_required
 def steam_sync_library(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
+    user = request.library_user
 
     steam_account = ExternalAccount.objects.filter(user=user, provider="steam").first()
 
@@ -149,7 +132,7 @@ def steam_sync_library(request):
         return redirect("library:profile")
 
     _sync_and_report(request, user, steam_account)
-    return _redirect_back(request, "library:profile")
+    return redirect_to_next(request, "library:profile")
 
 
 # --- Steam-бібліотека --------------------------------------------------------
@@ -229,20 +212,16 @@ def _render_steam_library(request, viewer, owner):
     return render(request, "library/steam_library.html", context)
 
 
+@library_login_required
 def steam_library(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
+    user = request.library_user
 
     return _render_steam_library(request, user, user)
 
 
+@library_login_required
 def user_steam_library(request, user_id):
-    viewer = get_current_user(request)
-
-    if viewer is None:
-        return redirect("library:login")
+    viewer = request.library_user
 
     owner = get_object_or_404(User, id=user_id)
 
@@ -256,12 +235,10 @@ def user_steam_library(request, user_id):
 
 
 @require_POST
+@library_login_required
 def steam_suggest_game(request, appid):
     """Створює заявку на додавання гри з власної Steam-бібліотеки до каталогу."""
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
+    user = request.library_user
 
     item = get_object_or_404(
         ExternalLibraryItem, user=user, provider="steam", external_game_id=str(appid)
@@ -282,20 +259,13 @@ def steam_suggest_game(request, appid):
         )
         messages.success(request, f'Заявку на додавання "{item.game_title}" до каталогу надіслано.')
 
-    return _redirect_back(request, "library:steam_library")
+    return redirect_to_next(request, "library:steam_library")
 
 
 # --- Зіставлення каталогу зі Steam (адміністратор) ----------------------------
 
+@admin_required
 def admin_steam_matching(request):
-    user = get_current_user(request)
-
-    if user is None:
-        return redirect("library:login")
-
-    if not is_admin_user(user):
-        return render(request, "library/no_access.html")
-
     catalog_appids = set(
         Game.objects.exclude(steam_appid__isnull=True).exclude(steam_appid="")
         .values_list("steam_appid", flat=True)
@@ -334,12 +304,8 @@ def admin_steam_matching(request):
 
 
 @require_POST
+@admin_required
 def admin_steam_link(request, game_id):
-    user = get_current_user(request)
-
-    if not is_admin_user(user):
-        return render(request, "library/no_access.html")
-
     game = get_object_or_404(Game, id=game_id)
     appid = request.POST.get("steam_appid", "").strip()
 

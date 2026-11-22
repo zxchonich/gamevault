@@ -1,5 +1,6 @@
 {% extends 'library/base.html' %}
 {% load static %}
+{% load library_extras %}
 
 {% block title %}{{ game.title }} | GameVault{% endblock %}
 
@@ -79,19 +80,7 @@
                     <span>Статус</span>
                     <b>
                         {% if library_entry %}
-                        {% if library_entry.status == 'planned' %}
-                        Планую
-                        {% elif library_entry.status == 'playing' %}
-                        Граю
-                        {% elif library_entry.status == 'completed' %}
-                        Пройдено
-                        {% elif library_entry.status == 'paused' %}
-                        Відкладено
-                        {% elif library_entry.status == 'dropped' %}
-                        Закинуто
-                        {% else %}
-                        {{ library_entry.status }}
-                        {% endif %}
+                        {{ library_entry.status|status_label }}
                         {% else %}
                         Не додано
                         {% endif %}
@@ -182,19 +171,7 @@
                     <li>Гра вже додана до вашої бібліотеки.</li>
                     <li>
                         Поточний статус:
-                        {% if library_entry.status == 'planned' %}
-                        Планую.
-                        {% elif library_entry.status == 'playing' %}
-                        Граю.
-                        {% elif library_entry.status == 'completed' %}
-                        Пройдено.
-                        {% elif library_entry.status == 'paused' %}
-                        Відкладено.
-                        {% elif library_entry.status == 'dropped' %}
-                        Закинуто.
-                        {% else %}
-                        {{ library_entry.status }}.
-                        {% endif %}
+                        {{ library_entry.status|status_label }}.
                     </li>
                     {% else %}
                     <li>Гра ще не додана до вашої бібліотеки.</li>

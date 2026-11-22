@@ -1,0 +1,234 @@
+"""Користувачі, друзі, профілі."""
+
+from django.contrib import messages
+from django.contrib.auth.hashers import make_password
+from django.db import models
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from ..access import can_view_profile, connection_between, friend_ids, library_login_required
+from ..forms import ProfileForm
+from ..models import LibraryEntry, SocialConnection, User
+from ..selectors import profile_stats
+from ..services import activity
+from ..services.steam_service import get_steam_summary
+
+SUGGESTED_USERS = 3
+
+
+def private_profile_response(request, viewer, owner, connection):
+    """Заглушка закритого профілю (для профілю та бібліотеки)."""
+    return render(request, "library/private_profile.html", {
+        "current_user": viewer,
+        "profile_user": owner,
+        "connection": connection,
+        "library_count": LibraryEntry.objects.filter(user=owner).count(),
+    })
+
+
+@library_login_required
+def user_list(request):
+    current_user = request.library_user
+    connections = SocialConnection.objects.filter(models.Q(sender=current_user) | models.Q(receiver=current_user))
+
+    status_by_user = {}
+    for connection in connections:
+        other_id = connection.receiver_id if connection.sender_id == current_user.id else connection.sender_id
+        status_by_user[other_id] = connection.status
+
+    users = User.objects.exclude(id=current_user.id).order_by("username")
+
+    return render(request, "library/user_list.html", {
+        "current_user": current_user,
+        "users_data": [{"user": user, "connection_status": status_by_user.get(user.id)} for user in users],
+    })
+
+
+@library_login_required
+def friends(request):
+    current_user = request.library_user
+
+    sent_requests = SocialConnection.objects.filter(sender=current_user, status="pending").select_related("receiver")
+    received_requests = (
+        SocialConnection.objects.filter(receiver=current_user, status="pending").select_related("sender")
+    )
+    accepted_connections = (
+        SocialConnection.objects
+        .filter(status="accepted")
+        .filter(models.Q(sender=current_user) | models.Q(receiver=current_user))
+        .select_related("sender", "receiver")
+    )
+
+    connected_ids = set()
+    for sender_id, receiver_id in (
+        SocialConnection.objects
+        .filter(models.Q(sender=current_user) | models.Q(receiver=current_user))
+        .values_list("sender_id", "receiver_id")
+    ):
+        connected_ids.add(receiver_id if sender_id == current_user.id else sender_id)
+
+    # Пропозиції: друзі друзів, а якщо їх мало — будь-хто, з ким ще немає зв'язку.
+    my_friends = friend_ids(current_user)
+    friends_of_friends = set()
+    for sender_id, receiver_id in (
+        SocialConnection.objects
+        .filter(status="accepted")
+        .filter(models.Q(sender_id__in=my_friends) | models.Q(receiver_id__in=my_friends))
+        .values_list("sender_id", "receiver_id")
+    ):
+        candidate = receiver_id if sender_id in my_friends else sender_id
+        if candidate != current_user.id and candidate not in connected_ids:
+            friends_of_friends.add(candidate)
+
+    suggested = list(User.objects.filter(id__in=friends_of_friends).order_by("username")[:SUGGESTED_USERS])
+    if len(suggested) < SUGGESTED_USERS:
+        suggested += list(
+            User.objects
+            .exclude(id=current_user.id)
+            .exclude(id__in=connected_ids | friends_of_friends)
+            .order_by("username")[:SUGGESTED_USERS - len(suggested)]
+        )
+
+    return render(request, "library/friends.html", {
+        "current_user": current_user,
+        "sent_requests": sent_requests,
+        "received_requests": received_requests,
+        "accepted_connections": accepted_connections,
+        "suggested_users": suggested,
+        "friends_count": accepted_connections.count(),
+        "received_requests_count": received_requests.count(),
+        "sent_requests_count": sent_requests.count(),
+    })
+
+
+@require_POST
+@library_login_required
+def add_friend(request, user_id):
+    current_user = request.library_user
+    target_user = get_object_or_404(User, id=user_id)
+
+    if current_user.id == target_user.id:
+        messages.error(request, "Не можна додати в друзі самого себе.")
+        return redirect("library:user_list")
+
+    if connection_between(current_user, target_user) is None:
+        SocialConnection.objects.create(
+            sender=current_user, receiver=target_user, status="pending", created_at=timezone.now()
+        )
+        messages.success(request, f"Заявку в друзі для {target_user.username} надіслано.")
+    else:
+        messages.info(request, "Заявка або зв’язок з цим користувачем уже існує.")
+
+    return redirect("library:friends")
+
+
+@require_POST
+@library_login_required
+def accept_connection(request, connection_id):
+    current_user = request.library_user
+    connection = get_object_or_404(SocialConnection, id=connection_id)
+
+    if connection.receiver_id == current_user.id:
+        if connection.status != "accepted":
+            activity.record_friendship(current_user, connection.sender)
+        connection.status = "accepted"
+        connection.save()
+        messages.success(request, "Заявку в друзі прийнято.")
+
+    return redirect("library:friends")
+
+
+@require_POST
+@library_login_required
+def reject_connection(request, connection_id):
+    current_user = request.library_user
+    connection = get_object_or_404(SocialConnection, id=connection_id)
+
+    if connection.receiver_id == current_user.id:
+        connection.status = "rejected"
+        connection.save()
+        messages.success(request, "Заявку в друзі відхилено.")
+
+    return redirect("library:friends")
+
+
+@require_POST
+@library_login_required
+def delete_connection(request, connection_id):
+    current_user = request.library_user
+    connection = get_object_or_404(SocialConnection, id=connection_id)
+
+    if current_user.id not in (connection.sender_id, connection.receiver_id):
+        return render(request, "library/no_access.html")
+
+    other_user = connection.receiver if connection.sender_id == current_user.id else connection.sender
+    connection.delete()
+
+    messages.success(request, f"Користувача {other_user.username} видалено з друзів.")
+    return redirect("library:friends")
+
+
+@library_login_required
+def profile(request):
+    user = request.library_user
+
+    return render(request, "library/profile.html", {
+        "user": user,
+        "profile_user": user,
+        "is_own_profile": True,
+        **profile_stats(user),
+        "steam_summary": get_steam_summary(user),
+        "recent_activity": activity.user_activity(user, user),
+    })
+
+
+@library_login_required
+def user_profile(request, user_id):
+    current_user = request.library_user
+    profile_user = get_object_or_404(User, id=user_id)
+
+    if current_user.id == profile_user.id:
+        return redirect("library:profile")
+
+    connection = connection_between(current_user, profile_user)
+
+    if not can_view_profile(current_user, profile_user):
+        return private_profile_response(request, current_user, profile_user, connection)
+
+    return render(request, "library/user_profile.html", {
+        "current_user": current_user,
+        "profile_user": profile_user,
+        "connection": connection,
+        **profile_stats(profile_user),
+        "steam_summary": get_steam_summary(profile_user),
+        "recent_activity": activity.user_activity(current_user, profile_user),
+    })
+
+
+@library_login_required
+def edit_profile(request):
+    user = request.library_user
+    error = None
+
+    if request.method == "POST":
+        form = ProfileForm(request.POST, request.FILES, user=user)
+
+        if form.is_valid():
+            data = form.cleaned_data
+            user.username = data["username"]
+            user.email = data["email"]
+            user.is_private = data["is_private"]
+            user.show_activity = data["show_activity"]
+            if data["password"]:
+                user.password_hash = make_password(data["password"])
+            if data["avatar"]:
+                user.avatar = data["avatar"]
+            user.save()
+
+            messages.success(request, "Профіль успішно оновлено.")
+            return redirect("library:profile")
+
+        error = form.first_error()
+
+    return render(request, "library/edit_profile.html", {"user": user, "error": error})
