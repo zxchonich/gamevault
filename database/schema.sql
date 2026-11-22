@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-004.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-005.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -71,6 +71,7 @@ CREATE TABLE `users` (
   `created_at` datetime NOT NULL,
   `avatar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_private` tinyint(1) NOT NULL DEFAULT '0',
+  `show_activity` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   KEY `fk_users_roles` (`role_id`),
   CONSTRAINT `fk_users_roles` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`)
@@ -158,6 +159,28 @@ CREATE TABLE `dismissed_recommendations` (
   KEY `fk_dismissed_recommendations_game` (`game_id`),
   CONSTRAINT `fk_dismissed_recommendations_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_dismissed_recommendations_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `activity_events` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `event_type` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'library_add, status_change, review, steam_import, friendship, game_approved',
+  `game_id` int DEFAULT NULL,
+  `target_user_id` int DEFAULT NULL COMMENT '╨┤╤А╤Г╨│╨╕╨╣ ╨║╨╛╤А╨╕╤Б╤В╤Г╨▓╨░╤З (╨┤╨╗╤П friendship)',
+  `status` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '╨╜╨╛╨▓╨╕╨╣ ╤Б╤В╨░╤В╤Г╤Б (status_change)',
+  `score` smallint DEFAULT NULL COMMENT '╨╛╤Ж╤Ц╨╜╨║╨░ (review)',
+  `item_count` int DEFAULT NULL COMMENT '╨║╤Ц╨╗╤М╨║╤Ц╤Б╤В╤М ╤Ц╨│╨╛╤А (steam_import)',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_activity_events_created` (`created_at`),
+  KEY `idx_activity_events_user_created` (`user_id`,`created_at`),
+  KEY `fk_activity_events_game` (`game_id`),
+  KEY `fk_activity_events_target_user` (`target_user_id`),
+  CONSTRAINT `fk_activity_events_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_activity_events_target_user` FOREIGN KEY (`target_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_activity_events_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

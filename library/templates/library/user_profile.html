@@ -263,6 +263,22 @@
     </section>
     {% endif %}
 
+    {% if recent_activity %}
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Остання активність</h2>
+            {% if is_own_profile %}<a class="profile-secondary-link" href="{% url 'library:feed' %}">Уся стрічка</a>{% endif %}
+        </div>
+
+        <div class="feed-list">
+            {% for item in recent_activity %}
+            {% include 'library/_feed_item.html' %}
+            {% endfor %}
+        </div>
+    </section>
+
+    {% endif %}
+
     <section class="dashboard-section">
         <div class="section-head">
             <h2>Останні ігри в бібліотеці</h2>

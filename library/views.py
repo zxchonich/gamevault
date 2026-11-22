@@ -9,6 +9,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 import urllib.parse
+from .services import activity
 from .services.recommendations import build_recommendations
 from .services.steam_service import (
     SteamError,
@@ -71,8 +72,12 @@ def home(request):
     user_friends_count = 0
 
     home_recommendations = []
+    home_feed = []
+    home_now_playing = []
 
     if current_user is not None:
+        home_feed = activity.build_feed(current_user, limit=8)[:5]
+        home_now_playing = activity.now_playing(current_user, limit=4)
         home_recommendations = attach_visible_genres_to_recommendations(
             build_recommendations(current_user, limit=3).recommendations
         )
@@ -91,6 +96,8 @@ def home(request):
     context = {
         'current_user': current_user,
         'home_recommendations': home_recommendations,
+        'home_feed': home_feed,
+        'home_now_playing': home_now_playing,
         'games': games,
         'genres': genres,
         'top_rated_games': top_rated_games,
@@ -394,6 +401,7 @@ def add_to_library(request, game_id):
     )
 
     if created:
+        activity.record_library_add(user, game)
         messages.success(request, f'Гру "{game.title}" додано до бібліотеки.')
     else:
         messages.info(request, f'Гра "{game.title}" вже є у вашій бібліотеці.')
@@ -415,6 +423,8 @@ def update_library_status(request, entry_id):
         allowed_statuses = ['planned', 'playing', 'completed', 'paused', 'dropped']
 
         if new_status in allowed_statuses:
+            if new_status != entry.status:
+                activity.record_status_change(user, entry.game, new_status)
             entry.status = new_status
             entry.save()
             messages.success(request, f'Статус гри "{entry.game.title}" оновлено.')
@@ -448,6 +458,9 @@ def add_review(request, game_id):
                     'created_at': timezone.now(),
                 }
             )
+
+            if created or review.score != score:
+                activity.record_review(user, game, score)
 
             if created:
                 messages.success(request, 'Рецензію додано.')
@@ -726,6 +739,8 @@ def accept_connection(request, connection_id):
     connection = get_object_or_404(SocialConnection, id=connection_id)
 
     if current_user is not None and connection.receiver_id == current_user.id:
+        if connection.status != 'accepted':
+            activity.record_friendship(current_user, connection.sender)
         connection.status = 'accepted'
         connection.save()
         messages.success(request, 'Заявку в друзі прийнято.')
@@ -988,6 +1003,7 @@ def profile(request):
         'recent_entries': recent_entries,
         'recent_reviews': recent_reviews,
         'steam_summary': get_steam_summary(user),
+        'recent_activity': activity.user_activity(user, user),
     }
 
     return render(request, 'library/profile.html', context)
@@ -1094,6 +1110,7 @@ def user_profile(request, user_id):
         'recent_entries': recent_entries,
         'recent_reviews': recent_reviews,
         'steam_summary': get_steam_summary(profile_user),
+        'recent_activity': activity.user_activity(current_user, profile_user),
     }
 
     return render(request, 'library/user_profile.html', context)
@@ -1195,6 +1212,7 @@ def approve_request(request, request_id):
             add_game_genres(game.id, selected_genres)
 
         game_request.save()
+        activity.record_game_approved(game_request.user, game)
 
         added = link_game_to_steam_owners(game) if appid else 0
 
@@ -1281,6 +1299,7 @@ def delete_library_entry(request, entry_id):
 
     if request.method == 'POST':
         Review.objects.filter(user=user, game=entry.game).delete()
+        activity.forget_game_activity(user, entry.game)
 
         entry.delete()
 
@@ -1351,6 +1370,7 @@ def edit_profile(request):
         password_confirm = request.POST.get('password_confirm', '').strip()
         avatar = request.FILES.get('avatar')
         is_private = request.POST.get('is_private') == 'on'
+        show_activity = request.POST.get('show_activity') == 'on'
 
         if not username or not email:
             error = 'Логін та email не можуть бути порожніми.'
@@ -1364,6 +1384,7 @@ def edit_profile(request):
             user.username = username
             user.email = email
             user.is_private = is_private
+            user.show_activity = show_activity
 
             if password:
                 user.password_hash = make_password(password)
@@ -1607,6 +1628,7 @@ def admin_review_delete(request, review_id):
         return redirect('library:game_detail', game_id=game_id)
 
     if request.method == 'POST':
+        activity.forget_review_activity(review.user, review.game)
         review.delete()
         messages.success(request, 'Рецензію видалено.')
 
@@ -1689,3 +1711,28 @@ def admin_genre_delete(request, genre_id):
             messages.success(request, f'Жанр "{genre_name}" видалено.')
 
     return redirect('library:admin_genre_list')
+
+
+def feed(request):
+    user = get_current_user(request)
+
+    if user is None:
+        return redirect('library:login')
+
+    try:
+        page = max(1, int(request.GET.get('page', 1)))
+    except ValueError:
+        page = 1
+
+    size = activity.FEED_PAGE_SIZE
+    events = list(activity.feed_events(user)[(page - 1) * size:page * size + 1])
+    has_more = len(events) > size
+
+    return render(request, 'library/feed.html', {
+        'items': activity.group_events(events[:size]),
+        'now_playing': activity.now_playing(user),
+        'page': page,
+        'has_more': has_more,
+        'has_friends': bool(activity.friend_ids(user)),
+    })
+

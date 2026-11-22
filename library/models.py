@@ -26,6 +26,7 @@ class User(models.Model):
     password_hash = models.CharField(max_length=255)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     is_private = models.BooleanField(default=False)
+    show_activity = models.BooleanField(default=True)
     created_at = models.DateTimeField()
 
     class Meta:
@@ -356,4 +357,40 @@ class SteamApp(models.Model):
     @property
     def genre_list(self):
         return [g.strip() for g in self.genres.split(",") if g.strip()]
+
+
+class ActivityEvent(models.Model):
+    """Подія для стрічки активності (див. library/services/activity.py)."""
+
+    LIBRARY_ADD = "library_add"
+    STATUS_CHANGE = "status_change"
+    REVIEW = "review"
+    STEAM_IMPORT = "steam_import"
+    FRIENDSHIP = "friendship"
+    GAME_APPROVED = "game_approved"
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, db_column="user_id", related_name="activity_events"
+    )
+    event_type = models.CharField(max_length=30)
+    game = models.ForeignKey(
+        Game, on_delete=models.CASCADE, db_column="game_id", null=True, blank=True,
+        related_name="activity_events",
+    )
+    target_user = models.ForeignKey(
+        User, on_delete=models.CASCADE, db_column="target_user_id", null=True, blank=True,
+        related_name="activity_events_as_target",
+    )
+    status = models.CharField(max_length=30, blank=True, null=True)
+    score = models.SmallIntegerField(blank=True, null=True)
+    item_count = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "activity_events"
+
+    def __str__(self):
+        return f"{self.user_id} {self.event_type} {self.game_id or ''}"
 

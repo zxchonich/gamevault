@@ -22,6 +22,7 @@ from .services.steam_service import (
     sync_steam_library,
     validate_steam_openid_response,
 )
+from .services import activity
 from .views import can_view_profile, get_current_user, get_status_label, is_admin_user
 
 STEAM_LIBRARY_PAGE_SIZE = 24
@@ -42,6 +43,8 @@ def _sync_and_report(request, user, steam_account):
     except SteamError as exc:
         messages.error(request, str(exc))
         return
+
+    activity.record_steam_import(user, result["added_to_library_count"])
 
     text = (
         f"Steam синхронізовано: {result['synced_count']} ігор отримано, "

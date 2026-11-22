@@ -1,0 +1,14 @@
+{% comment %}Список "Зараз грають" (activity.now_playing).{% endcomment %}
+<div class="steam-mini-list">
+    {% for item in now_playing %}
+    <a class="steam-mini-card"
+        href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}"
+        {% if not item.catalog_game %}target="_blank" rel="noopener"{% endif %}>
+        <img src="{{ item.cover_url }}" alt="{{ item.game_title }}" loading="lazy" onerror="this.remove()">
+        <div>
+            <b>{{ item.game_title }}</b>
+            <span>{{ item.user.username }} · {{ item.playtime_2weeks_hours }} год за 2 тижні</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>

@@ -26,6 +26,7 @@
         
                 {% if current_library_user %}
                 <a href="{% url 'library:my_library' %}">Моя бібліотека</a>
+                <a href="{% url 'library:feed' %}">Стрічка</a>
                 <a href="{% url 'library:friends' %}">Друзі</a>
                 <a href="{% url 'library:profile' %}">Профіль</a>
                 {% endif %}

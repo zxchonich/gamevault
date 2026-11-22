@@ -15,6 +15,7 @@ urlpatterns = [
     path('request-game/', views.request_game, name='request_game'),
     path('my-requests/', views.my_requests, name='my_requests'),
     path('recommendations/', views.recommendations, name='recommendations'),
+    path('feed/', views.feed, name='feed'),
     path('recommendations/<int:game_id>/dismiss/', views.dismiss_recommendation, name='dismiss_recommendation'),
     path('recommendations/<int:game_id>/restore/', views.restore_recommendation, name='restore_recommendation'),
     path('users/', views.user_list, name='user_list'),

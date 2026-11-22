@@ -1,0 +1,56 @@
+{% comment %}Одна подія стрічки (FeedItem з library/services/activity.py).{% endcomment %}
+<article class="feed-item">
+    <div class="feed-avatar">
+        {% if item.user.avatar %}
+        <img src="{{ item.user.avatar.url }}" alt="{{ item.user.username }}">
+        {% else %}
+        <span>{{ item.user.username|first|upper }}</span>
+        {% endif %}
+    </div>
+
+    <div class="feed-body">
+        <p>
+            {% if item.user.id == current_library_user.id %}
+            <a class="feed-user" href="{% url 'library:profile' %}">{{ item.user.username }}</a>
+            {% else %}
+            <a class="feed-user" href="{% url 'library:user_profile' item.user.id %}">{{ item.user.username }}</a>
+            {% endif %}
+
+            {% if item.event_type == 'library_add' %}
+            додає до бібліотеки
+            {% elif item.event_type == 'status_change' %}
+            {% if item.status == 'completed' %}проходить
+            {% elif item.status == 'playing' %}починає грати в
+            {% elif item.status == 'planned' %}планує зіграти в
+            {% elif item.status == 'paused' %}відкладає
+            {% elif item.status == 'dropped' %}закидає
+            {% else %}змінює статус{% endif %}
+            {% elif item.event_type == 'review' %}
+            оцінює
+            {% elif item.event_type == 'steam_import' %}
+            додає зі Steam ігор до бібліотеки: <b>{{ item.item_count }}</b>
+            {% elif item.event_type == 'friendship' %}
+            і
+            {% if item.target_user.id == current_library_user.id %}
+            <a class="feed-user" href="{% url 'library:profile' %}">{{ item.target_user.username }}</a>
+            {% else %}
+            <a class="feed-user" href="{% url 'library:user_profile' item.target_user.id %}">{{ item.target_user.username }}</a>
+            {% endif %}
+            тепер друзі
+            {% elif item.event_type == 'game_approved' %}
+            пропонує гру, і її додано в каталог:
+            {% endif %}
+
+            {% for game in item.games|slice:":3" %}
+            <a class="feed-game" href="{% url 'library:game_detail' game.id %}">«{{ game.title }}»</a>{% if not forloop.last %},{% endif %}
+            {% endfor %}
+            {% if item.extra_games_count %}і ще {{ item.extra_games_count }}{% endif %}
+
+            {% if item.event_type == 'review' and item.score %}
+            на <b>{{ item.score }}/10</b>
+            {% endif %}
+        </p>
+
+        <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"d.m.Y H:i" }}</time>
+    </div>
+</article>

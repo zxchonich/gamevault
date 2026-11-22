@@ -120,6 +120,18 @@
                     </div>
                 </label>
 
+                <label class="privacy-toggle">
+                    <input type="checkbox" name="show_activity" {% if user.show_activity %}checked{% endif %}>
+
+                    <div>
+                        <span>Показувати мою активність</span>
+                        <p>
+                            Якщо вимкнено, ваші події (додані й пройдені ігри, оцінки, ігри в Steam)
+                            не з'являтимуться у стрічці друзів і у вашому профілі для інших.
+                        </p>
+                    </div>
+                </label>
+
                 <div class="edit-profile-actions">
                     <button class="pseudo-button" type="submit">
                         <span>Зберегти зміни</span>

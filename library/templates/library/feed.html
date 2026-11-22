@@ -1,0 +1,67 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Стрічка | GameVault{% endblock %}
+
+{% block content %}
+<section class="feed-page page-wide">
+
+    <div class="dashboard-hero">
+        <div>
+            <div class="subtitle">Активність</div>
+            <h1>Стрічка</h1>
+            <p>Що ви та ваші друзі додають, проходять, оцінюють і в що грають у Steam.</p>
+
+            <div class="moderation-hero-actions">
+                <a class="profile-secondary-link" href="{% url 'library:friends' %}">Друзі</a>
+                <a class="profile-secondary-link" href="{% url 'library:edit_profile' %}">Налаштування видимості</a>
+            </div>
+        </div>
+    </div>
+
+    {% if now_playing %}
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Зараз грають</h2>
+            <span>Ігри Steam за останні 2 тижні</span>
+        </div>
+
+        {% include 'library/_now_playing.html' %}
+    </div>
+    {% endif %}
+
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Події</h2>
+            <span>{% if page > 1 %}Сторінка {{ page }}{% else %}Найновіші{% endif %}</span>
+        </div>
+
+        <div class="feed-list">
+            {% for item in items %}
+            {% include 'library/_feed_item.html' %}
+            {% empty %}
+            <div class="empty-card profile-wide-empty">
+                <h3>Поки що тихо</h3>
+                {% if has_friends %}
+                <p>Тут з'являтимуться ваші події та події друзів.</p>
+                {% else %}
+                <p>Додавайте ігри до бібліотеки й <a href="{% url 'library:user_list' %}">знаходьте друзів</a> — їхня активність з'явиться тут.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page > 1 or has_more %}
+        <nav class="pagination">
+            {% if page > 1 %}
+            <a href="?page={{ page|add:'-1' }}">Новіші</a>
+            {% endif %}
+            {% if has_more %}
+            <a href="?page={{ page|add:'1' }}">Показати ще</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </div>
+
+</section>
+{% endblock %}

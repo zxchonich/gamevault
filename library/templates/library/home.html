@@ -145,6 +145,27 @@
     </section>
     {% endif %}
 
+    {% if home_feed or home_now_playing %}
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Активність</h2>
+            <a class="profile-secondary-link" href="{% url 'library:feed' %}">Уся стрічка</a>
+        </div>
+
+        {% if home_now_playing %}
+        {% with now_playing=home_now_playing %}
+        {% include 'library/_now_playing.html' %}
+        {% endwith %}
+        {% endif %}
+
+        <div class="feed-list">
+            {% for item in home_feed %}
+            {% include 'library/_feed_item.html' %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <section class="home-leaderboard-grid">
 
         <div class="dashboard-section home-board">

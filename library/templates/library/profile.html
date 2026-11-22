@@ -263,6 +263,23 @@
     </section>
     <section class="dashboard-section">
         <div class="section-head">
+            <h2>Остання активність</h2>
+            {% if is_own_profile %}<a class="profile-secondary-link" href="{% url 'library:feed' %}">Уся стрічка</a>{% endif %}
+        </div>
+
+        <div class="feed-list">
+            {% for item in recent_activity %}
+            {% include 'library/_feed_item.html' %}
+            {% empty %}
+            <div class="empty-card profile-wide-empty">
+                <h3>Активності поки немає</h3>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="section-head">
             <h2>Останні ігри в бібліотеці</h2>
             <span>Нещодавно додані записи</span>
         </div>
