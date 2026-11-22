@@ -12,7 +12,7 @@ GameVault — курсовой проект на Django: веб-приложен
 
 ```bash
 venv\Scripts\activate
-pip install -r requirements.txt     # внимание: файл в кодировке UTF-16 LE
+pip install -r requirements.txt     # обновлять через pip freeze > requirements.txt (сохранять в UTF-8)
 python manage.py runserver
 python manage.py check
 python manage.py test library       # tests.py сейчас пустой
@@ -24,8 +24,8 @@ python manage.py test library.tests.SomeTestCase.test_method
 ## База данных
 
 - MySQL (`game_library_db` на localhost:3306, utf8mb4). Параметры БД, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` и `STEAM_API_KEY` читаются из `.env` (не в git; шаблон — [.env.example](.env.example)) через `python-dotenv` в [config/settings.py](config/settings.py). `db.sqlite3` не используется. Служба MySQL на этой машине (`MySQL96`) запускается вручную и требует прав администратора: `net start MySQL96`.
-- Изменения схемы оформляются SQL-файлами в [database/migrations/](database/migrations/) (`001_steam.sql` и т.д.). Дамп в репозитории отстаёт от локальной БД (там уже есть, например, `games.poster`, utf8mb4 и таблицы Steam); при расхождениях источник истины — живая БД (`SHOW CREATE TABLE`).
-- Структура таблиц задаётся SQL-дампом [database/gamevault_dump.sql](database/gamevault_dump.sql), **а не** миграциями Django. Все модели в [library/models.py](library/models.py) имеют `managed = False` и явный `db_table`, а в `library/migrations/` миграций нет. Сначала загрузите дамп в MySQL, затем `python manage.py migrate` — только для создания встроенных таблиц Django (sessions, contenttypes, admin, auth).
+- Изменения схемы оформляются SQL-файлами в [database/migrations/](database/migrations/) (`001_steam.sql`, `002_...`), применяются к локальной БД, после чего [database/schema.sql](database/schema.sql) переэкспортируется: `mysqldump --no-data --skip-comments --set-gtid-purged=OFF --skip-add-drop-table` по таблицам приложения, затем убрать `AUTO_INCREMENT=N` и сохранить `INSERT` ролей. Репозиторий публичный: данные пользователей в git не коммитить. Старый [database/gamevault_dump.sql](database/gamevault_dump.sql) (с данными) устарел и для разворачивания не подходит.
+- Структура таблиц задаётся [database/schema.sql](database/schema.sql), **а не** миграциями Django. Все модели в [library/models.py](library/models.py) имеют `managed = False` и явный `db_table`, а в `library/migrations/` миграций нет. Сначала загрузите схему в MySQL, затем `python manage.py migrate` — только для создания встроенных таблиц Django (sessions, contenttypes, admin, auth).
 - Изменения схемы вручную переносятся в модель; `makemigrations` эти таблицы не изменит.
 - Местами используется сырой SQL (например, `add_game_genres` в views.py вставляет строки в `game_genres` через `connection.cursor()`), так как `GameGenre` отображает связующую таблицу с составным первичным ключом.
 
