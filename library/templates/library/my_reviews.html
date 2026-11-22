@@ -53,7 +53,7 @@
                     {% if review.game.poster %}
                     <img src="{{ review.game.poster.url }}" alt="{{ review.game.title }}">
                     {% else %}
-                    <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ review.game.title }}">
+                    <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ review.game.title }}">
                     {% endif %}
 
                     <div class="review-score-badge">

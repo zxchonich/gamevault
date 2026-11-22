@@ -1358,6 +1358,7 @@ def register_view(request):
                     created_at=timezone.now(),
                 )
 
+                request.session.cycle_key()
                 request.session['library_user_id'] = user.id
                 return redirect('library:profile')
 

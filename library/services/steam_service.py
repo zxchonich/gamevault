@@ -211,8 +211,9 @@ def steam_store_url(appid):
 
 def normalize_title(title):
     """Назва для порівняння: без регістру, ™/®/©, пунктуації та зайвих пробілів."""
-    title = unicodedata.normalize("NFKC", title or "").casefold()
-    title = re.sub(r"[™®©]", "", title)
+    # Знаки ™®© прибираємо до NFKC, бо вона перетворює ™ на літери "TM".
+    title = re.sub(r"[™®©]", "", title or "")
+    title = unicodedata.normalize("NFKC", title).casefold()
     title = re.sub(r"[^\w]+", " ", title)
     return " ".join(title.split())
 

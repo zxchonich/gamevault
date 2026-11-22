@@ -73,7 +73,7 @@
                 {% if recommendation.game.poster %}
                 <img src="{{ recommendation.game.poster.url }}" alt="{{ recommendation.game.title }}">
                 {% else %}
-                <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ recommendation.game.title }}">
+                <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ recommendation.game.title }}">
                 {% endif %}
 
                 <div class="match-badge">

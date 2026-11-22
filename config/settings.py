@@ -145,3 +145,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Тести завантажують database/schema.sql у тестову БД (див. library/test_runner.py).
+TEST_RUNNER = 'library.test_runner.SchemaTestRunner'

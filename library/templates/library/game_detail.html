@@ -10,7 +10,7 @@
         {% if game.poster %}
         <img src="{{ game.poster.url }}" alt="{{ game.title }}">
         {% else %}
-        <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+        <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
         {% endif %}
 
         <a class="game-back-link" href="{% url 'library:game_list' %}">

@@ -189,7 +189,7 @@
             {% if game.poster %}
             <img src="{{ game.poster.url }}" alt="{{ game.title }}">
             {% else %}
-            <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ game.title }}">
+            <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
             {% endif %}
 
             <div class="library-game-content">
@@ -236,7 +236,7 @@
             {% if game.poster %}
             <img src="{{ game.poster.url }}" alt="{{ game.title }}">
             {% else %}
-            <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ game.title }}">
+            <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
             {% endif %}
 
             <div class="library-game-content">

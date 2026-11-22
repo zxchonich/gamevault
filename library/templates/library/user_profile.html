@@ -275,7 +275,7 @@
                 {% if entry.game.poster %}
                 <img src="{{ entry.game.poster.url }}" alt="{{ entry.game.title }}">
                 {% else %}
-                <img src="{% static 'library/media/games/default.jpg' %}" alt="{{ entry.game.title }}">
+                <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ entry.game.title }}">
                 {% endif %}
 
                 <div>

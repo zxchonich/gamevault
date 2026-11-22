@@ -15,11 +15,14 @@ venv\Scripts\activate
 pip install -r requirements.txt     # обновлять через pip freeze > requirements.txt (сохранять в UTF-8)
 python manage.py runserver
 python manage.py check
-python manage.py test library       # tests.py сейчас пустой
-python manage.py test library.tests.SomeTestCase.test_method
+python manage.py test library --keepdb                       # все тесты (~1-2 с с --keepdb)
+python manage.py test library.tests.test_steam --keepdb      # один модуль
+python manage.py test library.tests.test_auth.LoginLogoutTests.test_login_success_rotates_session --keepdb
 ```
 
 Линтер и форматтер не настроены.
+
+Тесты (`library/tests/`) работают на MySQL, поэтому служба должна быть запущена. Таблицы приложения `managed = False`, поэтому [library/test_runner.py](library/test_runner.py) после создания тестовой БД загружает в неё [database/schema.sql](database/schema.sql) — при изменении схемы обновите schema.sql, иначе тесты разойдутся с реальной БД (с `--keepdb` после этого один раз запустите без него). Фабрики данных и `login()` — в `library/tests/base.py`. Внешние вызовы Steam в тестах мокаются по месту использования (`library.views.fetch_store_details`, `library.steam_views.sync_steam_library`, `library.services.steam_service.requests`).
 
 ## База данных
 

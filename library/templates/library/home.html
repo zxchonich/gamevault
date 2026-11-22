@@ -132,7 +132,7 @@
                         {% if game.poster %}
                         <img src="{{ game.poster.url }}" alt="{{ game.title }}">
                         {% else %}
-                        <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+                        <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
                         {% endif %}
                     </div>
 
@@ -173,7 +173,7 @@
                         {% if game.poster %}
                         <img src="{{ game.poster.url }}" alt="{{ game.title }}">
                         {% else %}
-                        <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+                        <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
                         {% endif %}
                     </div>
 
@@ -319,7 +319,7 @@
                 {% if game.poster %}
                 <img src="{{ game.poster.url }}" alt="{{ game.title }}">
                 {% else %}
-                <img src="{% static 'library/media/games/dota2_poster.jpg' %}" alt="{{ game.title }}">
+                <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
                 {% endif %}
 
                 <div class="library-game-content">
