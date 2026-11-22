@@ -8232,3 +8232,32 @@ span.profile-secondary-link:hover {
     color: var(--text);
     font: inherit;
 }
+
+/* ---------- Рекомендації: причини, "Не цікаво", підказка ---------- */
+.recommendation-reason-list {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.recommendation-dismiss {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 6px;
+}
+
+.recommendation-dismiss:hover {
+    color: #fca5a5;
+}
+
+.recommendations-notice p {
+    color: var(--muted);
+    margin: 8px 0 0;
+}
+
+.recommendations-notice a {
+    color: var(--accent);
+}

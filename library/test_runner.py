@@ -2,13 +2,16 @@
 Після створення тестової БД завантажуємо в неї database/schema.sql — ту саму схему,
 що й у робочій БД (складений ключ game_genres, ролі тощо)."""
 
+import hashlib
 from pathlib import Path
 
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 from django.test.runner import DiscoverRunner
 
 SCHEMA_PATH = Path(settings.BASE_DIR) / "database" / "schema.sql"
+SCHEMA_VERSION_TABLE = "test_schema_version"
 
 
 def split_sql(sql):
@@ -18,12 +21,26 @@ def split_sql(sql):
 
 
 def load_schema(connection):
-    with connection.cursor() as cursor:
-        if "games" in connection.introspection.table_names(cursor):
-            return  # --keepdb: схема вже завантажена
+    sql = SCHEMA_PATH.read_text(encoding="utf-8")
+    schema_hash = hashlib.sha256(sql.encode("utf-8")).hexdigest()
 
-        for statement in split_sql(SCHEMA_PATH.read_text(encoding="utf-8")):
+    with connection.cursor() as cursor:
+        if SCHEMA_VERSION_TABLE in connection.introspection.table_names(cursor):
+            # --keepdb: схема вже завантажена; перевіряємо, що вона не застаріла.
+            cursor.execute(f"SELECT hash FROM {SCHEMA_VERSION_TABLE}")
+            row = cursor.fetchone()
+            if row and row[0] == schema_hash:
+                return
+            raise ImproperlyConfigured(
+                "database/schema.sql змінився після створення тестової БД. "
+                "Запустіть тести один раз без --keepdb (з --noinput), щоб перестворити її."
+            )
+
+        for statement in split_sql(sql):
             cursor.execute(statement)
+
+        cursor.execute(f"CREATE TABLE {SCHEMA_VERSION_TABLE} (hash char(64) NOT NULL)")
+        cursor.execute(f"INSERT INTO {SCHEMA_VERSION_TABLE} (hash) VALUES (%s)", [schema_hash])
 
 
 class SchemaTestRunner(DiscoverRunner):

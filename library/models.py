@@ -224,32 +224,33 @@ class SocialConnection(models.Model):
         return f'{self.sender.username} -> {self.receiver.username}'
 
 
-class Recommendation(models.Model):
-    id = models.AutoField(primary_key=True)
-    match_score = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    reason = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField()
+class DismissedRecommendation(models.Model):
+    """Гра, яку користувач приховав із рекомендацій ("Не цікаво")."""
 
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
         User,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         db_column='user_id',
-        related_name='recommendations'
+        related_name='dismissed_recommendations'
     )
     game = models.ForeignKey(
         Game,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         db_column='game_id',
-        related_name='recommendations'
+        related_name='dismissed_recommendations'
     )
+    created_at = models.DateTimeField()
 
     class Meta:
         managed = False
-        db_table = 'recommendations'
+        db_table = 'dismissed_recommendations'
+        unique_together = (('user', 'game'),)
 
     def __str__(self):
         return f'{self.user.username} - {self.game.title}'
-    
+
+
 class ExternalAccount(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(

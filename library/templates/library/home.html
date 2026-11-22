@@ -115,6 +115,36 @@
         </div>
     </div>
 
+    {% if home_recommendations %}
+    <section class="dashboard-section">
+        <div class="section-head">
+            <h2>Рекомендовано для вас</h2>
+            <a class="profile-secondary-link" href="{% url 'library:recommendations' %}">Усі рекомендації</a>
+        </div>
+
+        <div class="leaderboard-list">
+            {% for recommendation in home_recommendations %}
+            <a class="leaderboard-item" href="{% url 'library:game_detail' recommendation.game.id %}">
+                <div class="leaderboard-rank">{{ recommendation.score }}%</div>
+
+                <div class="leaderboard-cover">
+                    {% if recommendation.game.poster %}
+                    <img src="{{ recommendation.game.poster.url }}" alt="{{ recommendation.game.title }}">
+                    {% else %}
+                    <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ recommendation.game.title }}">
+                    {% endif %}
+                </div>
+
+                <div class="leaderboard-info">
+                    <h3>{{ recommendation.game.title }}</h3>
+                    <p>{{ recommendation.reasons.0 }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <section class="home-leaderboard-grid">
 
         <div class="dashboard-section home-board">

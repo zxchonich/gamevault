@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-002.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-003.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -148,18 +148,16 @@ CREATE TABLE `game_requests` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `recommendations` (
+CREATE TABLE `dismissed_recommendations` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `match_score` decimal(5,2) DEFAULT NULL,
-  `reason` mediumtext COLLATE utf8mb4_unicode_ci,
-  `created_at` datetime NOT NULL,
   `user_id` int NOT NULL,
   `game_id` int NOT NULL,
+  `created_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `fk_recommendations_user` (`user_id`),
-  KEY `fk_recommendations_game` (`game_id`),
-  CONSTRAINT `fk_recommendations_games1` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`),
-  CONSTRAINT `fk_recommendations_users1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  UNIQUE KEY `uq_dismissed_recommendations_user_game` (`user_id`,`game_id`),
+  KEY `fk_dismissed_recommendations_game` (`game_id`),
+  CONSTRAINT `fk_dismissed_recommendations_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_dismissed_recommendations_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

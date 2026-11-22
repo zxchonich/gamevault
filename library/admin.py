@@ -8,7 +8,7 @@ from .models import (
     LibraryEntry,
     Review,
     SocialConnection,
-    Recommendation,
+    DismissedRecommendation,
 )
 
 
@@ -66,7 +66,7 @@ class SocialConnectionAdmin(admin.ModelAdmin):
     list_filter = ('status',)
 
 
-@admin.register(Recommendation)
-class RecommendationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'game', 'match_score', 'created_at')
+@admin.register(DismissedRecommendation)
+class DismissedRecommendationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'game', 'created_at')
     search_fields = ('user__username', 'game__title')

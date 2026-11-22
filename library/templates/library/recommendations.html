@@ -13,11 +13,23 @@
             <h1>Рекомендації для вас</h1>
 
             <p>
-                Система формує добірку ігор на основі вашої бібліотеки, жанрових вподобань,
-                рецензій, оцінок, друзів та ігор, які є в їхніх бібліотеках.
+                Система формує добірку ігор на основі вашої бібліотеки, статусів проходження,
+                оцінок, годин у Steam, а також ігор і оцінок ваших друзів.
             </p>
         </div>
     </div>
+
+    {% if is_fallback %}
+    <div class="dashboard-section recommendations-notice">
+        <h2>Поки що замало даних про ваші смаки</h2>
+        <p>
+            Нижче — найкращі та найпопулярніші ігри каталогу. Щоб рекомендації стали персональними,
+            додайте кілька ігор до бібліотеки, оцініть їх,
+            {% if not current_library_user.external_accounts.exists %}<a href="{% url 'library:steam_connect' %}">підключіть Steam</a>{% else %}синхронізуйте Steam{% endif %}
+            або додайте друзів.
+        </p>
+    </div>
+    {% endif %}
 
     <div class="dashboard-stats">
         <div class="stat-card">
@@ -48,20 +60,33 @@
         <div class="recommendation-factors">
             <article>
                 <span>01</span>
-                <h3>Жанрові збіги</h3>
-                <p>Система аналізує жанри ігор, які вже є у вашій бібліотеці.</p>
+                <h3>Ваші смаки (до 50%)</h3>
+                <p>
+                    Жанри ігор із бібліотеки з урахуванням статусу та ваших оцінок:
+                    пройдені й високо оцінені ігри підвищують інтерес до жанру,
+                    закинуті та низько оцінені — знижують.
+                </p>
             </article>
 
             <article>
                 <span>02</span>
-                <h3>Ваші оцінки</h3>
-                <p>Високо оцінені ігри сильніше впливають на майбутні рекомендації.</p>
+                <h3>Години в Steam</h3>
+                <p>
+                    Ігри каталогу, у які ви грали в Steam, теж формують смаки: що більше годин
+                    і що свіжіше гра, то сильніший вплив.
+                </p>
             </article>
 
             <article>
                 <span>03</span>
-                <h3>Бібліотеки друзів</h3>
-                <p>Якщо гра є у друзів або високо ними оцінена, вона отримує додаткові бали.</p>
+                <h3>Друзі (до 30%)</h3>
+                <p>Гра є в бібліотеках чи Steam ваших друзів, вони її високо оцінили або багато в неї грали.</p>
+            </article>
+
+            <article>
+                <span>04</span>
+                <h3>Якість (до 20%)</h3>
+                <p>Середня оцінка користувачів, згладжена за кількістю відгуків.</p>
             </article>
         </div>
     </div>
@@ -109,8 +134,12 @@
                 </p>
 
                 <div class="recommendation-reason">
-                    <b>Причина рекомендації:</b>
-                    <span>{{ recommendation.reason }}</span>
+                    <b>Чому рекомендовано:</b>
+                    <ul class="recommendation-reason-list">
+                        {% for reason in recommendation.reasons %}
+                        <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
                 </div>
 
                 <div class="recommendation-actions">
@@ -124,6 +153,14 @@
                         <button type="submit" class="link-button recommendation-button recommendation-button-primary">
                         Додати в бібліотеку
                     </button>
+                    </form>
+
+                    <form class="inline-post-form" method="post"
+                        action="{% url 'library:dismiss_recommendation' recommendation.game.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button recommendation-dismiss" title="Більше не пропонувати">
+                            Не цікаво
+                        </button>
                     </form>
                 </div>
             </div>
@@ -143,6 +180,32 @@
         </div>
         {% endfor %}
     </section>
+
+    {% if dismissed %}
+    <div class="dashboard-section">
+        <div class="section-head">
+            <h2>Приховані ігри</h2>
+            <span>Ігри, позначені як «Не цікаво»: {{ dismissed|length }}</span>
+        </div>
+
+        <div class="steam-match-list">
+            {% for item in dismissed %}
+            <article class="steam-match-row">
+                <div class="steam-match-title">
+                    <a class="plain-title-link" href="{% url 'library:game_detail' item.game.id %}">{{ item.game.title }}</a>
+                    <span class="steam-game-note">Приховано {{ item.created_at|date:"d.m.Y" }}</span>
+                </div>
+
+                <form class="inline-post-form" method="post"
+                    action="{% url 'library:restore_recommendation' item.game.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="link-button secondary-action-link">Повернути</button>
+                </form>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
 </section>
 {% endblock %}

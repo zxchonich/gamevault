@@ -2,13 +2,14 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.db import models, connection
 from django.db.models import Avg
-from .models import Game, Genre, Review, User, LibraryEntry, GameRequest, SocialConnection, Role, Recommendation, GameGenre, ExternalAccount, ExternalLibraryItem
+from .models import Game, Genre, Review, User, LibraryEntry, GameRequest, SocialConnection, Role, DismissedRecommendation, GameGenre, ExternalAccount, ExternalLibraryItem
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 import urllib.parse
+from .services.recommendations import build_recommendations
 from .services.steam_service import (
     SteamError,
     download_steam_poster,
@@ -69,7 +70,12 @@ def home(request):
     user_review_count = 0
     user_friends_count = 0
 
+    home_recommendations = []
+
     if current_user is not None:
+        home_recommendations = attach_visible_genres_to_recommendations(
+            build_recommendations(current_user, limit=3).recommendations
+        )
         user_library_count = LibraryEntry.objects.filter(user=current_user).count()
         user_review_count = Review.objects.filter(user=current_user).count()
         user_friends_count = SocialConnection.objects.filter(
@@ -84,6 +90,7 @@ def home(request):
 
     context = {
         'current_user': current_user,
+        'home_recommendations': home_recommendations,
         'games': games,
         'genres': genres,
         'top_rated_games': top_rated_games,
@@ -489,171 +496,68 @@ def recommendations(request):
     if user is None:
         return redirect('library:login')
 
-    # Ігри, які вже є в бібліотеці користувача
-    user_game_ids = set(
-        LibraryEntry.objects
+    result = build_recommendations(user)
+    recommendations_list = attach_visible_genres_to_recommendations(result.recommendations)
+
+    scores = [r.score for r in recommendations_list]
+
+    dismissed = list(
+        DismissedRecommendation.objects
         .filter(user=user)
-        .values_list('game_id', flat=True)
+        .select_related('game')
+        .order_by('-created_at')
     )
-
-    # Жанри ігор із бібліотеки користувача
-    user_genre_ids = set(
-        Genre.objects
-        .filter(game_genres__game_id__in=user_game_ids)
-        .values_list('id', flat=True)
-    )
-
-    # Ігри, які користувач оцінив високо
-    high_rated_game_ids = set(
-        Review.objects
-        .filter(user=user, score__gte=8)
-        .values_list('game_id', flat=True)
-    )
-
-    # Жанри високо оцінених ігор
-    high_rated_genre_ids = set(
-        Genre.objects
-        .filter(game_genres__game_id__in=high_rated_game_ids)
-        .values_list('id', flat=True)
-    )
-
-    # Знаходимо друзів користувача
-    accepted_connections = SocialConnection.objects.filter(
-        status='accepted'
-    ).filter(
-        models.Q(sender=user) | models.Q(receiver=user)
-    )
-
-    friend_ids = []
-
-    for connection in accepted_connections:
-        if connection.sender_id == user.id:
-            friend_ids.append(connection.receiver_id)
-        else:
-            friend_ids.append(connection.sender_id)
-
-    # Ігри, які є в бібліотеках друзів
-    friend_game_ids = set(
-        LibraryEntry.objects
-        .filter(user_id__in=friend_ids)
-        .values_list('game_id', flat=True)
-    )
-
-    # Ігри, які друзі високо оцінили
-    friend_high_rated_game_ids = set(
-        Review.objects
-        .filter(user_id__in=friend_ids, score__gte=8)
-        .values_list('game_id', flat=True)
-    )
-
-    # Кандидати: усі ігри, яких ще немає у бібліотеці користувача
-    candidate_games = (
-        Game.objects
-        .exclude(id__in=user_game_ids)
-        .annotate(avg_score=Avg('reviews__score'))
-        .order_by('title')
-    )
-
-    # Очищаємо старі рекомендації користувача
-    Recommendation.objects.filter(user=user).delete()
-
-    recommended_games = []
-
-    for game in candidate_games:
-        score = 0
-        reasons = []
-
-        game_genre_ids = set(
-            Genre.objects
-            .filter(game_genres__game=game)
-            .values_list('id', flat=True)
-        )
-
-        # 1. Збіг жанрів із бібліотекою користувача
-        common_user_genres = game_genre_ids.intersection(user_genre_ids)
-
-        if common_user_genres:
-            score += 20
-            reasons.append('збіг із жанрами ігор у вашій бібліотеці')
-
-        # 2. Збіг із жанрами високо оцінених ігор
-        common_high_rated_genres = game_genre_ids.intersection(high_rated_genre_ids)
-
-        if common_high_rated_genres:
-            score += 30
-            reasons.append('схожість із жанрами ігор, які ви високо оцінили')
-
-        # 3. Гра є в бібліотеці друга
-        if game.id in friend_game_ids:
-            score += 20
-            reasons.append('гра є в бібліотеці ваших друзів')
-
-        # 4. Друг високо оцінив гру
-        if game.id in friend_high_rated_game_ids:
-            score += 20
-            reasons.append('цю гру високо оцінили ваші друзі')
-
-        # 5. Висока середня оцінка
-        if game.avg_score is not None:
-            if game.avg_score >= 8:
-                score += 10
-                reasons.append('гра має високу середню оцінку')
-            elif game.avg_score >= 6:
-                score += 5
-                reasons.append('гра має непогану середню оцінку')
-
-        # Обмежуємо максимум 100
-        if score > 100:
-            score = 100
-
-        # Якщо немає причин, не рекомендуємо
-        if score > 0:
-            reason_text = '; '.join(reasons)
-
-            recommendation = Recommendation.objects.create(
-                user=user,
-                game=game,
-                match_score=score,
-                reason=reason_text,
-                created_at=timezone.now(),
-            )
-
-            recommended_games.append(recommendation)
-
-    recommendations_list = (
-    Recommendation.objects
-    .filter(user=user)
-    .select_related('game')
-    .order_by('-match_score', '-created_at')
-    )
-
-    recommendations_count = recommendations_list.count()
-
-    best_match = recommendations_list.first()
-
-    if best_match:
-        best_match_score = best_match.match_score
-    else:
-        best_match_score = 0
-
-    average_match = recommendations_list.aggregate(
-        average_score=Avg('match_score')
-    )['average_score']
-
-    if average_match is None:
-        average_match = 0
-
-    recommendations_for_template = attach_visible_genres_to_recommendations(recommendations_list)
 
     context = {
         'user': user,
-        'recommendations': recommendations_for_template,
-        'recommendations_count': recommendations_count,
-        'best_match_score': best_match_score,
-        'average_match': average_match,
+        'recommendations': recommendations_list,
+        'recommendations_count': len(recommendations_list),
+        'best_match_score': max(scores, default=0),
+        'average_match': sum(scores) / len(scores) if scores else 0,
+        'is_fallback': result.is_fallback,
+        'has_steam_signals': result.has_steam_signals,
+        'dismissed': dismissed,
     }
 
     return render(request, 'library/recommendations.html', context)
+
+
+@require_POST
+def dismiss_recommendation(request, game_id):
+    user = get_current_user(request)
+
+    if user is None:
+        return redirect('library:login')
+
+    game = get_object_or_404(Game, id=game_id)
+    DismissedRecommendation.objects.get_or_create(
+        user=user, game=game, defaults={'created_at': timezone.now()}
+    )
+    messages.info(request, f'Гру "{game.title}" більше не буде в рекомендаціях.')
+
+    return _redirect_to_next(request, 'library:recommendations')
+
+
+@require_POST
+def restore_recommendation(request, game_id):
+    user = get_current_user(request)
+
+    if user is None:
+        return redirect('library:login')
+
+    DismissedRecommendation.objects.filter(user=user, game_id=game_id).delete()
+    messages.success(request, 'Гру повернуто до рекомендацій.')
+
+    return _redirect_to_next(request, 'library:recommendations')
+
+
+def _redirect_to_next(request, fallback):
+    next_url = request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return redirect(next_url)
+    return redirect(fallback)
 
 def user_list(request):
     current_user = get_current_user(request)
@@ -1676,7 +1580,7 @@ def admin_game_delete(request, game_id):
         GameGenre.objects.filter(game=game).delete()
         LibraryEntry.objects.filter(game=game).delete()
         Review.objects.filter(game=game).delete()
-        Recommendation.objects.filter(game=game).delete()
+        DismissedRecommendation.objects.filter(game=game).delete()
 
         game.delete()
 
