@@ -2,7 +2,7 @@
 -- Відповідає фактичній схемі локальної БД game_library_db
 -- та моделям Game, ExternalAccount, ExternalLibraryItem у library/models.py.
 --
--- Застосування до БД, розгорнутої з database/gamevault_dump.sql:
+-- Застосування до БД зі старою схемою (до інтеграції зі Steam):
 --   mysql -u root -p game_library_db < database/migrations/001_steam.sql
 --
 -- MySQL не підтримує ADD COLUMN IF NOT EXISTS: якщо steam_appid вже існує,
