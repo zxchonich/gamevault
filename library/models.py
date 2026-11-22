@@ -318,6 +318,12 @@ class ExternalLibraryItem(models.Model):
 
     @property
     def cover_url(self):
+        # Точна обкладинка зі Steam Store, якщо її підвантажено (attach_steam_apps),
+        # інакше — CDN за appid (для частини нових ігор там нічого немає).
+        steam_app = getattr(self, "steam_app", None)
+        if steam_app is not None and steam_app.header_image:
+            return steam_app.header_image
+
         from library.services.steam_service import steam_cover_url
         return steam_cover_url(self.external_game_id)
 
@@ -328,3 +334,26 @@ class ExternalLibraryItem(models.Model):
 
     def __str__(self):
         return f"{self.provider}: {self.game_title}"
+
+
+class SteamApp(models.Model):
+    """Дані гри зі Steam Store, спільні для всіх користувачів (обкладинка, жанри)."""
+
+    appid = models.CharField(max_length=20, primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    header_image = models.CharField(max_length=500, blank=True, null=True)
+    genres = models.CharField(max_length=500, blank=True, default="")
+    found = models.BooleanField(default=True)
+    fetched_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "steam_apps"
+
+    def __str__(self):
+        return f"{self.appid}: {self.name or '?'}"
+
+    @property
+    def genre_list(self):
+        return [g.strip() for g in self.genres.split(",") if g.strip()]
+

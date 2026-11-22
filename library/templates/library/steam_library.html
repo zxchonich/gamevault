@@ -109,6 +109,10 @@
                         {% endif %}
                     </h3>
 
+                    {% if item.steam_app.genres %}
+                    <p class="steam-game-meta">{{ item.steam_app.genres }}</p>
+                    {% endif %}
+
                     <p class="steam-game-meta">
                         {{ item.playtime_hours }} год
                         {% if item.playtime_2weeks_minutes %} · {{ item.playtime_2weeks_hours }} год за 2 тижні{% endif %}

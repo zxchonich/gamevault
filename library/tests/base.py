@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase
 from django.utils import timezone
@@ -18,7 +20,18 @@ DEFAULT_PASSWORD = "secret-pass-123"
 
 
 class GameVaultTestCase(TestCase):
-    """Базовий клас із фабриками даних. Ролі user/admin створює schema.sql."""
+    """Базовий клас із фабриками даних. Ролі user/admin створює schema.sql.
+
+    Справжні HTTP-запити (Steam) заборонені: тест має мокати їх явно,
+    інакше впаде з AssertionError, а не піде непомітно в мережу."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        for target in ("requests.get", "requests.post"):
+            patcher = mock.patch(target, side_effect=AssertionError(f"Справжній HTTP-запит у тесті: {target}"))
+            patcher.start()
+            cls.addClassCleanup(patcher.stop)
 
     def make_user(self, username, admin=False, private=False, password=DEFAULT_PASSWORD):
         return User.objects.create(

@@ -217,3 +217,67 @@ class RecommendationViewsTests(RecommendationTestCase):
         self.client.post(reverse("library:admin_game_delete", args=[self.dead_cells.id]))
 
         self.assertFalse(DismissedRecommendation.objects.exists())
+
+
+class SteamOnlyGamesTests(RecommendationTestCase):
+    """Steam-ігри поза каталогом впливають на смаки через жанри Steam Store."""
+
+    def steam_app(self, appid, *genres):
+        from library.models import SteamApp
+        SteamApp.objects.create(appid=str(appid), name=f"App {appid}", genres=", ".join(genres),
+                                fetched_at=timezone.now())
+
+    def test_played_steam_game_outside_catalog_shapes_profile(self):
+        account = self.make_steam_account(self.user)
+        self.make_steam_item(account, 578080, "PUBG", playtime=300 * 60)
+        self.steam_app(578080, "Action", "Free To Play")
+        self.game("Doom", "Action")
+        self.game("Tetris", "Puzzle")
+
+        recs, result = self.recommended()
+
+        self.assertFalse(result.is_fallback)
+        self.assertTrue(result.has_steam_signals)
+        self.assertIn("Doom", recs)
+        self.assertNotIn("Tetris", recs)
+        self.assertIn("Схожа на «PUBG» з вашого Steam", recs["Doom"].reasons)
+
+    def test_unplayed_or_unknown_steam_games_are_ignored(self):
+        account = self.make_steam_account(self.user)
+        self.make_steam_item(account, 1, "Never played", playtime=0)
+        self.steam_app(1, "Action")
+        self.make_steam_item(account, 2, "No store data", playtime=600)
+        self.game("Doom", "Action")
+
+        _, result = self.recommended()
+
+        self.assertTrue(result.is_fallback)
+
+    def test_mixed_sources_in_reason(self):
+        account = self.make_steam_account(self.user)
+        hades = self.game("Hades", "Action")
+        self.make_entry(self.user, hades, status="completed")
+        self.review(self.user, hades, 10)
+        self.make_steam_item(account, 578080, "PUBG", playtime=50 * 60)
+        self.steam_app(578080, "Action")
+        self.game("Doom", "Action")
+
+        recs, _ = self.recommended()
+
+        self.assertIn("Схожа на «Hades» та «PUBG» з ваших ігор", recs["Doom"].reasons)
+
+    def test_source_label_counts_hidden_titles(self):
+        account = self.make_steam_account(self.user)
+        hades = self.game("Hades", "Action")
+        dead_cells = self.game("Dead Cells", "Action")
+        for game in (hades, dead_cells):
+            self.make_entry(self.user, game, status="completed")
+            self.review(self.user, game, 10)
+        self.make_steam_item(account, 578080, "PUBG", playtime=60)
+        self.steam_app(578080, "Action")
+        self.game("Doom", "Action")
+
+        recs, _ = self.recommended()
+
+        self.assertIn("Схожа на «Dead Cells» та «Hades» і ще 1 з ваших ігор", recs["Doom"].reasons)
+

@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-003.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-004.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -196,6 +196,18 @@ CREATE TABLE `external_library_items` (
   KEY `fk_external_library_account` (`external_account_id`),
   CONSTRAINT `fk_external_library_account` FOREIGN KEY (`external_account_id`) REFERENCES `external_accounts` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_external_library_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `steam_apps` (
+  `appid` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `header_image` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `genres` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '╨Ц╨░╨╜╤А╨╕ Steam ╨░╨╜╨│╨╗╤Ц╨╣╤Б╤М╨║╨╛╤О ╤З╨╡╤А╨╡╨╖ ╨║╨╛╨╝╤Г',
+  `found` tinyint(1) NOT NULL DEFAULT '1' COMMENT '0 тАФ ╨│╤А╨╕ ╨╜╨╡╨╝╨░╤Ф ╨▓ Steam Store (╨╜╨╡ ╨╖╨░╨┐╨╕╤В╤Г╨▓╨░╤В╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╜╨╛)',
+  `fetched_at` datetime NOT NULL,
+  PRIMARY KEY (`appid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

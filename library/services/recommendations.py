@@ -23,8 +23,10 @@ from library.models import (
     LibraryEntry,
     Review,
     SocialConnection,
+    SteamApp,
     User,
 )
+from library.services.steam_service import catalog_genre_index, map_steam_genres
 
 STATUS_WEIGHTS = {
     "completed": 3.0,
@@ -33,6 +35,10 @@ STATUS_WEIGHTS = {
     "paused": 0.5,
     "dropped": -2.0,
 }
+
+# Steam-ігри поза каталогом впливають на смаки через жанри Steam Store, але з меншою вагою:
+# жанри Steam загальні (Action, Indie...), а таких ігор у бібліотеці може бути сотні.
+STEAM_ONLY_FACTOR = 0.5
 
 GENRE_POINTS = 50
 FRIEND_POINTS = 30
@@ -147,20 +153,48 @@ def build_recommendations(user, limit=None):
         owned_on_steam.add(game_id)
         signals[game_id] = signals.get(game_id, 0) + steam_weight(minutes, minutes_2weeks)
 
+    # Steam-ігри поза каталогом, у які користувач грав: жанри зі Steam Store.
+    external_games = []  # (назва, сигнал, id жанрів каталогу)
+    outside = list(
+        ExternalLibraryItem.objects
+        .filter(user=user, provider="steam", playtime_minutes__gt=0)
+        .exclude(external_game_id__in=game_by_appid.keys())
+        .values_list("external_game_id", "game_title", "playtime_minutes", "playtime_2weeks_minutes")
+    )
+    if outside:
+        genre_index = catalog_genre_index()
+        app_genres = dict(
+            SteamApp.objects
+            .filter(appid__in=[row[0] for row in outside], found=True)
+            .values_list("appid", "genres")
+        )
+        for appid, title, minutes, minutes_2weeks in outside:
+            genre_ids = map_steam_genres(app_genres.get(appid, "").split(","), genre_index)
+            if genre_ids:
+                external_games.append((title, STEAM_ONLY_FACTOR * steam_weight(minutes, minutes_2weeks), genre_ids))
+
     # --- Профіль жанрів ---------------------------------------------------------
     genre_weights = {}
     for game_id, signal in signals.items():
         for genre_id in genres_by_game.get(game_id, ()):
             genre_weights[genre_id] = genre_weights.get(genre_id, 0) + signal
 
+    for _, signal, genre_ids in external_games:
+        for genre_id in genre_ids:
+            genre_weights[genre_id] = genre_weights.get(genre_id, 0) + signal
+
     max_abs = max((abs(w) for w in genre_weights.values()), default=0)
     affinity = {g: w / max_abs for g, w in genre_weights.items()} if max_abs else {}
 
-    # Ігри, що найбільше сподобались, — для пояснень "схожа на ...".
-    liked_games = sorted(
-        (gid for gid, s in signals.items() if s > 0 and genres_by_game.get(gid)),
-        key=lambda gid: -signals[gid],
-    )
+    # Ігри, що найбільше сподобались, — для пояснень "схожа на ...":
+    # (назва, сигнал, жанри, чи це Steam-гра поза каталогом).
+    liked = [
+        (games[gid].title, signal, genres_by_game[gid], False)
+        for gid, signal in signals.items()
+        if signal > 0 and genres_by_game.get(gid)
+    ]
+    liked += [(title, signal, genre_ids, True) for title, signal, genre_ids in external_games if signal > 0]
+    liked.sort(key=lambda entry: (-entry[1], entry[0]))
 
     # --- Дані друзів ------------------------------------------------------------
     friend_ids = _friend_ids(user)
@@ -208,7 +242,7 @@ def build_recommendations(user, limit=None):
             reason = f"Середня оцінка {format_number(avg)} ({n} {word})"
         return points, reason
 
-    is_fallback = not signals and not friend_owners
+    is_fallback = not signals and not external_games and not friend_owners
     results = []
 
     for game_id, game in games.items():
@@ -225,9 +259,15 @@ def build_recommendations(user, limit=None):
             match = 0.6 * max(values) + 0.4 * (sum(values) / len(values))
             genre_points = round(GENRE_POINTS * max(-1.0, min(1.0, match)))
             if genre_points > 0:
-                similar = [games[gid].title for gid in liked_games if genres_by_game[gid] & game_genres]
+                similar = [entry for entry in liked if entry[2] & game_genres]
                 if similar:
-                    reasons.append(f"Схожа на {_join_names(similar)} з вашої бібліотеки")
+                    from_steam = {entry[3] for entry in similar}
+                    source = (
+                        "з вашого Steam" if from_steam == {True}
+                        else "з вашої бібліотеки" if from_steam == {False}
+                        else "з ваших ігор"
+                    )
+                    reasons.append(f"Схожа на {_join_names(e[0] for e in similar)} {source}")
 
         # Друзі
         owners = friend_owners.get(game_id, set())
@@ -286,5 +326,5 @@ def build_recommendations(user, limit=None):
     return RecommendationResult(
         recommendations=results,
         is_fallback=is_fallback,
-        has_steam_signals=bool(owned_on_steam),
+        has_steam_signals=bool(owned_on_steam or external_games),
     )

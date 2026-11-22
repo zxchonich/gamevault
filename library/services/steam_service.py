@@ -10,7 +10,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from library.models import Game, LibraryEntry, ExternalLibraryItem
+from library.models import ExternalLibraryItem, Game, Genre, LibraryEntry, SteamApp
 
 STEAM_OPENID_URL = "https://steamcommunity.com/openid/login"
 STEAM_PLAYER_SUMMARIES_URL = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/"
@@ -26,9 +26,23 @@ STEAM_CLAIMED_ID_RE = re.compile(r"^https?://steamcommunity\.com/openid/id/(\d{1
 
 REQUEST_TIMEOUT = 10
 
+# Скільки нових ігор довантажувати зі Steam Store під час однієї синхронізації
+# (кожна гра — окремий запит; решта довантажиться наступного разу або командою fetch_steam_apps).
+STEAM_APPS_PER_SYNC = 20
+
+# Жанри Steam, назви яких відрізняються від жанрів каталогу.
+STEAM_GENRE_ALIASES = {
+    "simulation": "simulator",
+    "role playing": "rpg",
+}
+
 
 class SteamError(Exception):
     """Помилка роботи зі Steam. Текст повідомлення можна показувати користувачу."""
+
+
+class SteamAppNotFound(SteamError):
+    """Гри з таким appid немає в Steam Store (видалена, регіональна тощо)."""
 
 
 def _get_api_key():
@@ -188,10 +202,15 @@ def sync_steam_library(user, steam_account):
             if _add_to_library(user.id, catalog_game, playtime_by_appid[catalog_game.steam_appid], now):
                 added_to_library_count += 1
 
+    # Обкладинки та жанри нових ігор (мережеві запити — поза транзакцією).
+    details = refresh_steam_apps(playtime_by_appid.keys(), limit=STEAM_APPS_PER_SYNC)
+
     return {
         "synced_count": len(playtime_by_appid),
         "added_to_library_count": added_to_library_count,
         "removed_count": removed_count,
+        "details_fetched": details["fetched"] + details["not_found"],
+        "details_pending": details["pending"],
     }
 
 
@@ -269,12 +288,12 @@ def _fetch_app_data(appid, language):
             timeout=REQUEST_TIMEOUT,
         )
         response.raise_for_status()
-        payload = response.json().get(str(appid)) or {}
-    except (requests.RequestException, ValueError) as exc:
+        payload = (response.json() or {}).get(str(appid)) or {}
+    except (requests.RequestException, ValueError, AttributeError) as exc:
         raise SteamError("Не вдалося отримати дані гри зі Steam Store. Спробуйте пізніше.") from exc
 
     if not payload.get("success"):
-        raise SteamError(f"Гру з appid {appid} не знайдено в Steam Store.")
+        raise SteamAppNotFound(f"Гру з appid {appid} не знайдено в Steam Store.")
 
     return payload.get("data") or {}
 
@@ -365,8 +384,85 @@ def get_steam_summary(user, top_limit=5):
         "games_count": items.count(),
         "total_hours": round((totals["minutes"] or 0) / 60),
         "last_synced_at": totals["last_synced"],
-        "top_games": list(items.filter(playtime_minutes__gt=0).order_by("-playtime_minutes")[:top_limit]),
-        "recent_games": list(
+        "top_games": attach_steam_apps(
+            items.filter(playtime_minutes__gt=0).order_by("-playtime_minutes")[:top_limit]
+        ),
+        "recent_games": attach_steam_apps(
             items.filter(playtime_2weeks_minutes__gt=0).order_by("-playtime_2weeks_minutes")[:top_limit]
         ),
     }
+
+
+def refresh_steam_apps(appids, limit=None, refresh=False, delay=0):
+    """Завантажує зі Steam Store дані (назва, обкладинка, жанри) для appid, яких ще немає
+    в steam_apps (або для всіх, якщо refresh=True). Зупиняється на першій мережевій помилці
+    чи обмеженні частоти запитів Steam. Повертає лічильники."""
+    import time
+
+    appids = sorted({str(a) for a in appids if a})
+    if not refresh:
+        known = set(SteamApp.objects.filter(appid__in=appids).values_list("appid", flat=True))
+        appids = [a for a in appids if a not in known]
+
+    batch = appids if limit is None else appids[:limit]
+    stats = {"fetched": 0, "not_found": 0, "pending": len(appids) - len(batch), "error": None}
+
+    for index, appid in enumerate(batch):
+        if delay and index:
+            time.sleep(delay)
+
+        try:
+            data = _fetch_app_data(appid, "english")
+        except SteamAppNotFound:
+            SteamApp.objects.update_or_create(
+                appid=appid, defaults={"found": False, "fetched_at": timezone.now()}
+            )
+            stats["not_found"] += 1
+            continue
+        except SteamError as exc:
+            stats["error"] = str(exc)
+            stats["pending"] += len(batch) - index
+            break
+
+        SteamApp.objects.update_or_create(
+            appid=appid,
+            defaults={
+                "name": (data.get("name") or "")[:255] or None,
+                "header_image": (data.get("header_image") or "")[:500] or None,
+                "genres": ", ".join(g.get("description", "") for g in data.get("genres") or [])[:500],
+                "found": True,
+                "fetched_at": timezone.now(),
+            },
+        )
+        stats["fetched"] += 1
+
+    return stats
+
+
+def attach_steam_apps(items):
+    """Підвантажує SteamApp до ExternalLibraryItem (item.steam_app) — для точних обкладинок і жанрів."""
+    items = list(items)
+    appids = {item.external_game_id for item in items}
+    apps = {app.appid: app for app in SteamApp.objects.filter(appid__in=appids, found=True)}
+
+    for item in items:
+        item.steam_app = apps.get(item.external_game_id)
+
+    return items
+
+
+def catalog_genre_index():
+    """{нормалізована назва: id жанру каталогу} для зіставлення з жанрами Steam."""
+    return {normalize_title(name): genre_id for genre_id, name in Genre.objects.values_list("id", "name")}
+
+
+def map_steam_genres(steam_genres, genre_index):
+    """Жанри Steam -> множина id жанрів каталогу (лише ті, що є в каталозі)."""
+    result = set()
+    for name in steam_genres:
+        key = normalize_title(name)
+        key = STEAM_GENRE_ALIASES.get(key, key)
+        if key in genre_index:
+            result.add(genre_index[key])
+    return result
+

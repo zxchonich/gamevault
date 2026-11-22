@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from .models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry, User
 from .services.steam_service import (
     SteamError,
+    attach_steam_apps,
     build_steam_login_url,
     extract_steam_id_from_openid,
     get_steam_profile,
@@ -48,6 +49,11 @@ def _sync_and_report(request, user, steam_account):
     )
     if result["removed_count"]:
         text += f" Прибрано ігор, яких більше немає в Steam: {result['removed_count']}."
+    if result.get("details_pending"):
+        text += (
+            f" Обкладинки та жанри завантажено для {result['details_fetched']} ігор, "
+            f"ще {result['details_pending']} — під час наступних синхронізацій."
+        )
 
     messages.success(request, text)
 
@@ -176,7 +182,7 @@ def _render_steam_library(request, viewer, owner):
         items = items.order_by("-playtime_minutes", "game_title")
 
     page_obj = Paginator(items, STEAM_LIBRARY_PAGE_SIZE).get_page(request.GET.get("page"))
-    page_items = list(page_obj.object_list)
+    page_items = attach_steam_apps(page_obj.object_list)
     page_appids = [item.external_game_id for item in page_items]
 
     games_by_appid = {g.steam_appid: g for g in Game.objects.filter(steam_appid__in=page_appids)}

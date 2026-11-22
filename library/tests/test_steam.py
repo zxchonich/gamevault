@@ -9,6 +9,7 @@ from django.utils import timezone
 from library.models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry
 from library.services import steam_service
 from library.services.steam_service import (
+    SteamAppNotFound,
     SteamError,
     extract_steam_id_from_openid,
     get_owned_games,
@@ -94,8 +95,16 @@ class SteamSyncTests(GameVaultTestCase):
         self.user = self.make_user("alice")
         self.account = self.make_steam_account(self.user)
 
-    def sync(self, games):
-        with mock.patch("library.services.steam_service.get_owned_games", return_value=games):
+    def sync(self, games, store=None):
+        """store: {appid: дані Steam Store}; відсутні appid — "немає в Steam Store"."""
+        store = store or {}
+
+        def fake_fetch(appid, language):
+            if str(appid) not in store:
+                raise SteamAppNotFound("not found")
+            return store[str(appid)]
+
+        with mock.patch("library.services.steam_service.get_owned_games", return_value=games),                 mock.patch("library.services.steam_service._fetch_app_data", side_effect=fake_fetch):
             return sync_steam_library(self.user, self.account)
 
     def test_sync_imports_items_and_adds_catalog_games(self):
@@ -108,7 +117,8 @@ class SteamSyncTests(GameVaultTestCase):
             owned_game(578080, "PUBG"),
         ])
 
-        self.assertEqual(result, {"synced_count": 3, "added_to_library_count": 2, "removed_count": 0})
+        self.assertEqual(result, {"synced_count": 3, "added_to_library_count": 2, "removed_count": 0,
+                                  "details_fetched": 3, "details_pending": 0})
         cs2 = ExternalLibraryItem.objects.get(user=self.user, external_game_id="730")
         self.assertEqual((cs2.playtime_minutes, cs2.playtime_2weeks_minutes), (600, 60))
         self.assertIsNotNone(cs2.last_played_at)
@@ -358,3 +368,118 @@ class SteamAdminTests(GameVaultTestCase):
         game = Game.objects.get(steam_appid="578080")
         self.assertRedirects(response, reverse("library:game_detail", args=[game.id]))
         self.assertTrue(LibraryEntry.objects.filter(user=self.alice, game=game).exists())
+
+
+class SteamAppsTests(GameVaultTestCase):
+    """Обкладинки й жанри зі Steam Store (таблиця steam_apps)."""
+
+    STORE = {
+        "578080": {"name": "PUBG", "header_image": "https://img/578080.jpg",
+                   "genres": [{"description": "Action"}, {"description": "Free To Play"}]},
+        "3527290": {"name": "PEAK", "header_image": "https://img/peak.jpg",
+                    "genres": [{"description": "Adventure"}, {"description": "Simulation"}]},
+    }
+
+    def fake_fetch(self, appid, language):
+        if appid not in self.STORE:
+            raise SteamAppNotFound("not found")
+        return self.STORE[appid]
+
+    def refresh(self, appids, **kwargs):
+        from library.services.steam_service import refresh_steam_apps
+        with mock.patch("library.services.steam_service._fetch_app_data", side_effect=self.fake_fetch) as fetch:
+            return refresh_steam_apps(appids, **kwargs), fetch
+
+    def test_refresh_stores_apps_and_marks_missing(self):
+        from library.models import SteamApp
+
+        stats, _ = self.refresh(["578080", "3527290", "1"])
+
+        self.assertEqual((stats["fetched"], stats["not_found"], stats["pending"]), (2, 1, 0))
+        pubg = SteamApp.objects.get(appid="578080")
+        self.assertEqual((pubg.header_image, pubg.genre_list), ("https://img/578080.jpg", ["Action", "Free To Play"]))
+        self.assertFalse(SteamApp.objects.get(appid="1").found)
+
+    def test_refresh_skips_known_apps_and_respects_limit(self):
+        self.refresh(["578080"])
+
+        stats, fetch = self.refresh(["578080", "3527290", "1"], limit=1)
+
+        self.assertEqual(fetch.call_count, 1)  # 578080 уже відомий, ліміт 1 з двох нових
+        self.assertEqual(stats["pending"], 1)
+
+        _, fetch = self.refresh(["578080"], refresh=True)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_refresh_stops_on_network_error(self):
+        from library.models import SteamApp
+        from library.services.steam_service import refresh_steam_apps
+
+        with mock.patch("library.services.steam_service._fetch_app_data",
+                        side_effect=SteamError("Steam недоступний")):
+            stats = refresh_steam_apps(["578080", "3527290"])
+
+        self.assertEqual((stats["fetched"], stats["pending"], stats["error"]), (0, 2, "Steam недоступний"))
+        self.assertFalse(SteamApp.objects.exists())
+
+    def test_cover_url_prefers_store_header(self):
+        from library.services.steam_service import attach_steam_apps
+
+        account = self.make_steam_account(self.make_user("alice"))
+        peak = self.make_steam_item(account, 3527290, "PEAK")
+        unknown = self.make_steam_item(account, 999, "Unknown")
+        self.refresh(["3527290"])
+
+        attach_steam_apps([peak, unknown])
+
+        self.assertEqual(peak.cover_url, "https://img/peak.jpg")
+        self.assertIn("/steam/apps/999/header.jpg", unknown.cover_url)
+
+    def test_map_steam_genres_uses_catalog_and_aliases(self):
+        from library.models import Genre
+        from library.services.steam_service import catalog_genre_index, map_steam_genres
+
+        action = Genre.objects.create(name="Action")
+        simulator = Genre.objects.create(name="Simulator")
+
+        mapped = map_steam_genres(["Action", "Simulation", "Free To Play", ""], catalog_genre_index())
+
+        self.assertEqual(mapped, {action.id, simulator.id})
+
+    def test_sync_reports_pending_details(self):
+        user = self.make_user("alice")
+        account = self.make_steam_account(user)
+        self.login(user)
+        games = [owned_game(i, f"Game {i}") for i in range(1, 26)]
+
+        with mock.patch("library.services.steam_service.get_owned_games", return_value=games), \
+                mock.patch("library.services.steam_service._fetch_app_data",
+                           side_effect=SteamAppNotFound("not found")) as fetch:
+            response = self.client.post(reverse("library:steam_sync_library"), follow=True)
+
+        self.assertEqual(fetch.call_count, steam_service.STEAM_APPS_PER_SYNC)
+        self.assertIn("ще 5 — під час наступних синхронізацій", self.messages_of(response)[0])
+        self.assertEqual(ExternalLibraryItem.objects.filter(user=user).count(), 25)
+
+    def test_fetch_steam_apps_command(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        from library.models import SteamApp
+
+        account = self.make_steam_account(self.make_user("alice"))
+        self.make_steam_item(account, 578080, "PUBG")
+        out = StringIO()
+
+        with mock.patch("library.services.steam_service._fetch_app_data", side_effect=self.fake_fetch):
+            call_command("fetch_steam_apps", "--delay", "0", stdout=out)
+
+        self.assertTrue(SteamApp.objects.filter(appid="578080", found=True).exists())
+        self.assertIn("Завантажено: 1", out.getvalue())
+
+    def test_network_guard_blocks_unmocked_requests(self):
+        from library.services.steam_service import refresh_steam_apps
+
+        with self.assertRaisesMessage(AssertionError, "Справжній HTTP-запит"):
+            refresh_steam_apps(["578080"])
