@@ -57,8 +57,10 @@
     --r-lg: 28px;
     --r-xl: 32px;
     --r-pill: 999px;
-    /* Адаптивність: сторінка займає весь екран; відступи, проміжки й шрифти
-       плавно ростуть з шириною вікна. Обмеження ширини — лише для тексту (--measure). */
+    /* Адаптивність: шапка на всю ширину, контент по центру до --content-max
+       (на ноутбуках це вся ширина); відступи, проміжки й шрифти плавно ростуть
+       з шириною вікна; текст для читання обмежений --measure. */
+    --content-max: 1760px;
     --gap: clamp(14px, 1.2vw, 28px);
     --page-pad: clamp(10px, 1.6vw, 40px);
     --measure: 70ch;
@@ -126,6 +128,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .gv-container {
     width: 100%;
+    max-width: var(--content-max);
+    margin-inline: auto;
 }
 
 .gv-main {
