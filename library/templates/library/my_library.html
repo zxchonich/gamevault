@@ -87,7 +87,7 @@
                     <button class="gv-btn gv-btn--sm gv-js-hide" type="submit">OK</button>
                 </form>
                 {% if entry.steam_item %}
-                <a class="gv-btn gv-btn--sm gv-btn--icon" href="{{ entry.steam_item.launch_url }}" aria-label="Запустити {{ entry.game.title }} у Steam" title="Запустити в Steam">{% icon "play" 16 %}</a>
+                {% include 'library/components/steam_launch.html' with item=entry.steam_item title=entry.game.title size="sm" %}
                 {% endif %}
                 <form method="post" action="{% url 'library:delete_library_entry' entry.id %}">
                     {% csrf_token %}

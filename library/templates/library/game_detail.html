@@ -50,7 +50,7 @@
             {% endif %}
 
             {% if steam_item %}
-            <a class="gv-btn gv-btn--lg" href="{{ steam_item.launch_url }}">{% icon "play" 16 %} Запустити</a>
+            {% include 'library/components/steam_launch.html' with item=steam_item title=game.title size="lg" label=True %}
             {% elif game.steam_appid %}
             <a class="gv-btn gv-btn--lg gv-btn--ghost" href="https://store.steampowered.com/app/{{ game.steam_appid }}/" target="_blank" rel="noopener">Steam ↗</a>
             {% endif %}

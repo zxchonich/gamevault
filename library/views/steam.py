@@ -20,6 +20,7 @@ from ..models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, Li
 from ..selectors import get_status_label
 from ..services import activity
 from ..services.social_auth import can_remove_login_method, create_social_user
+from ..services.steam_catalog import is_catalog_candidate
 from ..services.steam_service import (
     SteamError,
     attach_steam_apps,
@@ -49,6 +50,8 @@ def _sync_and_report(request, user, steam_account):
         f"Steam синхронізовано: {result['synced_count']} ігор отримано, "
         f"{result['added_to_library_count']} додано до бібліотеки GameVault."
     )
+    if result.get("catalog_added") or result.get("catalog_linked"):
+        text += f" Нових ігор у каталозі: {result.get('catalog_added', 0) + result.get('catalog_linked', 0)}."
     if result["removed_count"]:
         text += f" Прибрано ігор, яких більше немає в Steam: {result['removed_count']}."
     if result.get("details_pending"):
@@ -174,6 +177,19 @@ def steam_sync_library(request):
 
 # --- Steam-бібліотека --------------------------------------------------------
 
+def _catalog_note(app):
+    """Чому Steam-гри ще немає в каталозі (ігри потрапляють туди автоматично)."""
+    if app is None or app.app_type is None:
+        return "Додається в каталог…"
+    if app.blocked:
+        return "Прибрано з каталогу"
+    if app.adult:
+        return "18+ — не в каталозі"
+    if not is_catalog_candidate(app):
+        return "Не гра — не в каталозі"
+    return "Додається в каталог…"
+
+
 def _render_steam_library(request, viewer, owner):
     is_own = viewer.id == owner.id
     steam_account = ExternalAccount.objects.filter(user=owner, provider="steam").first()
@@ -213,17 +229,12 @@ def _render_steam_library(request, viewer, owner):
         e.game_id: e
         for e in LibraryEntry.objects.filter(user=viewer, game__in=games_by_appid.values())
     }
-    pending_appids = set(
-        GameRequest.objects.filter(status="pending", steam_appid__in=page_appids)
-        .values_list("steam_appid", flat=True)
-    )
-
     for item in page_items:
         item.catalog_game = games_by_appid.get(item.external_game_id)
         entry = viewer_entries.get(item.catalog_game.id) if item.catalog_game else None
         item.viewer_entry = entry
         item.viewer_status_label = get_status_label(entry.status) if entry else None
-        item.request_pending = item.external_game_id in pending_appids
+        item.catalog_note = None if item.catalog_game else _catalog_note(item.steam_app)
 
     totals = all_items.aggregate(
         minutes=models.Sum("playtime_minutes"),
@@ -269,34 +280,6 @@ def user_steam_library(request, user_id):
         return redirect("library:user_profile", owner.id)
 
     return _render_steam_library(request, viewer, owner)
-
-
-@require_POST
-@library_login_required
-def steam_suggest_game(request, appid):
-    """Створює заявку на додавання гри з власної Steam-бібліотеки до каталогу."""
-    user = request.library_user
-
-    item = get_object_or_404(
-        ExternalLibraryItem, user=user, provider="steam", external_game_id=str(appid)
-    )
-
-    if Game.objects.filter(steam_appid=item.external_game_id).exists():
-        messages.info(request, f'Гра "{item.game_title}" вже є в каталозі.')
-    elif GameRequest.objects.filter(status="pending", steam_appid=item.external_game_id).exists():
-        messages.info(request, f'Заявку на "{item.game_title}" вже подано, вона очікує модерації.')
-    else:
-        GameRequest.objects.create(
-            user=user,
-            title=item.game_title,
-            description="",
-            steam_appid=item.external_game_id,
-            status="pending",
-            created_at=timezone.now(),
-        )
-        messages.success(request, f'Заявку на додавання "{item.game_title}" до каталогу надіслано.')
-
-    return redirect_to_next(request, "library:steam_library")
 
 
 # --- Зіставлення каталогу зі Steam (адміністратор) ----------------------------

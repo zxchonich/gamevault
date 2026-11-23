@@ -6,7 +6,7 @@
 <header class="gv-page-head">
     <div>
         <h1>Запропонувати гру</h1>
-        <p>Немає потрібної гри в каталозі? Надішліть заявку — після перевірки адміністратор додасть її.</p>
+        <p>Немає потрібної гри в каталозі й у вашому Steam? Надішліть заявку — після перевірки адміністратор додасть її.</p>
     </div>
     <div class="gv-page-head__actions">
         <a class="gv-btn gv-btn--ghost" href="{% url 'library:my_requests' %}">Мої заявки</a>
@@ -39,7 +39,7 @@
             <li><b>Адміністратор перевіряє</b><span>Статус видно на сторінці «Мої заявки».</span></li>
             <li><b>Гра з'являється в каталозі</b><span>Її можна додати в бібліотеку й оцінити.</span></li>
         </ol>
-        <p class="muted" style="font-weight: 600; margin-top: 16px; font-size: 14px">Гру зі своєї Steam-бібліотеки простіше запропонувати одним кліком на сторінці <a href="{% url 'library:steam_library' %}" style="color: var(--accent-text); font-weight: 800">Steam-бібліотеки</a>.</p>
+        <p class="muted" style="font-weight: 600; margin-top: 16px; font-size: 14px">Ігри з вашої <a href="{% url 'library:steam_library' %}" style="color: var(--accent-text); font-weight: 800">Steam-бібліотеки</a> потрапляють у каталог автоматично — заявка потрібна лише для ігор, яких там немає.</p>
     </aside>
 </div>
 {% endblock %}

@@ -27,7 +27,6 @@ class PostOnlyActionsTests(GameVaultTestCase):
             reverse("library:logout"),
             reverse("library:steam_disconnect"),
             reverse("library:steam_sync_library"),
-            reverse("library:steam_suggest_game", args=[730]),
             reverse("library:admin_steam_link", args=[self.game.id]),
             reverse("library:update_library_status", args=[1]),
             reverse("library:delete_library_entry", args=[1]),

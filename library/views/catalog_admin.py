@@ -8,8 +8,9 @@ from django.views.decorators.http import require_POST
 
 from ..access import admin_required, is_admin_user, library_login_required, redirect_to_next
 from ..forms import GameForm, GenreForm
-from ..models import DismissedRecommendation, Game, GameGenre, Genre, LibraryEntry, Review
+from ..models import DismissedRecommendation, Game, GameGenre, Genre, LibraryEntry, Review, SteamApp
 from ..selectors import set_game_genres
+from ..services.steam_catalog import block_appid
 from ..storage import delete_unused_file
 from ..services import activity
 from ..services.steam_service import (
@@ -97,6 +98,9 @@ def _save_game(request, game, form):
             messages.warning(request, "Не вдалося завантажити постер зі Steam.")
 
     game.save()
+    if game.steam_appid:
+        # Адмін сам (повторно) додав гру — знімаємо її з «чорного списку» автоімпорту.
+        SteamApp.objects.filter(appid=game.steam_appid, blocked=True).update(blocked=False)
     if old_poster and old_poster != (game.poster.name if game.poster else ""):
         delete_unused_file(Game, "poster", old_poster)
     set_game_genres(game, request.POST.getlist("genres"))
@@ -166,8 +170,10 @@ def admin_game_delete(request, game_id):
     Review.objects.filter(game=game).delete()
     DismissedRecommendation.objects.filter(game=game).delete()
     poster = game.poster.name if game.poster else ""
+    appid = game.steam_appid
     game.delete()
     delete_unused_file(Game, "poster", poster)
+    block_appid(appid)  # інакше синхронізація Steam додала б гру в каталог знову
 
     messages.success(request, "Гру видалено з каталогу.")
     return redirect("library:game_list")

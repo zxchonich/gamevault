@@ -230,8 +230,14 @@ CREATE TABLE `external_library_items` (
 CREATE TABLE `steam_apps` (
   `appid` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `app_type` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `header_image` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `genres` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '╨Ц╨░╨╜╤А╨╕ Steam ╨░╨╜╨│╨╗╤Ц╨╣╤Б╤М╨║╨╛╤О ╤З╨╡╤А╨╡╨╖ ╨║╨╛╨╝╤Г',
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `developer` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `release_date` date DEFAULT NULL,
+  `adult` tinyint(1) NOT NULL DEFAULT '0',
+  `blocked` tinyint(1) NOT NULL DEFAULT '0',
   `found` tinyint(1) NOT NULL DEFAULT '1' COMMENT '0 тАФ ╨│╤А╨╕ ╨╜╨╡╨╝╨░╤Ф ╨▓ Steam Store (╨╜╨╡ ╨╖╨░╨┐╨╕╤В╤Г╨▓╨░╤В╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╜╨╛)',
   `fetched_at` datetime NOT NULL,
   PRIMARY KEY (`appid`)

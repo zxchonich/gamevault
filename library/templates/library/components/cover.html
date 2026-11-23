@@ -3,5 +3,8 @@
     <img src="{{ game.poster.url }}" alt="{{ game.title }}" loading="lazy">
     {% else %}
     <span class="gv-cover__title" aria-hidden="true">{{ game.title }}</span>
+    {% if game.steam_appid %}{# Гра зі Steam без завантаженого постера — вертикальний постер Steam CDN; немає — лишається плашка з назвою. #}
+    <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/{{ game.steam_appid }}/library_600x900.jpg" alt="{{ game.title }}" loading="lazy" onerror="this.remove()">
+    {% endif %}
     {% endif %}
 </div>

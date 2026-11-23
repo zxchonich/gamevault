@@ -71,7 +71,6 @@ urlpatterns = [
     path("steam/disconnect/", steam.steam_disconnect, name="steam_disconnect"),
     path("steam/sync/", steam.steam_sync_library, name="steam_sync_library"),
     path("steam/library/", steam.steam_library, name="steam_library"),
-    path("steam/suggest/<int:appid>/", steam.steam_suggest_game, name="steam_suggest_game"),
     path("users/<int:user_id>/steam/", steam.user_steam_library, name="user_steam_library"),
     path("manage/steam-matching/", steam.admin_steam_matching, name="admin_steam_matching"),
     path("manage/steam-matching/<int:game_id>/link/", steam.admin_steam_link, name="admin_steam_link"),

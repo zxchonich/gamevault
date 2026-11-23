@@ -146,6 +146,7 @@ class SteamSyncTests(GameVaultTestCase):
         ])
 
         self.assertEqual(result, {"synced_count": 3, "added_to_library_count": 2, "removed_count": 0,
+                                  "catalog_added": 0, "catalog_linked": 0,
                                   "details_fetched": 3, "details_pending": 0})
         cs2 = ExternalLibraryItem.objects.get(user=self.user, external_game_id="730")
         self.assertEqual((cs2.playtime_minutes, cs2.playtime_2weeks_minutes), (600, 60))
@@ -156,13 +157,16 @@ class SteamSyncTests(GameVaultTestCase):
     def test_sync_keeps_existing_status_and_removes_stale_items(self):
         game = self.make_game("Counter-Strike 2", steam_appid="730")
         self.make_entry(self.user, game, status="completed")
-        self.make_steam_item(self.account, 999, "Removed game")
+        self.make_steam_item(self.account, 999, "Refunded game", playtime=30)
+        self.make_steam_item(self.account, 570, "Dota 2", playtime=89000)
 
         result = self.sync([owned_game(730, "Counter-Strike 2", playtime=100)])
 
         self.assertEqual(result["removed_count"], 1)
         self.assertEqual(LibraryEntry.objects.get(user=self.user, game=game).status, "completed")
         self.assertFalse(ExternalLibraryItem.objects.filter(external_game_id="999").exists())
+        # Steam інколи не віддає гру з годинами (Dota 2) — її не стираємо.
+        self.assertTrue(ExternalLibraryItem.objects.filter(external_game_id="570").exists())
 
     def test_link_game_to_steam_owners(self):
         bob = self.make_user("bob")
@@ -265,30 +269,12 @@ class SteamLibraryViewsTests(GameVaultTestCase):
         self.make_friends(bob, self.alice)
         self.assertEqual(self.client.get(url).status_code, 200)
 
-    def test_suggest_game_creates_single_request(self):
-        self.login(self.alice)
-        url = reverse("library:steam_suggest_game", args=[578080])
-
-        self.client.post(url)
-        self.client.post(url)
-
-        request = GameRequest.objects.get(steam_appid="578080")
-        self.assertEqual((request.title, request.status, request.user_id), ("PUBG", "pending", self.alice.id))
-
-    def test_suggest_rules(self):
-        self.login(self.alice)
-
-        self.client.post(reverse("library:steam_suggest_game", args=[730]))
-        self.assertFalse(GameRequest.objects.exists())  # уже в каталозі
-
-        self.login(self.make_user("bob"))
-        response = self.client.post(reverse("library:steam_suggest_game", args=[578080]))
-        self.assertEqual(response.status_code, 404)  # гри немає в його Steam
-
     def test_steam_data_on_my_library_and_game_page(self):
         self.make_entry(self.alice, self.cs2)
         self.login(self.alice)
 
+        self.assertContains(self.client.get(reverse("library:my_library")), "steam://nav/games/details/730")
+        ExternalLibraryItem.objects.filter(external_game_id="730").update(playtime_2weeks_minutes=90)
         self.assertContains(self.client.get(reverse("library:my_library")), "steam://run/730")
         self.assertContains(self.client.get(reverse("library:game_detail", args=[self.cs2.id])), "steam://run/730")
 
@@ -402,9 +388,9 @@ class SteamAppsTests(GameVaultTestCase):
     """Обкладинки й жанри зі Steam Store (таблиця steam_apps)."""
 
     STORE = {
-        "578080": {"name": "PUBG", "header_image": "https://img/578080.jpg",
+        "578080": {"name": "PUBG", "type": "game", "header_image": "https://img/578080.jpg",
                    "genres": [{"description": "Action"}, {"description": "Free To Play"}]},
-        "3527290": {"name": "PEAK", "header_image": "https://img/peak.jpg",
+        "3527290": {"name": "PEAK", "type": "game", "header_image": "https://img/peak.jpg",
                     "genres": [{"description": "Adventure"}, {"description": "Simulation"}]},
     }
 
@@ -433,11 +419,13 @@ class SteamAppsTests(GameVaultTestCase):
 
         stats, fetch = self.refresh(["578080", "3527290", "1"], limit=1)
 
-        self.assertEqual(fetch.call_count, 1)  # 578080 уже відомий, ліміт 1 з двох нових
+        # 578080 уже відомий, ліміт 1 з двох нових: першим іде "1" — його немає в Store, тож один запит
+        # (для знайдених гри — ще один, українською, за описом).
+        self.assertEqual(fetch.call_count, 1)
         self.assertEqual(stats["pending"], 1)
 
         _, fetch = self.refresh(["578080"], refresh=True)
-        self.assertEqual(fetch.call_count, 1)
+        self.assertEqual(fetch.call_count, 2)
 
     def test_refresh_stops_on_network_error(self):
         from library.models import SteamApp

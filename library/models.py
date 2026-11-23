@@ -355,10 +355,20 @@ class SteamApp(models.Model):
 
     appid = models.CharField(max_length=20, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True)
+    app_type = models.CharField(max_length=20, blank=True, null=True)  # game, dlc, demo, music… (NULL — старий запис)
     header_image = models.CharField(max_length=500, blank=True, null=True)
-    genres = models.CharField(max_length=500, blank=True, default="")
+    genres = models.CharField(max_length=500, blank=True, default="")  # англійські назви жанрів Steam через кому
+    description = models.TextField(blank=True, null=True)
+    developer = models.CharField(max_length=255, blank=True, null=True)
+    release_date = models.DateField(blank=True, null=True)
+    adult = models.BooleanField(default=False)    # сексуальний контент 18+ — у каталог автоматично не йде
+    blocked = models.BooleanField(default=False)  # адмін видалив гру з каталогу — не додавати знову
     found = models.BooleanField(default=True)
     fetched_at = models.DateTimeField()
+
+    @property
+    def genre_list(self):
+        return [name.strip() for name in (self.genres or "").split(",") if name.strip()]
 
     class Meta:
         managed = False

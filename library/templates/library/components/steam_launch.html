@@ -1,0 +1,11 @@
+{% load library_extras %}{% comment %}
+Кнопка запуску Steam-гри: item (ExternalLibraryItem), title, size ("sm"/"lg"), label (показувати текст).
+Сайт не може знати, що встановлено на комп'ютері (Steam Web API цього не дає), тому:
+грали за останні 2 тижні — «Грати» (steam://run); інакше — сторінка гри в бібліотеці Steam,
+де Steam сам покаже «Грати» чи «Встановити».
+{% endcomment %}
+{% if item.playtime_2weeks_minutes %}
+<a class="gv-btn{% if size %} gv-btn--{{ size }}{% endif %}{% if not label %} gv-btn--icon{% endif %} gv-btn--ghost" href="steam://run/{{ item.external_game_id }}" title="Грати (запустити в Steam)" aria-label="Грати в {{ title }}">{% icon "play" 16 %}{% if label %} Грати{% endif %}</a>
+{% else %}
+<a class="gv-btn{% if size %} gv-btn--{{ size }}{% endif %}{% if not label %} gv-btn--icon{% endif %} gv-btn--ghost" href="steam://nav/games/details/{{ item.external_game_id }}" title="Відкрити в бібліотеці Steam — там можна встановити або запустити" aria-label="Відкрити {{ title }} у Steam">{% icon "steam" 16 %}{% if label %} Відкрити в Steam{% endif %}</a>
+{% endif %}

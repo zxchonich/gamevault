@@ -1,4 +1,5 @@
 import datetime
+import html
 import os
 import re
 import unicodedata
@@ -14,6 +15,7 @@ from library.models import ExternalLibraryItem, Game, Genre, LibraryEntry, Steam
 
 STEAM_OPENID_URL = "https://steamcommunity.com/openid/login"
 STEAM_PLAYER_SUMMARIES_URL = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/"
+STEAM_RECENT_GAMES_URL = "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/"
 STEAM_OWNED_GAMES_URL = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
 STEAM_APP_DETAILS_URL = "https://store.steampowered.com/api/appdetails"
 STEAM_CDN_APP_URL = "https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/{file}"
@@ -29,6 +31,13 @@ REQUEST_TIMEOUT = 10
 # Скільки нових ігор довантажувати зі Steam Store під час однієї синхронізації
 # (кожна гра — окремий запит; решта довантажиться наступного разу або командою fetch_steam_apps).
 STEAM_APPS_PER_SYNC = 20
+
+# Steam-ігри, яких немає в списку під час синхронізації, видаляються, лише якщо награно менше
+# (повернення грошей у Steam — до 2 годин гри).
+REMOVE_MISSING_BELOW_MINUTES = 120
+
+# content_descriptors Steam Store: 3 — Adult Only Sexual Content, 4 — Frequent Nudity or Sexual Content.
+ADULT_CONTENT_DESCRIPTORS = {3, 4}
 
 # Жанри Steam, назви яких відрізняються від жанрів каталогу.
 STEAM_GENRE_ALIASES = {
@@ -142,11 +151,17 @@ def get_steam_profile(steam_id):
 
 
 def get_owned_games(steam_id):
+    """Ігри акаунта: GetOwnedGames + GetRecentlyPlayedGames.
+
+    Частину безкоштовних ігор (зокрема Dota 2) GetOwnedGames не віддає навіть із
+    include_played_free_games — вони є лише серед нещодавно зіграних, тому списки об'єднуємо.
+    skip_unvetted_apps=0 — інакше Steam ховає частину нових/маловідомих ігор."""
     data = _steam_api_get(STEAM_OWNED_GAMES_URL, {
         "key": _get_api_key(),
         "steamid": steam_id,
         "include_appinfo": 1,
         "include_played_free_games": 1,
+        "skip_unvetted_apps": 0,
         "format": "json",
     })
 
@@ -159,7 +174,16 @@ def get_owned_games(steam_id):
             "\"Деталі ігор\" відкриті в налаштуваннях приватності Steam."
         )
 
-    return payload.get("games", [])
+    games = payload.get("games", [])
+    known = {game.get("appid") for game in games}
+    try:
+        recent = _steam_api_get(STEAM_RECENT_GAMES_URL, {"key": _get_api_key(), "steamid": steam_id})
+    except SteamError:
+        recent = {}
+    for game in recent.get("response", {}).get("games", []):
+        if game.get("appid") and game["appid"] not in known:
+            games.append(game)
+    return games
 
 
 def sync_steam_library(user, steam_account):
@@ -180,29 +204,28 @@ def sync_steam_library(user, steam_account):
             playtime = game.get("playtime_forever") or 0
             playtime_by_appid[appid] = playtime
             last_played = game.get("rtime_last_played") or 0
+            defaults = {
+                "external_account": steam_account,
+                "game_title": name,
+                "playtime_minutes": playtime,
+                "playtime_2weeks_minutes": game.get("playtime_2weeks") or 0,
+                "launch_url": f"steam://run/{appid}",
+                "synced_at": now,
+            }
+            if last_played:
+                defaults["last_played_at"] = datetime.datetime.fromtimestamp(last_played, tz=datetime.timezone.utc)
+            elif "rtime_last_played" in game:
+                defaults["last_played_at"] = None
 
             ExternalLibraryItem.objects.update_or_create(
-                user=user,
-                provider="steam",
-                external_game_id=appid,
-                defaults={
-                    "external_account": steam_account,
-                    "game_title": name,
-                    "playtime_minutes": playtime,
-                    "playtime_2weeks_minutes": game.get("playtime_2weeks") or 0,
-                    "last_played_at": (
-                        datetime.datetime.fromtimestamp(last_played, tz=datetime.timezone.utc)
-                        if last_played else None
-                    ),
-                    "launch_url": f"steam://run/{appid}",
-                    "synced_at": now,
-                }
+                user=user, provider="steam", external_game_id=appid, defaults=defaults,
             )
 
-        # Ігри, яких більше немає в акаунті Steam.
+        # Ігри, яких більше немає в списку Steam. Видаляємо лише з малим часом у грі (повернення
+        # грошей): ігри з годинами Steam інколи просто не віддає (див. get_owned_games).
         removed_count, _ = (
             ExternalLibraryItem.objects
-            .filter(user=user, provider="steam")
+            .filter(user=user, provider="steam", playtime_minutes__lt=REMOVE_MISSING_BELOW_MINUTES)
             .exclude(external_game_id__in=playtime_by_appid.keys())
             .delete()
         )
@@ -222,9 +245,17 @@ def sync_steam_library(user, steam_account):
     # Обкладинки та жанри нових ігор (мережеві запити — поза транзакцією).
     details = refresh_steam_apps(playtime_by_appid.keys(), limit=STEAM_APPS_PER_SYNC)
 
+    # Ігри, яких ще немає в каталозі, додаються туди самі (і в бібліотеки всіх власників).
+    from library.services.steam_catalog import import_steam_games
+
+    imported = import_steam_games(playtime_by_appid.keys())
+    added_to_library_count += imported["added_to_libraries"].get(user.id, 0)
+
     return {
         "synced_count": len(playtime_by_appid),
         "added_to_library_count": added_to_library_count,
+        "catalog_added": imported["created"],
+        "catalog_linked": imported["linked"],
         "removed_count": removed_count,
         "details_fetched": details["fetched"] + details["not_found"],
         "details_pending": details["pending"],
@@ -428,7 +459,12 @@ def refresh_steam_apps(appids, limit=None, refresh=False, delay=0):
 
     appids = sorted({str(a) for a in appids if a})
     if not refresh:
-        known = set(SteamApp.objects.filter(appid__in=appids).values_list("appid", flat=True))
+        # Записи старого формату (без app_type) теж довантажуємо — у них немає даних для каталогу.
+        known = set(
+            SteamApp.objects.filter(appid__in=appids)
+            .exclude(found=True, app_type__isnull=True)
+            .values_list("appid", flat=True)
+        )
         appids = [a for a in appids if a not in known]
 
     batch = appids if limit is None else appids[:limit]
@@ -451,12 +487,25 @@ def refresh_steam_apps(appids, limit=None, refresh=False, delay=0):
             stats["pending"] += len(batch) - index
             break
 
+        description = data.get("short_description") or ""
+        try:
+            description = _fetch_app_data(appid, "ukrainian").get("short_description") or description
+        except SteamError:
+            pass
+        release = data.get("release_date") or {}
+        descriptor_ids = set((data.get("content_descriptors") or {}).get("ids") or [])
+
         SteamApp.objects.update_or_create(
             appid=appid,
             defaults={
                 "name": (data.get("name") or "")[:255] or None,
+                "app_type": (data.get("type") or "")[:20] or None,
                 "header_image": (data.get("header_image") or "")[:500] or None,
                 "genres": ", ".join(g.get("description", "") for g in data.get("genres") or [])[:500],
+                "description": html.unescape(re.sub(r"<[^>]+>", "", description)).strip() or None,
+                "developer": ", ".join(data.get("developers") or [])[:255] or None,
+                "release_date": None if release.get("coming_soon") else _parse_store_date(release.get("date")),
+                "adult": bool(descriptor_ids & ADULT_CONTENT_DESCRIPTORS),
                 "found": True,
                 "fetched_at": timezone.now(),
             },

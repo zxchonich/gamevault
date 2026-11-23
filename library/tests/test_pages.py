@@ -48,7 +48,7 @@ class PageRenderTests(GameVaultTestCase):
         self.assert_page(reverse("library:edit_profile"), 'name="is_private"', 'name="show_activity"', "steam_admin")
         self.assert_page(reverse("library:my_reviews"), "Hades", "9/10")
         self.assert_page(reverse("library:request_game"), 'name="title"')
-        self.assert_page(reverse("library:steam_library"), "Hades", "Portal 2", "Заявку подано")
+        self.assert_page(reverse("library:steam_library"), "Hades", "Portal 2", "Додається в каталог")
         self.assert_page(reverse("library:user_steam_library", args=[self.friend.id]), "Portal 2")
         self.assert_page(reverse("library:feed"), "gv-np-card", "Portal 2", "friend")
 

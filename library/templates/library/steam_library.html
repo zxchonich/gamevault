@@ -9,7 +9,7 @@
         <h1>{% if is_own %}Моя бібліотека Steam{% else %}Steam · {{ profile_user.username }}{% endif %}</h1>
         <p>
             {% if last_synced_at %}Синхронізовано {{ last_synced_at|date:"d.m.Y H:i" }}{% else %}Ще не синхронізовано{% endif %}
-            {% if is_own %} · ігри з каталогу можна додати в бібліотеку, решту — запропонувати{% endif %}
+            · ігри зі Steam самі потрапляють у каталог і бібліотеку
         </p>
     </div>
     <div class="gv-page-head__actions">
@@ -96,18 +96,10 @@
                         <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary gv-grow">+ У бібліотеку</button>
                     </form>
                     {% endif %}
-                    {% elif item.request_pending %}
-                    <span class="gv-np-card__note gv-grow">Заявку подано</span>
-                    {% elif is_own %}
-                    <form method="post" action="{% url 'library:steam_suggest_game' item.external_game_id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" class="gv-btn gv-btn--sm gv-grow" title="Запропонувати гру в каталог GameVault">+ Запропонувати</button>
-                    </form>
                     {% else %}
-                    <span class="gv-np-card__note gv-grow">Немає в каталозі</span>
+                    <span class="gv-np-card__note gv-grow" title="Ігри зі Steam потрапляють у каталог автоматично">{{ item.catalog_note }}</span>
                     {% endif %}
-                    {% if is_own %}<a class="gv-btn gv-btn--sm gv-btn--icon gv-btn--ghost" href="{{ item.launch_url }}" title="Запустити в Steam" aria-label="Запустити {{ item.game_title }} у Steam">{% icon "play" 16 %}</a>{% endif %}
+                    {% if is_own %}{% include 'library/components/steam_launch.html' with item=item title=item.game_title size="sm" %}{% endif %}
                 </div>
             </div>
         </article>
