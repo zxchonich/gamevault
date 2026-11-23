@@ -18,7 +18,7 @@
         <form method="post" action="{% url 'library:steam_sync_library' %}">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" class="gv-btn gv-btn--primary">↻ Синхронізувати</button>
+            <button type="submit" class="gv-btn gv-btn--primary">{% icon "sync" 16 %} Синхронізувати</button>
         </form>
         {% else %}
         <a class="gv-btn gv-btn--primary" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
@@ -89,25 +89,25 @@
                 <div class="gv-np-card__actions">
                     {% if item.catalog_game %}
                     {% if item.viewer_entry %}
-                    <a class="gv-btn gv-btn--sm" href="{% url 'library:game_detail' item.catalog_game.id %}">✓ {% if is_own %}{{ item.viewer_status_label }}{% else %}У вас: {{ item.viewer_status_label }}{% endif %}</a>
+                    <a class="gv-btn gv-btn--sm gv-grow" href="{% url 'library:game_detail' item.catalog_game.id %}">{% icon "check" 15 %} {% if is_own %}{{ item.viewer_status_label }}{% else %}У вас: {{ item.viewer_status_label }}{% endif %}</a>
                     {% else %}
                     <form method="post" action="{% url 'library:add_to_library' item.catalog_game.id %}">
                         {% csrf_token %}
-                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">+ У бібліотеку</button>
+                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary gv-grow">+ У бібліотеку</button>
                     </form>
                     {% endif %}
                     {% elif item.request_pending %}
-                    <span class="gv-np-card__note">Заявку подано</span>
+                    <span class="gv-np-card__note gv-grow">Заявку подано</span>
                     {% elif is_own %}
                     <form method="post" action="{% url 'library:steam_suggest_game' item.external_game_id %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" class="gv-btn gv-btn--sm">Запропонувати в каталог</button>
+                        <button type="submit" class="gv-btn gv-btn--sm gv-grow" title="Запропонувати гру в каталог GameVault">+ Запропонувати</button>
                     </form>
                     {% else %}
-                    <span class="gv-np-card__note">Немає в каталозі</span>
+                    <span class="gv-np-card__note gv-grow">Немає в каталозі</span>
                     {% endif %}
-                    {% if is_own %}<a class="gv-btn gv-btn--sm gv-btn--ghost" href="{{ item.launch_url }}" title="Запустити в Steam">▶</a>{% endif %}
+                    {% if is_own %}<a class="gv-btn gv-btn--sm gv-btn--icon gv-btn--ghost" href="{{ item.launch_url }}" title="Запустити в Steam" aria-label="Запустити {{ item.game_title }} у Steam">{% icon "play" 16 %}</a>{% endif %}
                 </div>
             </div>
         </article>

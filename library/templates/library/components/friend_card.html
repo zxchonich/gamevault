@@ -1,15 +1,14 @@
 {% load library_extras %}{% comment %}Картка друга: friend, connection.{% endcomment %}
 <article class="gv-user-card">
-    <a class="gv-user-card__head" href="{% url 'library:user_profile' friend.id %}">
+    <a class="gv-user-card__head" href="{% url 'library:user_profile' friend.id %}" title="Профіль {{ friend.username }}">
         {% user_avatar friend %}
         <span class="gv-user-card__name">{{ friend.username }}</span>
     </a>
     <div class="gv-user-card__actions">
-        <a class="gv-btn gv-btn--sm gv-btn--inverse" href="{% url 'library:user_library' friend.id %}">Бібліотека</a>
-        <a class="gv-btn gv-btn--sm" href="{% url 'library:user_profile' friend.id %}">Профіль</a>
+        <a class="gv-btn gv-btn--sm gv-btn--icon" href="{% url 'library:user_library' friend.id %}" title="Бібліотека" aria-label="Бібліотека {{ friend.username }}">{% icon "library" %}</a>
         <form method="post" action="{% url 'library:delete_connection' connection.id %}">
             {% csrf_token %}
-            <button type="submit" class="gv-btn gv-btn--sm gv-btn--danger" onclick="return confirm('Видалити {{ friend.username|escapejs }} з друзів?');">Видалити</button>
+            <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--danger" title="Видалити з друзів" aria-label="Видалити {{ friend.username }} з друзів" onclick="return confirm('Видалити {{ friend.username|escapejs }} з друзів?');">{% icon "user-minus" %}</button>
         </form>
     </div>
 </article>

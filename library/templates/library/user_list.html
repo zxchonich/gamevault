@@ -41,12 +41,10 @@
                 {% if not item.connection_status %}
                 <form method="post" action="{% url 'library:add_friend' item.user.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">+ Додати</button>
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--primary" title="Додати в друзі" aria-label="Додати {{ item.user.username }} в друзі">{% icon "user-plus" %}</button>
                 </form>
-                {% elif item.connection_status == 'accepted' %}
-                <span class="gv-chip gv-chip--accent">✓ Друзі</span>
                 {% endif %}
-                <a class="gv-btn gv-btn--sm" href="{% url 'library:user_library' item.user.id %}">Бібліотека</a>
+                <a class="gv-btn gv-btn--sm gv-btn--icon" href="{% url 'library:user_library' item.user.id %}" title="Бібліотека" aria-label="Бібліотека {{ item.user.username }}">{% icon "library" %}</a>
             </div>
         </article>
         {% empty %}

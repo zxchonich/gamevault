@@ -52,6 +52,12 @@ class PageRenderTests(GameVaultTestCase):
         self.assert_page(reverse("library:user_steam_library", args=[self.friend.id]), "Portal 2")
         self.assert_page(reverse("library:feed"), "gv-np-card", "Portal 2", "friend")
 
+    def test_profile_shows_favorite_game_and_top_genres(self):
+        response = self.assert_page(reverse("library:profile"), "Улюблені жанри", "Roguelike", "gv-profile-head__backdrop")
+        self.assertEqual(response.context["backdrop"]["title"], "Hades")
+        self.assertEqual(response.context["top_genres"][0]["genre"], self.genre)
+        self.assert_page(reverse("library:user_profile", args=[self.friend.id]), "gv-steam-card")
+
     def test_my_requests(self):
         self.login(self.friend)
         self.assert_page(reverse("library:my_requests"), "Pending Game", "gv-state--pending", "gv-state--approved")

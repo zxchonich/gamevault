@@ -25,7 +25,7 @@ from ..services.steam_service import (
     validate_steam_openid_response,
 )
 
-STEAM_LIBRARY_PAGE_SIZE = 24
+STEAM_LIBRARY_PAGE_SIZE = 30  # ділиться на 1, 2, 3, 5 і 6 колонок .gv-steam-grid — останній ряд завжди повний
 
 
 def _sync_and_report(request, user, steam_account):

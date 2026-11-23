@@ -50,7 +50,7 @@
             {% endif %}
 
             {% if steam_item %}
-            <a class="gv-btn gv-btn--lg" href="{{ steam_item.launch_url }}">▶ Запустити</a>
+            <a class="gv-btn gv-btn--lg" href="{{ steam_item.launch_url }}">{% icon "play" 16 %} Запустити</a>
             {% elif game.steam_appid %}
             <a class="gv-btn gv-btn--lg gv-btn--ghost" href="https://store.steampowered.com/app/{{ game.steam_appid }}/" target="_blank" rel="noopener">Steam ↗</a>
             {% endif %}
@@ -64,7 +64,7 @@
     <div class="gv-game__main">
         <section class="gv-card">
             <div class="gv-section-head"><h2>Про гру</h2></div>
-            <div class="gv-prose" style="margin-bottom: 18px">
+            <div class="gv-prose" style="max-width: none; margin-bottom: 18px; line-height: 1.6">
                 <p>{% if game.description %}{{ game.description|linebreaksbr }}{% else %}<span class="muted">Опис гри поки що відсутній.</span>{% endif %}</p>
             </div>
             <div class="gv-meta">

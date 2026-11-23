@@ -87,13 +87,11 @@
                     <button class="gv-btn gv-btn--sm gv-js-hide" type="submit">OK</button>
                 </form>
                 {% if entry.steam_item %}
-                <a class="gv-btn gv-btn--sm gv-btn--icon" style="width: 38px; min-height: 38px" href="{{ entry.steam_item.launch_url }}" aria-label="Запустити {{ entry.game.title }} у Steam" title="Запустити в Steam">▶</a>
+                <a class="gv-btn gv-btn--sm gv-btn--icon" href="{{ entry.steam_item.launch_url }}" aria-label="Запустити {{ entry.game.title }} у Steam" title="Запустити в Steam">{% icon "play" 16 %}</a>
                 {% endif %}
                 <form method="post" action="{% url 'library:delete_library_entry' entry.id %}">
                     {% csrf_token %}
-                    <button class="gv-btn gv-btn--sm gv-btn--icon gv-btn--danger" style="width: 38px; min-height: 38px" type="submit" aria-label="Видалити {{ entry.game.title }} з бібліотеки" title="Видалити з бібліотеки" onclick="return confirm('Видалити гру з бібліотеки? Вашу рецензію на неї теж буде видалено.');">
-                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg>
-                    </button>
+                    <button class="gv-btn gv-btn--sm gv-btn--icon gv-btn--danger" type="submit" aria-label="Видалити {{ entry.game.title }} з бібліотеки" title="Видалити з бібліотеки" onclick="return confirm('Видалити гру з бібліотеки? Вашу рецензію на неї теж буде видалено.');"> {% icon "trash" 16 %}</button>
                 </form>
             </div>
         </article>

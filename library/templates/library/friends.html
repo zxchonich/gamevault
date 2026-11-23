@@ -32,11 +32,11 @@
             <div class="gv-user-card__actions">
                 <form method="post" action="{% url 'library:accept_connection' connection.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">Прийняти</button>
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--primary" title="Прийняти" aria-label="Прийняти заявку {{ connection.sender.username }}">{% icon "check" %}</button>
                 </form>
                 <form method="post" action="{% url 'library:reject_connection' connection.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--ghost">Відхилити</button>
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--ghost" title="Відхилити" aria-label="Відхилити заявку {{ connection.sender.username }}">{% icon "x" %}</button>
                 </form>
             </div>
         </article>
@@ -74,9 +74,8 @@
                 <div class="gv-user-card__actions">
                     <form method="post" action="{% url 'library:add_friend' user.id %}">
                         {% csrf_token %}
-                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">+ Додати</button>
+                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--primary" title="Додати в друзі" aria-label="Додати {{ user.username }} в друзі">{% icon "user-plus" %}</button>
                     </form>
-                    <a class="gv-btn gv-btn--sm" href="{% url 'library:user_profile' user.id %}">Профіль</a>
                 </div>
             </article>
             {% empty %}
@@ -100,7 +99,7 @@
                 <div class="gv-user-card__actions">
                     <form method="post" action="{% url 'library:delete_connection' connection.id %}">
                         {% csrf_token %}
-                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--ghost">Скасувати</button>
+                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--ghost" title="Скасувати заявку" aria-label="Скасувати заявку {{ connection.receiver.username }}">{% icon "x" %}</button>
                     </form>
                 </div>
             </article>

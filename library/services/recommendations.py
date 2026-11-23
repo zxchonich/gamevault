@@ -21,6 +21,7 @@ from library.models import (
     ExternalLibraryItem,
     Game,
     GameGenre,
+    Genre,
     LibraryEntry,
     Review,
     SteamApp,
@@ -113,13 +114,27 @@ def _join_names(names, limit=2):
     return text
 
 
-def build_recommendations(user, limit=None):
-    games = {game.id: game for game in Game.objects.all()}
-    game_by_appid = {g.steam_appid: g.id for g in games.values() if g.steam_appid}
+@dataclass
+class TasteProfile:
+    """Сигнали користувача та профіль жанрів (спільне для рекомендацій і профілю)."""
+    signals: dict            # game_id -> вага
+    library_ids: set
+    owned_on_steam: set
+    external_games: list     # (назва, сигнал, id жанрів каталогу) — Steam-ігри поза каталогом
+    genre_weights: dict      # genre_id -> сума сигналів
+    affinity: dict           # genre_id -> -1..1
+    liked: list              # (назва, сигнал, жанри, чи Steam-гра поза каталогом), найкращі першими
 
-    genres_by_game = {}
-    for game_id, genre_id in GameGenre.objects.values_list("game_id", "genre_id"):
-        genres_by_game.setdefault(game_id, set()).add(genre_id)
+
+def build_taste_profile(user, games=None, game_by_appid=None, genres_by_game=None):
+    if games is None:
+        games = {game.id: game for game in Game.objects.all()}
+    if game_by_appid is None:
+        game_by_appid = {g.steam_appid: g.id for g in games.values() if g.steam_appid}
+    if genres_by_game is None:
+        genres_by_game = {}
+        for game_id, genre_id in GameGenre.objects.values_list("game_id", "genre_id"):
+            genres_by_game.setdefault(game_id, set()).add(genre_id)
 
     # --- Сигнали користувача ---------------------------------------------------
     signals = {}  # game_id -> вага
@@ -185,6 +200,35 @@ def build_recommendations(user, limit=None):
     ]
     liked += [(title, signal, genre_ids, True) for title, signal, genre_ids in external_games if signal > 0]
     liked.sort(key=lambda entry: (-entry[1], entry[0]))
+
+    return TasteProfile(signals, library_ids, owned_on_steam, external_games, genre_weights, affinity, liked)
+
+
+def top_genres(user, limit=5):
+    """Улюблені жанри для профілю: [{"genre", "weight", "percent"}], percent — відносно першого."""
+    profile = build_taste_profile(user)
+    positive = sorted(((g, w) for g, w in profile.genre_weights.items() if w > 0), key=lambda x: -x[1])[:limit]
+    if not positive:
+        return []
+    names = {genre.id: genre for genre in Genre.objects.filter(id__in=[g for g, _ in positive])}
+    top = positive[0][1]
+    return [
+        {"genre": names[g], "weight": w, "percent": max(6, round(w / top * 100))}
+        for g, w in positive if g in names
+    ]
+
+
+def build_recommendations(user, limit=None):
+    games = {game.id: game for game in Game.objects.all()}
+    game_by_appid = {g.steam_appid: g.id for g in games.values() if g.steam_appid}
+
+    genres_by_game = {}
+    for game_id, genre_id in GameGenre.objects.values_list("game_id", "genre_id"):
+        genres_by_game.setdefault(game_id, set()).add(genre_id)
+
+    taste = build_taste_profile(user, games, game_by_appid, genres_by_game)
+    signals, library_ids, owned_on_steam = taste.signals, taste.library_ids, taste.owned_on_steam
+    external_games, affinity, liked = taste.external_games, taste.affinity, taste.liked
 
     # --- Дані друзів ------------------------------------------------------------
     friend_ids = get_friend_ids(user)

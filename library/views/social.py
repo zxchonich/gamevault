@@ -10,8 +10,9 @@ from django.views.decorators.http import require_POST
 from ..access import can_view_profile, connection_between, friend_ids, library_login_required
 from ..forms import ProfileForm
 from ..models import LibraryEntry, SocialConnection, User
-from ..selectors import profile_stats
+from ..selectors import profile_backdrop, profile_stats
 from ..services import activity
+from ..services.recommendations import top_genres
 from ..services.steam_service import get_steam_summary
 
 SUGGESTED_USERS = 3
@@ -169,6 +170,17 @@ def delete_connection(request, connection_id):
     return redirect("library:friends")
 
 
+def _profile_extras(user):
+    """Спільні дані свого й чужого профілю."""
+    steam_summary = get_steam_summary(user, top_limit=4)
+    return {
+        **profile_stats(user),
+        "steam_summary": steam_summary,
+        "backdrop": profile_backdrop(user, steam_summary),
+        "top_genres": top_genres(user),
+    }
+
+
 @library_login_required
 def profile(request):
     user = request.library_user
@@ -177,8 +189,7 @@ def profile(request):
         "user": user,
         "profile_user": user,
         "is_own_profile": True,
-        **profile_stats(user),
-        "steam_summary": get_steam_summary(user),
+        **_profile_extras(user),
         "recent_activity": activity.user_activity(user, user),
     })
 
@@ -200,8 +211,7 @@ def user_profile(request, user_id):
         "current_user": current_user,
         "profile_user": profile_user,
         "connection": connection,
-        **profile_stats(profile_user),
-        "steam_summary": get_steam_summary(profile_user),
+        **_profile_extras(profile_user),
         "recent_activity": activity.user_activity(current_user, profile_user),
     })
 

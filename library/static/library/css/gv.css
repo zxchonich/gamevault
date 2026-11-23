@@ -297,7 +297,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .gv-btn--danger:hover { background: var(--danger-bg); color: var(--danger); }
 .gv-btn--sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
 .gv-btn--lg { min-height: 52px; padding: 0 26px; font-size: 15px; }
-.gv-btn--icon { width: 44px; padding: 0; }
+.gv-btn--icon { width: 44px; padding: 0; flex: 0 0 auto; }
+.gv-btn--icon.gv-btn--sm { width: 38px; min-height: 38px; }
+.gv-btn .gv-icon { flex: 0 0 auto; }
+/* Рядок дій: основна кнопка з текстом + кнопки-іконки. */
+.gv-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gv-actions > .gv-grow { flex: 1 1 auto; min-width: 0; }
+.gv-actions form { display: contents; }
 
 /* Кнопка-посилання всередині POST-форми (див. CLAUDE.md, «Действия — только POST») */
 .inline-post-form { display: contents; }
@@ -894,18 +900,19 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .gv-user-card {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 12px;
     padding: 16px;
     border-radius: var(--r-lg);
     background: var(--surface-2);
     min-width: 0;
 }
-.gv-user-card__head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gv-user-card__head { flex: 1 1 auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
 .gv-user-card__head:hover { color: var(--text); }
 .gv-user-card__name { font-family: var(--font-display); font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gv-user-card__sub { color: var(--muted); font-size: 13px; font-weight: 600; }
-.gv-user-card__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.gv-user-card__actions { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; }
 
 .gv-count { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: var(--r-pill); background: var(--violet); color: #FFFFFF; font-size: 12px; font-weight: 800; }
 
@@ -1052,7 +1059,12 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
 .gv-steps span { color: var(--muted); font-size: 13px; font-weight: 600; }
 
 /* Steam-бібліотека: картка гри з діями (на основі gv-np-card) */
-.gv-steam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 16vw, 300px), 1fr)); gap: 12px; }
+/* Фіксована кількість колонок (1/2/3/5/6), на яку ділиться STEAM_LIBRARY_PAGE_SIZE = 30. */
+.gv-steam-grid { --cols: 1; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 480px) { .gv-steam-grid { --cols: 2; } }
+@media (min-width: 760px) { .gv-steam-grid { --cols: 3; } }
+@media (min-width: 1200px) { .gv-steam-grid { --cols: 5; } }
+@media (min-width: 1560px) { .gv-steam-grid { --cols: 6; } }
 .gv-np-card--static:hover { transform: none; border-color: var(--line); }
 .gv-np-card--static:hover .gv-np-card__media img { transform: none; }
 .gv-np-card--static .gv-np-card__media:hover img { transform: scale(1.04); }
@@ -1060,12 +1072,14 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
 .gv-np-card__title a { color: inherit; }
 .gv-np-card__title a:hover { color: var(--accent-text); }
 .gv-np-card__sub { color: var(--muted); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gv-np-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.gv-np-card__actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin-top: auto; }
+.gv-np-card__actions form { display: contents; }
+.gv-np-card__actions .gv-grow, .gv-actions .gv-btn.gv-grow { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gv-np-card__note { display: inline-flex; align-items: center; min-height: 36px; color: var(--muted); font-size: 13px; font-weight: 700; }
 
 /* Звичайна кнопка на тлі surface-2 (картки-блоки) — на тон світліша/темніша, щоб не зливалася. */
-:is(.gv-box, .gv-np-card, .gv-admin-row, .gv-switch) .gv-btn:not(.gv-btn--primary, .gv-btn--ghost, .gv-btn--danger, .gv-btn--inverse) { background: var(--surface-3); }
-:is(.gv-box, .gv-np-card, .gv-admin-row) .gv-btn:not(.gv-btn--primary, .gv-btn--ghost, .gv-btn--danger, .gv-btn--inverse):hover { background: var(--line); }
+:is(.gv-box, .gv-np-card, .gv-admin-row, .gv-switch, .gv-user-card, .gv-list-item) .gv-btn:not(.gv-btn--primary, .gv-btn--ghost, .gv-btn--danger, .gv-btn--inverse) { background: var(--surface-3); }
+:is(.gv-box, .gv-np-card, .gv-admin-row, .gv-user-card, .gv-list-item) .gv-btn:not(.gv-btn--primary, .gv-btn--ghost, .gv-btn--danger, .gv-btn--inverse):hover { background: var(--line); }
 :is(.gv-box, .gv-admin-row) .gv-input { background: var(--surface); }
 .gv-box .gv-chip-check span { background: var(--surface-3); }
 .gv-box .gv-chip-check span:hover { background: var(--line); }
@@ -1095,6 +1109,73 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
     .gv-auth { grid-template-columns: minmax(0, 1fr); }
     .gv-auth__perks { display: none; }
 }
+
+/* ---------- Профіль: фон з улюбленої гри, жанри, Steam-картка ---------- */
+.gv-profile-head__backdrop {
+    position: absolute; inset: -40px; z-index: 0;
+    background-size: cover; background-position: center;
+    filter: blur(26px) saturate(1.4); opacity: 0.8;
+}
+.gv-profile-head.has-backdrop::before {
+    inset: 0; height: auto; z-index: 1;
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--surface) 82%, transparent) 0%,
+        color-mix(in srgb, var(--surface) 45%, transparent) 50%,
+        color-mix(in srgb, var(--surface) 10%, transparent) 100%);
+}
+.gv-profile-head > *:not(.gv-profile-head__backdrop) { position: relative; z-index: 2; }
+.gv-profile-head__fav { gap: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-profile-head__fav .gv-icon { color: var(--accent-text); }
+
+.gv-profile-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--gap); }
+
+/* Легенда-таблиця: колір · назва · кількість · відсоток */
+.gv-legend--table { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 44px; gap: 10px 12px; align-items: center; }
+.gv-legend--table div { display: contents; }
+.gv-legend--table span { font-weight: 700; font-size: 14px; }
+.gv-legend--table b { margin: 0; text-align: right; }
+.gv-legend--table .is-zero > * { opacity: 0.45; }
+
+/* Улюблені жанри */
+.gv-genre-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; counter-reset: genre; }
+.gv-genre-bars li { counter-increment: genre; display: grid; grid-template-columns: 22px minmax(70px, 140px) minmax(0, 1fr); gap: 12px; align-items: center; }
+.gv-genre-bars li::before { content: counter(genre); font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--muted); }
+.gv-genre-bars li:first-child::before { color: var(--accent-text); }
+.gv-genre-bars__name { font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-genre-bars__track { height: 10px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; }
+.gv-genre-bars__track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--violet), var(--accent)); }
+
+/* Сітка, де 6 елементів завжди дають повні ряди (2 / 3 / 6 колонок) */
+.gv-grid-6 { --cols: 2; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: clamp(12px, 1vw, 22px); }
+@media (min-width: 720px) { .gv-grid-6 { --cols: 3; } }
+@media (min-width: 1400px) { .gv-grid-6 { --cols: 6; } }
+
+/* Steam-картка профілю */
+.gv-steam-card { display: flex; flex-direction: column; gap: 14px; }
+.gv-steam-card__head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gv-steam-card__avatar { width: 44px; height: 44px; border-radius: var(--r-sm); object-fit: cover; flex: 0 0 auto; }
+.gv-steam-card__who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gv-steam-card__who h2 { font-size: clamp(19px, 0.6vw + 15px, 28px); font-weight: 800; line-height: 1.1; }
+.gv-steam-card__who a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-steam-card__who a:hover { color: var(--accent-text); }
+.gv-steam-card__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gv-steam-card__stats div { display: flex; align-items: baseline; gap: 6px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); }
+.gv-steam-card__stats b { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.gv-steam-card__stats span { color: var(--muted); font-weight: 700; font-size: 13px; }
+.gv-steam-card .gv-now-playing { grid-template-columns: minmax(0, 1fr); margin: 0; gap: 8px; }
+.gv-steam-card .gv-field__hint { margin-top: -6px; }
+
+/* Сегментований перемикач (радіо + підписи, без JS) */
+.gv-seg { display: flex; flex-direction: column; gap: 10px; }
+.gv-seg__tabs { display: flex; gap: 4px; padding: 4px; border-radius: var(--r-pill); background: var(--surface-2); }
+.gv-seg__tabs label { flex: 1 1 0; text-align: center; padding: 7px 10px; border-radius: var(--r-pill); font-size: 13px; font-weight: 800; color: var(--muted); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.gv-seg__tabs label:hover { color: var(--text); }
+.gv-seg > input:nth-of-type(1):checked ~ .gv-seg__tabs label:nth-child(1),
+.gv-seg > input:nth-of-type(2):checked ~ .gv-seg__tabs label:nth-child(2) { background: var(--text); color: var(--bg); }
+.gv-seg > input:nth-of-type(1):focus-visible ~ .gv-seg__tabs label:nth-child(1),
+.gv-seg > input:nth-of-type(2):focus-visible ~ .gv-seg__tabs label:nth-child(2) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.gv-seg > input:nth-of-type(1):checked ~ .gv-seg__panels > :nth-child(2),
+.gv-seg > input:nth-of-type(2):checked ~ .gv-seg__panels > :nth-child(1) { display: none; }
 
 /* Планшет: меню переходить на окремий рядок під логотипом. */
 @media (max-width: 1024px) {

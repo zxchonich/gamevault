@@ -33,6 +33,35 @@ def static_v(path):
     return url
 
 
+# --- Іконки ---------------------------------------------------------------------
+# Контурні іконки 24×24 (stroke = currentColor). Використання: {% icon "sync" %}.
+ICONS = {
+    "library": '<path d="M5 4h3v16H5zM10 4h3v16h-3z"/><path d="m15 5 3-.8 3.4 15-3 .8z"/>',
+    "user": '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>',
+    "user-plus": '<circle cx="10" cy="8" r="4"/><path d="M2 21c0-4 3.6-6 8-6 1.4 0 2.7.2 3.8.6M19 14v6M16 17h6"/>',
+    "user-minus": '<circle cx="10" cy="8" r="4"/><path d="M2 21c0-4 3.6-6 8-6 1.4 0 2.7.2 3.8.6M16 17h6"/>',
+    "sync": '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M4 3v5h5M20 21v-5h-5"/>',
+    "unlink": '<path d="M9 7.5 10.5 6a4.2 4.2 0 0 1 6 6L15 13.5M15 16.5 13.5 18a4.2 4.2 0 0 1-6-6L9 10.5"/><path d="M4 4l3 3M20 20l-3-3"/>',
+    "trash": '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    "play": '<path d="M8 5v14l11-7z" fill="currentColor"/>',
+    "check": '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    "x": '<path d="M6 6l12 12M18 6 6 18"/>',
+    "external": '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    "settings": '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+}
+
+
+@register.simple_tag
+def icon(name, size=18):
+    """{% icon "sync" %} — інлайн-SVG іконка (декоративна: підпис дає aria-label кнопки)."""
+    from django.utils.safestring import mark_safe
+
+    return mark_safe(
+        f'<svg class="gv-icon" aria-hidden="true" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" '
+        f'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{ICONS[name]}</svg>'
+    )
+
+
 # --- Компоненти нового дизайну --------------------------------------------------
 
 AVATAR_COLORS = ["#7C5CFF", "#2F9E6E", "#E0533F", "#2A7FD4", "#C2418F", "#B7791F"]

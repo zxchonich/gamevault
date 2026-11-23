@@ -157,7 +157,7 @@ def profile_stats(user):
         "review_count": reviews.count(),
         "friends_count": len(friend_ids(user)),
         "average_score": reviews.aggregate(avg=models.Avg("score"))["avg"] or 0,
-        "recent_entries": entries[:8],
+        "recent_entries": entries[:6],  # 6 — повний ряд у .gv-grid-6 (6, 3 або 2 колонки)
         "recent_reviews": reviews[:4],
         "status_breakdown": [
             {
@@ -175,6 +175,29 @@ def profile_stats(user):
         stats[f"{status}_percent"] = int(count / library_count * 100) if library_count else 0
 
     return stats
+
+
+def profile_backdrop(user, steam_summary=None):
+    """Фон шапки профілю — улюблена гра: найвища власна оцінка, інакше найбільше годин у Steam.
+    {"title", "image", "caption"} або None."""
+    review = (
+        Review.objects.filter(user=user, score__gte=7).select_related("game")
+        .order_by("-score", "-created_at").first()
+    )
+    if review:
+        game = review.game
+        image = game.poster.url if game.poster else None
+        if not image and game.steam_appid:
+            from .services.steam_service import steam_cover_url
+            image = steam_cover_url(game.steam_appid)
+        if image:
+            return {"title": game.title, "image": image, "caption": f"Улюблена гра · {review.score}/10"}
+
+    top = (steam_summary or {}).get("top_games") or []
+    if top:
+        item = top[0]
+        return {"title": item.game_title, "image": item.cover_url, "caption": f"Найбільше годин · {round(item.playtime_minutes / 60)} год"}
+    return None
 
 
 # --- Сторінка гри --------------------------------------------------------------
