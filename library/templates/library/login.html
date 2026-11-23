@@ -25,12 +25,12 @@
             {% if error %}<p class="gv-form__error" role="alert">{{ error }}</p>{% endif %}
 
             <label class="gv-field">
-                <span>Логін</span>
-                <input class="gv-input" type="text" name="username" value="{{ request.POST.username }}" required autocomplete="username" autofocus placeholder="Ваш логін">
+                <span>Логін або email</span>
+                <input class="gv-input" type="text" name="username" value="{{ request.POST.username }}" required autocomplete="username" autofocus placeholder="Логін або email">
             </label>
 
             <label class="gv-field">
-                <span>Пароль</span>
+                <span class="gv-field__head"><span>Пароль</span><a href="{% url 'library:password_reset' %}">Забули пароль?</a></span>
                 <span class="gv-password">
                     <input class="gv-input" type="password" name="password" required autocomplete="current-password" placeholder="Ваш пароль">
                     <button type="button" aria-pressed="false">Показати</button>

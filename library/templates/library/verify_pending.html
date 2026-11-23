@@ -1,0 +1,20 @@
+{% extends 'library/base.html' %}
+{% load library_extras %}
+
+{% block title %}Підтвердіть email | GameVault{% endblock %}
+
+{% block content %}
+<section class="gv-card gv-auth-single">
+    <div class="gv-auth-single__icon" aria-hidden="true">{% icon "mail" 30 %}</div>
+    <h1>Підтвердіть email</h1>
+    <p>Ми надіслали лист на <b>{{ pending_user.email }}</b>. Відкрийте посилання з листа — і ви одразу увійдете в акаунт <b>{{ pending_user.username }}</b>.</p>
+    <p class="gv-field__hint">Посилання діє 3 дні. Не бачите листа — перевірте «Спам».</p>
+    <div class="gv-auth-single__actions">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="gv-btn gv-btn--primary">Надіслати ще раз</button>
+        </form>
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:home' %}">На сайт як гість</a>
+    </div>
+</section>
+{% endblock %}

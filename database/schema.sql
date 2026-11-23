@@ -66,13 +66,16 @@ CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `role_id` int NOT NULL,
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email_verified_at` datetime DEFAULT NULL,
   `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime NOT NULL,
   `avatar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_private` tinyint(1) NOT NULL DEFAULT '0',
   `show_activity` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_users_username` (`username`),
+  UNIQUE KEY `uq_users_email` (`email`),
   KEY `fk_users_roles` (`role_id`),
   CONSTRAINT `fk_users_roles` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

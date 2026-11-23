@@ -41,11 +41,12 @@ class GameVaultTestCase(TestCase):
         cache.clear()
         return super().run(result)
 
-    def make_user(self, username, admin=False, private=False, password=DEFAULT_PASSWORD):
+    def make_user(self, username, admin=False, private=False, password=DEFAULT_PASSWORD, verified=True):
         return User.objects.create(
             role=Role.objects.get(id=ADMIN_ROLE_ID if admin else USER_ROLE_ID),
             username=username,
             email=f"{username}@example.com",
+            email_verified_at=timezone.now() if verified else None,
             password_hash=make_password(password),
             is_private=private,
             created_at=timezone.now(),

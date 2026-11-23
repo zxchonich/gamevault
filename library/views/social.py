@@ -19,6 +19,7 @@ from ..models import LibraryEntry, SocialConnection, User
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
 from ..services import activity
+from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
 from ..services.steam_service import get_steam_summary
 
@@ -234,7 +235,10 @@ def edit_profile(request):
         if form.is_valid():
             data = form.cleaned_data
             user.username = data["username"]
-            user.email = data["email"]
+            new_email = data["email"] or None
+            email_changed = (new_email or "").lower() != (user.email or "").lower()
+            if email_changed and new_email is None:
+                user.email, user.email_verified_at = None, None
             user.is_private = data["is_private"]
             user.show_activity = data["show_activity"]
             if data["password"]:
@@ -249,6 +253,10 @@ def edit_profile(request):
             if data["avatar"] and old_avatar and old_avatar != user.avatar.name:
                 delete_unused_file(User, "avatar", old_avatar)
 
+            if email_changed and new_email:
+                # Нова адреса діє лише після підтвердження листом; до того лишається стара.
+                send_verification_email(request, user, new_email)
+                messages.info(request, f"На {new_email} надіслано лист — email зміниться після підтвердження.")
             messages.success(request, "Профіль успішно оновлено.")
             return redirect("library:profile")
 

@@ -20,18 +20,15 @@ class RegistrationTests(GameVaultTestCase):
         data.update(overrides)
         return self.client.post(reverse("library:register"), data)
 
-    def test_register_creates_user_with_hashed_password_and_logs_in(self):
-        self.client.get(reverse("library:register"))
-        old_key = self.client.session.session_key
-
+    def test_register_creates_unverified_user_and_does_not_log_in(self):
         response = self.register()
 
-        self.assertRedirects(response, reverse("library:profile"))
+        self.assertRedirects(response, reverse("library:verify_pending"))
         user = User.objects.get(username="newbie")
         self.assertEqual(user.role_id, USER_ROLE_ID)
         self.assertTrue(check_password("pass-12345", user.password_hash))
-        self.assertEqual(self.client.session["library_user_id"], user.id)
-        self.assertNotEqual(self.client.session.session_key, old_key)
+        self.assertIsNone(user.email_verified_at)
+        self.assertNotIn("library_user_id", self.client.session)
 
     def test_password_mismatch(self):
         response = self.register(password_confirm="other")

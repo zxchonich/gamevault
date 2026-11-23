@@ -1,0 +1,11 @@
+{% autoescape off %}Привіт, {{ user.username }}!
+
+{% if is_change %}Ви вказали цю адресу як новий email акаунта GameVault.{% else %}Дякуємо за реєстрацію в GameVault.{% endif %}
+Щоб підтвердити email, відкрийте посилання (діє {{ days }} дні):
+
+{{ link }}
+
+Якщо це були не ви — просто проігноруйте лист.
+
+— GameVault
+{% endautoescape %}

@@ -39,8 +39,8 @@
                 </label>
                 <label class="gv-field">
                     <span>Email</span>
-                    <input class="gv-input" type="email" name="email" value="{{ user.email }}" required autocomplete="email">
-                    <span class="gv-field__hint">Бачите тільки ви.</span>
+                    <input class="gv-input" type="email" name="email" value="{{ user.email|default_if_none:'' }}" {% if not user.external_accounts.exists %}required{% endif %} autocomplete="email" placeholder="you@example.com">
+                    <span class="gv-field__hint">{% if user.email and not user.email_verified_at %}Не підтверджено · {% endif %}Бачите тільки ви. Нова адреса діє після підтвердження листом.</span>
                 </label>
             </div>
         </section>

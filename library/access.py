@@ -59,6 +59,12 @@ def update_session_after_password_change(request, user):
     request.session[SESSION_AUTH_KEY] = session_auth_hash(user)
 
 
+def needs_email_verification(user):
+    """Акаунт без підтвердженого email не входить — окрім прив'язаних до Steam/Google
+    (їх засвідчив сам провайдер, а email у Steam-акаунта може й не бути)."""
+    return not user.is_email_verified and not user.external_accounts.exists()
+
+
 def is_admin_user(user):
     return user is not None and user.role is not None and user.role.name == "admin"
 

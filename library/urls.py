@@ -47,6 +47,10 @@ urlpatterns = [
     path('login/', accounts.login_view, name='login'),
     path('logout/', accounts.logout_view, name='logout'),
     path('register/', accounts.register_view, name='register'),
+    path('register/verify/', accounts.verify_pending, name='verify_pending'),
+    path('verify-email/<str:token>/', accounts.verify_email, name='verify_email'),
+    path('password-reset/', accounts.password_reset_request, name='password_reset'),
+    path('password-reset/<str:token>/', accounts.password_reset_confirm, name='password_reset_confirm'),
 
     # Адміністрування каталогу
     path('manage/games/add/', catalog_admin.admin_game_add, name='admin_game_add'),

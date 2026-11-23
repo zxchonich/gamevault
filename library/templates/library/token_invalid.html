@@ -1,0 +1,16 @@
+{% extends 'library/base.html' %}
+{% load library_extras %}
+
+{% block title %}Посилання недійсне | GameVault{% endblock %}
+
+{% block content %}
+<section class="gv-card gv-auth-single">
+    <div class="gv-auth-single__icon is-danger" aria-hidden="true">{% icon "x" 30 %}</div>
+    <h1>Посилання не спрацювало</h1>
+    <p>{{ error }}</p>
+    <div class="gv-auth-single__actions">
+        <a class="gv-btn gv-btn--primary" href="{% url 'library:login' %}">До входу</a>
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:password_reset' %}">Скинути пароль</a>
+    </div>
+</section>
+{% endblock %}

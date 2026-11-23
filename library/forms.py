@@ -47,8 +47,35 @@ def password_problem(password, username=""):
 
 
 class LoginForm(LibraryForm):
-    username = forms.CharField(max_length=50)
+    username = forms.CharField(max_length=100)  # логін або email
     password = forms.CharField(max_length=128)
+
+
+class PasswordResetRequestForm(LibraryForm):
+    email = forms.EmailField(
+        max_length=100,
+        error_messages={"required": "Вкажіть email.", "invalid": "Вкажіть коректну електронну адресу."},
+    )
+
+
+class SetPasswordForm(LibraryForm):
+    password = forms.CharField(max_length=128, error_messages={"required": "Вкажіть новий пароль."})
+    password_confirm = forms.CharField(max_length=128, required=False)
+
+    def __init__(self, *args, username="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.username = username
+
+    def clean(self):
+        data = super().clean()
+        if self.errors:
+            return data
+        if data["password"] != data.get("password_confirm"):
+            raise forms.ValidationError("Паролі не збігаються.")
+        problem = password_problem(data["password"], self.username)
+        if problem:
+            raise forms.ValidationError(problem)
+        return data
 
 
 class RegisterForm(LibraryForm):
@@ -83,7 +110,8 @@ class ProfileForm(LibraryForm):
     username = forms.CharField(max_length=50, error_messages={"required": EMPTY})
     email = forms.EmailField(
         max_length=100,
-        error_messages={"required": EMPTY, "invalid": "Вкажіть коректну електронну адресу."},
+        required=False,  # без email можна лише акаунту, прив'язаному до Steam/Google
+        error_messages={"invalid": "Вкажіть коректну електронну адресу."},
     )
     current_password = forms.CharField(max_length=128, required=False)
     password = forms.CharField(max_length=128, required=False)
@@ -104,12 +132,15 @@ class ProfileForm(LibraryForm):
         others = User.objects.exclude(id=self.user.id)
         if others.filter(username=data["username"]).exists():
             raise forms.ValidationError("Користувач із таким логіном уже існує.")
-        if others.filter(email=data["email"]).exists():
+        if not data["email"] and not self.user.external_accounts.exists():
+            raise forms.ValidationError(self.EMPTY)
+        if data["email"] and others.filter(email=data["email"]).exists():
             raise forms.ValidationError("Користувач із таким email уже існує.")
         if data["password"]:
             from django.contrib.auth.hashers import check_password
 
-            if not check_password(data["current_password"], self.user.password_hash):
+            # Акаунт зі Steam/Google без пароля задає його вперше — поточного пароля немає.
+            if self.user.has_usable_password and not check_password(data["current_password"], self.user.password_hash):
                 raise forms.ValidationError("Щоб змінити пароль, правильно вкажіть поточний.")
             if data["password"] != data["password_confirm"]:
                 raise forms.ValidationError("Паролі не збігаються.")

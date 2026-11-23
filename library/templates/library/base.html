@@ -56,7 +56,7 @@
                 <div class="gv-menu__panel">
                     <div class="gv-menu__head">
                         <b>{{ current_library_user.username }}</b>
-                        <span>{{ current_library_user.email }}</span>
+                        {% if current_library_user.email %}<span>{{ current_library_user.email }}</span>{% endif %}
                     </div>
                     <a href="{% url 'library:profile' %}">Профіль</a>
                     <a href="{% url 'library:steam_library' %}">Steam-бібліотека</a>

@@ -14,7 +14,7 @@ steam_summary, backdrop (улюблена гра для фону шапки), to
         </div>
         <h1 class="gv-profile-head__name">{{ profile_user.username }}</h1>
         <p class="gv-profile-head__sub">
-            У GameVault з {{ profile_user.created_at|date:"d.m.Y" }}{% if is_own_profile %} · {{ profile_user.email }}{% endif %}
+            У GameVault з {{ profile_user.created_at|date:"d.m.Y" }}{% if is_own_profile and profile_user.email %} · {{ profile_user.email }}{% endif %}
         </p>
     </div>
     <div class="gv-profile-head__actions">

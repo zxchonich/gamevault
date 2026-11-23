@@ -21,8 +21,11 @@ class User(models.Model):
         db_column='role_id',
         related_name='users'
     )
-    username = models.CharField(max_length=50)
-    email = models.CharField(max_length=100)
+    username = models.CharField(max_length=50, unique=True)
+    # NULL, а не "" — інакше унікальний індекс не дасть двом акаунтам без email (Steam) існувати.
+    email = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    # Для акаунтів зі Steam/Google — "непридатний" хеш (make_password(None)): паролем не увійти.
     password_hash = models.CharField(max_length=255)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     is_private = models.BooleanField(default=False)
@@ -35,6 +38,15 @@ class User(models.Model):
 
     def __str__(self):
         return self.username
+
+    @property
+    def has_usable_password(self):
+        from django.contrib.auth.hashers import is_password_usable
+        return is_password_usable(self.password_hash)
+
+    @property
+    def is_email_verified(self):
+        return bool(self.email and self.email_verified_at)
 
 
 class Game(models.Model):
