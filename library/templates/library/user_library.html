@@ -19,12 +19,12 @@
 </header>
 
 <nav class="gv-tabs" aria-label="Статуси">
-    <a class="gv-tab{% if not selected_status %} is-active{% endif %}" href="{% url_with status='' %}">Усі <b>{{ library_count }}</b></a>
-    <a class="gv-tab{% if selected_status == 'playing' %} is-active{% endif %}" href="{% url_with status='playing' %}">Грає <b>{{ playing_count }}</b></a>
-    <a class="gv-tab{% if selected_status == 'completed' %} is-active{% endif %}" href="{% url_with status='completed' %}">Пройдено <b>{{ completed_count }}</b></a>
-    <a class="gv-tab{% if selected_status == 'planned' %} is-active{% endif %}" href="{% url_with status='planned' %}">Планує <b>{{ planned_count }}</b></a>
-    <a class="gv-tab{% if selected_status == 'paused' %} is-active{% endif %}" href="{% url_with status='paused' %}">Відкладено <b>{{ paused_count }}</b></a>
-    <a class="gv-tab{% if selected_status == 'dropped' %} is-active{% endif %}" href="{% url_with status='dropped' %}">Закинуто <b>{{ dropped_count }}</b></a>
+    <a class="gv-tab{% if not selected_status %} is-active{% endif %}" href="{% url_with status='' page='' %}">Усі <b>{{ library_count }}</b></a>
+    <a class="gv-tab{% if selected_status == 'playing' %} is-active{% endif %}" href="{% url_with status='playing' page='' %}">Грає <b>{{ playing_count }}</b></a>
+    <a class="gv-tab{% if selected_status == 'completed' %} is-active{% endif %}" href="{% url_with status='completed' page='' %}">Пройдено <b>{{ completed_count }}</b></a>
+    <a class="gv-tab{% if selected_status == 'planned' %} is-active{% endif %}" href="{% url_with status='planned' page='' %}">Планує <b>{{ planned_count }}</b></a>
+    <a class="gv-tab{% if selected_status == 'paused' %} is-active{% endif %}" href="{% url_with status='paused' page='' %}">Відкладено <b>{{ paused_count }}</b></a>
+    <a class="gv-tab{% if selected_status == 'dropped' %} is-active{% endif %}" href="{% url_with status='dropped' page='' %}">Закинуто <b>{{ dropped_count }}</b></a>
 </nav>
 
 <section class="gv-card" aria-label="Ігри бібліотеки">
@@ -59,7 +59,7 @@
         {% endif %}
     </form>
 
-    <div class="gv-lib-grid">
+    <div class="gv-lib-grid gv-grid-24">
         {% for entry in entries %}
         <a class="gv-lib-card" href="{% url 'library:game_detail' entry.game.id %}">
             <span class="gv-lib-card__cover">
@@ -75,5 +75,7 @@
         </div>
         {% endfor %}
     </div>
+
+    {% pagination page_obj %}
 </section>
 {% endblock %}

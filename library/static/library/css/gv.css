@@ -1145,6 +1145,14 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
 .gv-genre-bars__track { height: 10px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; }
 .gv-genre-bars__track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--violet), var(--accent)); }
 
+/* Сітка обкладинок для сторінок по 24 (каталог, бібліотеки): 2/3/4/6/8 колонок — 24 ділиться на всі. */
+.gv-grid-24 { --cols: 2; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: clamp(12px, 1vw, 22px); }
+@media (min-width: 560px) { .gv-grid-24 { --cols: 3; } }
+@media (min-width: 900px) { .gv-grid-24 { --cols: 4; } }
+@media (min-width: 1200px) { .gv-grid-24 { --cols: 6; } }
+@media (min-width: 1760px) { .gv-grid-24 { --cols: 8; } }
+.gv-grid-24 > .gv-empty { grid-column: 1 / -1; }
+
 /* Сітка, де 6 елементів завжди дають повні ряди (2 / 3 / 6 колонок) */
 .gv-grid-6 { --cols: 2; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: clamp(12px, 1vw, 22px); }
 @media (min-width: 720px) { .gv-grid-6 { --cols: 3; } }

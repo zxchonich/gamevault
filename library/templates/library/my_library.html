@@ -61,7 +61,7 @@
 
     {% if filtered_count != library_count %}<p class="muted" style="font-weight: 700; margin-bottom: 14px">Знайдено: {{ filtered_count }}</p>{% endif %}
 
-    <div class="gv-lib-grid">
+    <div class="gv-lib-grid gv-grid-24">
         {% for entry in entries %}
         <article class="gv-lib-card">
             <a class="gv-lib-card__cover" href="{% url 'library:game_detail' entry.game.id %}" aria-label="{{ entry.game.title }}">
@@ -108,5 +108,7 @@
         </div>
         {% endfor %}
     </div>
+
+    {% pagination page_obj %}
 </section>
 {% endblock %}

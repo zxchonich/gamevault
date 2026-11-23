@@ -103,6 +103,10 @@ def set_game_genres(game, genre_ids):
 
 # --- Бібліотека ----------------------------------------------------------------
 
+# 24 ділиться на 2/3/4/6/8 колонок .gv-grid-24 — останній ряд сторінки завжди повний.
+LIBRARY_PAGE_SIZE = 24
+
+
 def library_context(request, owner, other=False):
     """Фільтри, сортування й лічильники бібліотеки owner (для моєї та чужої бібліотеки)."""
     query = request.GET.get("q", "").strip()
@@ -121,7 +125,10 @@ def library_context(request, owner, other=False):
         entries = entries.filter(game__game_genres__genre_id=genre_id)
 
     entries = entries.order_by(*LIBRARY_SORTS.get(sort, LIBRARY_SORTS["newest"])).distinct()
-    entries = list(entries)
+    from django.core.paginator import Paginator
+
+    page_obj = Paginator(entries, LIBRARY_PAGE_SIZE).get_page(request.GET.get("page"))
+    entries = list(page_obj.object_list)
 
     for entry in entries:
         entry.status_label = get_status_label(entry.status)
@@ -138,7 +145,8 @@ def library_context(request, owner, other=False):
         "selected_sort": sort,
         "library_count": sum(counts.values()),
         **{f"{status}_count": count for status, count in counts.items()},
-        "filtered_count": len(entries),
+        "filtered_count": page_obj.paginator.count,
+        "page_obj": page_obj,
     }
 
 

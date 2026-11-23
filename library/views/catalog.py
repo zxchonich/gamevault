@@ -16,7 +16,7 @@ from ..services import activity
 from ..services.recommendations import build_recommendations
 from ..services.steam_service import steam_items_by_appid
 
-GAMES_PAGE_SIZE = 8
+GAMES_PAGE_SIZE = 24  # ділиться на 2/3/4/6/8 колонок .gv-grid-24
 GAME_SORTS = {
     "newest": ("-created_at",),
     "rating": ("-avg_score", "title"),

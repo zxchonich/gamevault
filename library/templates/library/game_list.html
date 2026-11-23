@@ -58,7 +58,7 @@
 </section>
 
 <section class="gv-card" aria-label="Ігри">
-    <div class="gv-game-grid">
+    <div class="gv-grid-24">
         {% for game in games %}
         <article class="gv-game-tile">
             <a href="{% url 'library:game_detail' game.id %}" aria-label="{{ game.title }}">{% game_cover game %}</a>

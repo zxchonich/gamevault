@@ -58,6 +58,16 @@ class PageRenderTests(GameVaultTestCase):
         self.assertEqual(response.context["top_genres"][0]["genre"], self.genre)
         self.assert_page(reverse("library:user_profile", args=[self.friend.id]), "gv-steam-card")
 
+    def test_catalog_and_library_pages_hold_24_games(self):
+        for i in range(30):
+            self.make_entry(self.admin, self.make_game(f"Bulk {i:02d}"))
+        catalog = self.client.get(reverse("library:game_list"))
+        self.assertEqual(len(catalog.context["page_obj"].object_list), 24)
+        library = self.client.get(reverse("library:my_library"))
+        self.assertEqual(len(library.context["entries"]), 24)
+        self.assertEqual(library.context["filtered_count"], 30)
+        self.assertEqual(len(self.client.get(reverse("library:my_library") + "?page=2").context["entries"]), 6)
+
     def test_my_requests(self):
         self.login(self.friend)
         self.assert_page(reverse("library:my_requests"), "Pending Game", "gv-state--pending", "gv-state--approved")
