@@ -71,3 +71,45 @@ def pagination(context, page_obj):
         items.append(number)
         previous = number
     return {"request": context["request"], "page_obj": page_obj, "items": items}
+
+
+@register.filter
+def cover_bg(game):
+    return cover_colors(game)[0]
+
+
+@register.filter
+def cover_ink(game):
+    return cover_colors(game)[1]
+
+
+@register.inclusion_tag("library/components/score_ring.html")
+def score_ring(score, size=64):
+    """Відсоток збігу кільцем: {% score_ring recommendation.score 72 %}."""
+    score = max(0, min(100, int(score or 0)))
+    return {"score": score, "size": size}
+
+
+MONTHS_GENITIVE = [
+    "січня", "лютого", "березня", "квітня", "травня", "червня",
+    "липня", "серпня", "вересня", "жовтня", "листопада", "грудня",
+]
+
+
+@register.filter
+def day_label(value):
+    """Дата події для розділювачів стрічки: «Сьогодні», «Вчора», «12 листопада» (+рік, якщо не поточний)."""
+    import datetime
+
+    from django.utils import timezone
+
+    if not value:
+        return ""
+    day = timezone.localtime(value).date() if isinstance(value, datetime.datetime) else value
+    today = timezone.localdate()
+    if day == today:
+        return "Сьогодні"
+    if day == today - datetime.timedelta(days=1):
+        return "Вчора"
+    label = f"{day.day} {MONTHS_GENITIVE[day.month - 1]}"
+    return label if day.year == today.year else f"{label} {day.year}"

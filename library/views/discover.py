@@ -12,16 +12,43 @@ from ..services import activity
 from ..services.recommendations import build_recommendations
 
 
+# Полиці рекомендацій за головною складовою балу (вага складової — від її максимуму).
+SHELVES = [
+    ("genre", "Під ваші смаки", 50),
+    ("friends", "Популярне серед друзів", 30),
+    ("quality", "Високо оцінене гравцями", 20),
+]
+MIN_FOR_SHELVES = 6
+
+
+def _shelves(recommendations):
+    groups = {key: [] for key, _, _ in SHELVES}
+    for rec in recommendations:
+        shares = {
+            "genre": rec.genre_points / 50,
+            "friends": rec.friend_points / 30,
+            "quality": rec.quality_points / 20,
+        }
+        groups[max(shares, key=shares.get)].append(rec)
+    return [{"title": title, "items": groups[key]} for key, title, _ in SHELVES if groups[key]]
+
+
 @library_login_required
 def recommendations(request):
     user = request.library_user
     result = build_recommendations(user)
     recommendations_list = attach_visible_genres_to_entries(result.recommendations)
     scores = [r.score for r in recommendations_list]
+    hero = recommendations_list[0] if recommendations_list else None
+    rest = recommendations_list[1:]
+    shelves = _shelves(rest) if len(rest) >= MIN_FOR_SHELVES and not result.is_fallback else []
 
     return render(request, "library/recommendations.html", {
         "user": user,
         "recommendations": recommendations_list,
+        "hero": hero,
+        "rest": rest,
+        "shelves": shelves,
         "recommendations_count": len(recommendations_list),
         "best_match_score": max(scores, default=0),
         "average_match": sum(scores) / len(scores) if scores else 0,
@@ -61,13 +88,19 @@ def feed(request):
     except ValueError:
         page = 1
 
+    kind = request.GET.get("filter", "all")
+    if kind not in activity.FEED_FILTERS:
+        kind = "all"
+
     size = activity.FEED_PAGE_SIZE
-    events = list(activity.feed_events(user)[(page - 1) * size:page * size + 1])
+    events = list(activity.feed_events(user, kind)[(page - 1) * size:page * size + 1])
 
     return render(request, "library/feed.html", {
         "items": activity.group_events(events[:size]),
-        "now_playing": activity.now_playing(user),
+        "now_playing": activity.now_playing(user, limit=12),
         "page": page,
         "has_more": len(events) > size,
         "has_friends": bool(friend_ids(user)),
+        "filters": activity.FEED_FILTERS,
+        "selected_filter": kind,
     })

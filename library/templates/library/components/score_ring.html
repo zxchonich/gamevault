@@ -1,0 +1,7 @@
+<span class="gv-ring" style="--ring-size: {{ size }}px" role="img" aria-label="Збіг {{ score }}%">
+    <svg viewBox="0 0 36 36" aria-hidden="true">
+        <circle class="gv-ring__track" cx="18" cy="18" r="15.9155"></circle>
+        <circle class="gv-ring__value" cx="18" cy="18" r="15.9155" stroke-dasharray="{{ score }} 100"></circle>
+    </svg>
+    <b>{{ score }}<small>%</small></b>
+</span>

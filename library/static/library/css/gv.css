@@ -503,14 +503,112 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-avatar--sm { width: 34px; height: 34px; font-size: 13px; border-radius: var(--r-xs); }
 .gv-avatar--lg { width: 64px; height: 64px; font-size: 24px; border-radius: var(--r-md); }
 
-/* Стрічка (класи feed-* лишаються для сторінок зі старими стилями) */
-.gv-feed { display: flex; flex-direction: column; gap: 14px; }
-.gv-feed-item { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
-.gv-feed-item .feed-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.gv-feed-item .feed-body p { font-size: 14px; line-height: 1.45; font-weight: 500; }
-.gv-feed-item .feed-user { font-weight: 800; }
-.gv-feed-item .feed-game { font-weight: 800; color: var(--accent-text); }
-.gv-feed-item time { color: var(--muted); font-size: 12px; font-weight: 600; }
+/* Стрічка: події */
+.gv-feed { display: flex; flex-direction: column; gap: 10px; }
+
+.gv-day {
+    display: flex; align-items: center; gap: 12px;
+    margin: 14px 0 2px;
+    font-family: var(--font-display); font-weight: 800; font-size: 13px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.gv-day::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: var(--surface-2); }
+.gv-feed > .gv-day:first-child { margin-top: 0; }
+
+.gv-event {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px; border-radius: var(--r-md); background: var(--surface-2); min-width: 0;
+}
+.gv-event__who { position: relative; flex: 0 0 auto; }
+.gv-event__who .gv-avatar + .gv-avatar { position: absolute; left: 18px; top: 18px; box-shadow: 0 0 0 3px var(--surface-2); }
+.gv-event--friendship .gv-event__who { width: 58px; height: 56px; }
+.gv-event__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.gv-event__text { font-size: 14px; line-height: 1.45; font-weight: 500; }
+.gv-event__text .feed-user { font-weight: 800; }
+.gv-event__text .feed-game { font-weight: 800; color: var(--accent-text); }
+.gv-event time { color: var(--muted); font-size: 12px; font-weight: 600; }
+.gv-event__quote {
+    margin: 0; padding: 10px 14px; border-radius: var(--r-sm);
+    background: var(--surface); font-size: 14px; line-height: 1.5; font-style: italic; color: var(--text);
+    max-width: var(--measure);
+}
+.gv-event__strip { display: flex; gap: 6px; }
+.gv-event__strip .gv-cover { width: 54px; }
+.gv-event__thumb { flex: 0 0 auto; width: 58px; position: relative; }
+.gv-event__thumb:hover { color: inherit; }
+.gv-event__score {
+    position: absolute; right: -6px; bottom: -6px;
+    padding: 4px 8px; border-radius: var(--r-pill);
+    background: var(--accent); color: #101014;
+    font-family: var(--font-display); font-weight: 800; font-size: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* «Пройдено» — маленьке свято */
+.gv-event.is-celebrate { background: var(--accent); color: #101014; }
+.gv-event.is-celebrate .feed-game,
+.gv-event.is-celebrate .feed-user,
+.gv-event.is-celebrate time { color: #101014; }
+.gv-event.is-celebrate .gv-event__who .gv-avatar + .gv-avatar { box-shadow: 0 0 0 3px var(--accent); }
+.gv-event__badge {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: var(--r-pill); background: #101014; color: #C8F031;
+    font-weight: 800; font-size: 12px;
+}
+
+/* Компактний варіант (бокові панелі) */
+.gv-feed--compact .gv-event { padding: 10px; gap: 10px; }
+.gv-feed--compact .gv-event__thumb { width: 44px; }
+.gv-feed--compact .gv-event__strip .gv-cover { width: 40px; }
+
+/* Кольорові статуси */
+.gv-status { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: var(--r-pill); font-weight: 800; font-size: 12px; color: #101014; vertical-align: 1px; }
+.gv-status--playing { background: #3DA5FF; }
+.gv-status--completed { background: #C8F031; }
+.gv-status--planned { background: #A28BFF; }
+.gv-status--paused { background: #FFB547; }
+.gv-status--dropped { background: #FF8A7A; }
+
+/* «Зараз грають» — карусель */
+.gv-carousel {
+    display: grid; grid-auto-flow: column; grid-auto-columns: clamp(230px, 18vw, 320px);
+    gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px;
+    scrollbar-width: thin;
+}
+.gv-np-card {
+    scroll-snap-align: start; position: relative; display: block;
+    aspect-ratio: 460 / 215; border-radius: var(--r-md); overflow: hidden;
+    background: linear-gradient(135deg, var(--violet), #3DA5FF);
+    color: #F4F4F6;
+}
+.gv-np-card:hover { color: #F4F4F6; }
+.gv-np-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.25s ease; }
+.gv-np-card:hover img { transform: scale(1.04); }
+.gv-np-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10, 10, 14, 0.9) 0%, rgba(10, 10, 14, 0.15) 65%); }
+.gv-np-card__info { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: flex-end; gap: 10px; }
+.gv-np-card__info .gv-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); }
+.gv-np-card__text { min-width: 0; display: flex; flex-direction: column; }
+.gv-np-card__text b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-np-card__text span { font-size: 12px; font-weight: 700; opacity: 0.85; }
+
+/* Кільце відсотка збігу */
+.gv-ring { position: relative; flex: 0 0 auto; width: var(--ring-size, 64px); height: var(--ring-size, 64px); display: inline-grid; place-items: center; }
+.gv-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.gv-ring circle { fill: none; stroke-width: 3.6; }
+.gv-ring__track { stroke: var(--ring-track, rgba(128, 128, 140, 0.25)); }
+.gv-ring__value { stroke: var(--ring-color, var(--accent)); stroke-linecap: round; }
+.gv-ring b { font-family: var(--font-display); font-weight: 800; font-size: calc(var(--ring-size, 64px) * 0.3); letter-spacing: -0.02em; }
+.gv-ring small { font-size: 0.55em; }
+
+/* Склад балу рекомендації */
+.gv-contrib { display: flex; flex-direction: column; gap: 6px; }
+.gv-contrib__bar { display: flex; height: 8px; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); }
+.gv-contrib__bar span { display: block; height: 100%; }
+.gv-contrib__legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.gv-contrib__legend i { display: inline-block; width: 8px; height: 8px; border-radius: 3px; margin-right: 5px; }
+.c-genre { background: #7C5CFF; }
+.c-friends { background: #3DA5FF; }
+.c-quality { background: #C8F031; }
 
 /* «Зараз грають» */
 .gv-now-playing { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 18px; }
@@ -727,6 +825,11 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-score-big { display: flex; align-items: baseline; gap: 6px; }
 .gv-score-big b { font-family: var(--font-display); font-size: clamp(40px, 3vw, 60px); font-weight: 800; letter-spacing: -0.03em; }
 .gv-score-big span { color: var(--muted); font-weight: 700; }
+
+.gv-game-hero .gv-ring { --ring-track: rgba(255, 255, 255, 0.25); }
+.gv-game-hero:not(.has-image) .gv-ring { --ring-color: #101014; --ring-track: rgba(16, 16, 20, 0.2); }
+.gv-rec-hero__reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-weight: 700; }
+.gv-rec-hero__reasons li::before { content: "→ "; opacity: 0.7; }
 
 /* Вибір оцінки 1–10 */
 .gv-score-picker { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }

@@ -1,0 +1,43 @@
+{% load library_extras %}{% comment %}Картка рекомендації: recommendation (GameRecommendation).{% endcomment %}
+<article class="gv-rec-card">
+    <a class="gv-rec-card__cover" href="{% url 'library:game_detail' recommendation.game.id %}" aria-label="{{ recommendation.game.title }}">
+        {% game_cover recommendation.game %}
+    </a>
+    <div class="gv-rec-card__body">
+        <div style="display: flex; gap: 12px; align-items: flex-start">
+            <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+                <a class="gv-rec-card__title display" href="{% url 'library:game_detail' recommendation.game.id %}">{{ recommendation.game.title }}</a>
+                <div class="gv-chips">{% for genre in recommendation.game.visible_genres %}<span class="gv-chip gv-chip--sm">{{ genre.name }}</span>{% endfor %}</div>
+            </div>
+            {% score_ring recommendation.score 58 %}
+        </div>
+        <ul class="gv-rec-card__reasons" aria-label="Чому рекомендовано">
+            {% for reason in recommendation.reasons %}<li>{{ reason }}</li>{% endfor %}
+        </ul>
+        {% if recommendation.genre_points or recommendation.friend_points or recommendation.quality_points %}
+        <div class="gv-contrib" aria-label="Склад балу">
+            <div class="gv-contrib__bar" aria-hidden="true">
+                {% if recommendation.genre_points %}<span class="c-genre" style="width: {{ recommendation.genre_points }}%"></span>{% endif %}
+                {% if recommendation.friend_points %}<span class="c-friends" style="width: {{ recommendation.friend_points }}%"></span>{% endif %}
+                {% if recommendation.quality_points %}<span class="c-quality" style="width: {{ recommendation.quality_points }}%"></span>{% endif %}
+            </div>
+            <div class="gv-contrib__legend">
+                {% if recommendation.genre_points %}<span><i class="c-genre"></i>смаки {{ recommendation.genre_points }}</span>{% endif %}
+                {% if recommendation.friend_points %}<span><i class="c-friends"></i>друзі {{ recommendation.friend_points }}</span>{% endif %}
+                {% if recommendation.quality_points %}<span><i class="c-quality"></i>якість {{ recommendation.quality_points }}</span>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="gv-rec-card__actions">
+            <form method="post" action="{% url 'library:add_to_library' recommendation.game.id %}">
+                {% csrf_token %}
+                <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">+ У бібліотеку</button>
+            </form>
+            <a class="gv-btn gv-btn--sm" href="{% url 'library:game_detail' recommendation.game.id %}">Детальніше</a>
+            <form method="post" action="{% url 'library:dismiss_recommendation' recommendation.game.id %}">
+                {% csrf_token %}
+                <button type="submit" class="gv-btn gv-btn--sm gv-btn--ghost" title="Більше не пропонувати">Не цікаво</button>
+            </form>
+        </div>
+    </div>
+</article>

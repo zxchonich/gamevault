@@ -281,3 +281,37 @@ class SteamOnlyGamesTests(RecommendationTestCase):
 
         self.assertIn("Схожа на «Dead Cells» та «Hades» і ще 1 з ваших ігор", recs["Doom"].reasons)
 
+
+class RecommendationShelvesTests(GameVaultTestCase):
+    def test_shelves_group_by_strongest_component(self):
+        from library.services.recommendations import GameRecommendation
+        from library.views.discover import _shelves
+
+        game = self.make_game("Any")
+        recs = [
+            GameRecommendation(game=game, score=50, genre_points=45, friend_points=0, quality_points=5),
+            GameRecommendation(game=game, score=40, genre_points=5, friend_points=28, quality_points=7),
+            GameRecommendation(game=game, score=20, genre_points=0, friend_points=0, quality_points=20),
+        ]
+
+        shelves = _shelves(recs)
+
+        self.assertEqual([s["title"] for s in shelves],
+                         ["Під ваші смаки", "Популярне серед друзів", "Високо оцінене гравцями"])
+
+    def test_page_shows_hero_and_rest(self):
+        user = self.make_user("alice")
+        rogue = Genre.objects.create(name="Roguelike")
+        hades = self.make_game("Hades")
+        GameGenre.objects.create(game=hades, genre=rogue)
+        self.make_entry(user, hades, status="completed")
+        for title in ("Dead Cells", "Rogue Legacy"):
+            GameGenre.objects.create(game=self.make_game(title), genre=rogue)
+        self.login(user)
+
+        response = self.client.get(reverse("library:recommendations"))
+
+        self.assertIsNotNone(response.context["hero"])
+        self.assertEqual(len(response.context["rest"]), 1)
+        self.assertContains(response, "gv-ring")
+

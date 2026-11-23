@@ -158,9 +158,9 @@ steam_summary, recent_activity.
                 <h2 id="activity">Остання активність</h2>
                 {% if is_own_profile %}<a class="gv-link" href="{% url 'library:feed' %}">Уся стрічка</a>{% endif %}
             </div>
-            <div class="gv-feed">
+            <div class="gv-feed gv-feed--compact">
                 {% for item in recent_activity %}
-                {% include 'library/_feed_item.html' %}
+                {% include 'library/_feed_item.html' with compact=True %}
                 {% empty %}
                 <p class="muted" style="font-weight: 600">Активності поки немає.</p>
                 {% endfor %}

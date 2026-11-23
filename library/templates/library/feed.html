@@ -1,4 +1,5 @@
 {% extends 'library/base.html' %}
+{% load library_extras %}
 
 {% block title %}Стрічка | GameVault{% endblock %}
 
@@ -14,50 +15,66 @@
     </div>
 </header>
 
-<div class="gv-row">
-    <section class="gv-card gv-grow" aria-labelledby="events">
-        <div class="gv-section-head">
-            <h2 id="events">{% if page > 1 %}Події · сторінка {{ page }}{% else %}Останні події{% endif %}</h2>
-        </div>
-        <div class="gv-feed">
-            {% for item in items %}
-            {% include 'library/_feed_item.html' %}
-            {% empty %}
-            <div class="gv-empty">
-                <h3>Поки що тихо</h3>
-                {% if has_friends %}
-                <p>Тут з'являтимуться ваші події та події друзів.</p>
-                {% else %}
-                <p>Додавайте ігри до бібліотеки й знаходьте друзів — їхня активність з'явиться тут.</p>
-                <a class="gv-btn gv-btn--primary" href="{% url 'library:user_list' %}">Знайти друзів</a>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        {% if page > 1 or has_more %}
-        <nav class="gv-pagination" aria-label="Сторінки стрічки">
-            {% if page > 1 %}<a href="?page={{ page|add:'-1' }}">← Новіші</a>{% endif %}
-            {% if has_more %}<a href="?page={{ page|add:'1' }}">Показати ще →</a>{% endif %}
-        </nav>
-        {% endif %}
-    </section>
+{% if now_playing %}
+<section class="gv-card" aria-labelledby="now-playing">
+    <div class="gv-section-head">
+        <h2 id="now-playing">Зараз грають</h2>
+        <p style="margin: 0">Steam · останні 2 тижні</p>
+    </div>
+    <div class="gv-carousel">
+        {% for item in now_playing %}
+        <a class="gv-np-card" href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}" {% if not item.catalog_game %}target="_blank" rel="noopener"{% endif %}>
+            <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
+            <span class="gv-np-card__info">
+                {% user_avatar item.user "sm" %}
+                <span class="gv-np-card__text">
+                    <b>{{ item.game_title }}</b>
+                    <span>{{ item.user.username }} · {{ item.playtime_2weeks_hours }} год</span>
+                </span>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 
-    <aside class="gv-card gv-side" aria-labelledby="now-playing" style="align-self: flex-start">
-        <div class="gv-section-head">
-            <h2 id="now-playing">Зараз грають</h2>
-        </div>
-        {% if now_playing %}
-        <div class="gv-now-playing" style="grid-template-columns: 1fr; margin-bottom: 0">
-            {% for item in now_playing %}
-            <a class="steam-mini-card" href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}" {% if not item.catalog_game %}target="_blank" rel="noopener"{% endif %}>
-                <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
-                <div><b>{{ item.game_title }}</b><span>{{ item.user.username }} · {{ item.playtime_2weeks_hours }} год за 2 тижні</span></div>
-            </a>
+<section class="gv-card" aria-labelledby="events">
+    <div class="gv-section-head">
+        <h2 id="events">Події</h2>
+        <nav class="gv-chips" aria-label="Фільтр подій">
+            {% for key, label in filters.items %}
+            <a class="gv-chip{% if key == selected_filter %} is-active{% endif %}" href="{% if key == 'all' %}?{% else %}?filter={{ key }}{% endif %}">{{ label }}</a>
             {% endfor %}
+        </nav>
+    </div>
+
+    <div class="gv-feed" style="max-width: 980px">
+        {% for item in items %}
+        {% ifchanged item.created_at|date:"Ymd" %}<h3 class="gv-day">{{ item.created_at|day_label }}</h3>{% endifchanged %}
+        {% include 'library/_feed_item.html' %}
+        {% empty %}
+        <div class="gv-empty">
+            {% if selected_filter != 'all' %}
+            <h3>Тут поки порожньо</h3>
+            <p>Подій такого типу ще немає.</p>
+            <a class="gv-btn" href="?">Показати всі події</a>
+            {% elif has_friends %}
+            <h3>Поки що тихо</h3>
+            <p>Тут з'являтимуться ваші події та події друзів.</p>
+            {% else %}
+            <h3>Поки що тихо</h3>
+            <p>Додавайте ігри до бібліотеки й знаходьте друзів — їхня активність з'явиться тут.</p>
+            <a class="gv-btn gv-btn--primary" href="{% url 'library:user_list' %}">Знайти друзів</a>
+            {% endif %}
         </div>
-        {% else %}
-        <p class="muted" style="font-weight: 600">За останні 2 тижні у Steam ніхто не грав. Підключіть Steam у профілі, щоб тут з'являлися ваші ігри.</p>
-        {% endif %}
-    </aside>
-</div>
+        {% endfor %}
+    </div>
+
+    {% if page > 1 or has_more %}
+    <nav class="gv-pagination" aria-label="Сторінки стрічки">
+        {% if page > 1 %}<a href="{% url_with page=page|add:'-1' %}">← Новіші</a>{% endif %}
+        {% if has_more %}<a href="{% url_with page=page|add:'1' %}">Показати ще →</a>{% endif %}
+    </nav>
+    {% endif %}
+</section>
 {% endblock %}

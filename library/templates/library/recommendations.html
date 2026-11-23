@@ -28,55 +28,70 @@
 </section>
 {% endif %}
 
-<section aria-label="Рекомендовані ігри">
-    <div class="gv-rec-grid">
-        {% for recommendation in recommendations %}
-        <article class="gv-rec-card">
-            <a class="gv-rec-card__cover" href="{% url 'library:game_detail' recommendation.game.id %}" aria-label="{{ recommendation.game.title }}">
-                {% game_cover recommendation.game %}
-                <span class="gv-rec-card__score">{{ recommendation.score }}%</span>
-            </a>
-            <div class="gv-rec-card__body">
-                <a class="gv-rec-card__title display" href="{% url 'library:game_detail' recommendation.game.id %}">{{ recommendation.game.title }}</a>
-                <div class="gv-chips">
-                    {% for genre in recommendation.game.visible_genres %}<span class="gv-chip gv-chip--sm">{{ genre.name }}</span>{% endfor %}
-                </div>
-                <ul class="gv-rec-card__reasons" aria-label="Чому рекомендовано">
-                    {% for reason in recommendation.reasons %}<li>{{ reason }}</li>{% endfor %}
-                </ul>
-                <div class="gv-rec-card__actions">
-                    <form method="post" action="{% url 'library:add_to_library' recommendation.game.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">+ У бібліотеку</button>
-                    </form>
-                    <a class="gv-btn gv-btn--sm" href="{% url 'library:game_detail' recommendation.game.id %}">Детальніше</a>
-                    <form method="post" action="{% url 'library:dismiss_recommendation' recommendation.game.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--ghost" title="Більше не пропонувати">Не цікаво</button>
-                    </form>
-                </div>
+{% if hero %}
+<section class="gv-game-hero{% if hero.game.poster %} has-image{% endif %}" style="--hero-bg: {{ hero.game|cover_bg }}; --hero-ink: {{ hero.game|cover_ink }}" aria-label="Головна рекомендація">
+    {% if hero.game.poster %}<div class="gv-game-hero__backdrop" style="background-image: url('{{ hero.game.poster.url }}')" aria-hidden="true"></div>{% endif %}
+    <a class="gv-game-hero__cover" href="{% url 'library:game_detail' hero.game.id %}" aria-label="{{ hero.game.title }}">{% game_cover hero.game %}</a>
+    <div class="gv-game-hero__body">
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+            {% score_ring hero.score 84 %}
+            <div class="gv-chips">
+                <span class="gv-chip">{% if is_fallback %}Популярне зараз{% else %}Найкращий збіг для вас{% endif %}</span>
+                {% for genre in hero.game.visible_genres %}<span class="gv-chip">{{ genre.name }}</span>{% endfor %}
             </div>
-        </article>
-        {% empty %}
-        <div class="gv-empty">
-            <h3>Поки що немає рекомендацій</h3>
-            <p>Усі ігри каталогу вже у вашій бібліотеці або приховані. Нові ігри з'являтимуться тут, щойно їх додадуть у каталог.</p>
-            <a class="gv-btn gv-btn--primary" href="{% url 'library:request_game' %}">Запропонувати гру</a>
         </div>
-        {% endfor %}
+        <h2 class="gv-game__title">{{ hero.game.title }}</h2>
+        <ul class="gv-rec-hero__reasons">
+            {% for reason in hero.reasons %}<li>{{ reason }}</li>{% endfor %}
+        </ul>
+        <div class="gv-game-hero__actions">
+            <form method="post" action="{% url 'library:add_to_library' hero.game.id %}">
+                {% csrf_token %}
+                <button type="submit" class="gv-btn gv-btn--primary gv-btn--lg">+ Додати в бібліотеку</button>
+            </form>
+            <a class="gv-btn gv-btn--lg" href="{% url 'library:game_detail' hero.game.id %}">Детальніше</a>
+            <form method="post" action="{% url 'library:dismiss_recommendation' hero.game.id %}">
+                {% csrf_token %}
+                <button type="submit" class="gv-btn gv-btn--lg gv-btn--ghost">Не цікаво</button>
+            </form>
+        </div>
     </div>
 </section>
+{% endif %}
+
+{% if shelves %}
+{% for shelf in shelves %}
+<section aria-label="{{ shelf.title }}">
+    <div class="gv-section-head"><h2>{{ shelf.title }}</h2><p style="margin: 0">{{ shelf.items|length }}</p></div>
+    <div class="gv-rec-grid">
+        {% for recommendation in shelf.items %}{% include 'library/components/rec_card.html' %}{% endfor %}
+    </div>
+</section>
+{% endfor %}
+{% elif rest %}
+<section aria-label="Ще рекомендації">
+    <div class="gv-section-head"><h2>Ще для вас</h2></div>
+    <div class="gv-rec-grid">
+        {% for recommendation in rest %}{% include 'library/components/rec_card.html' %}{% endfor %}
+    </div>
+</section>
+{% elif not hero %}
+<div class="gv-empty">
+    <h3>Поки що немає рекомендацій</h3>
+    <p>Усі ігри каталогу вже у вашій бібліотеці або приховані. Нові ігри з'являтимуться тут, щойно їх додадуть у каталог.</p>
+    <a class="gv-btn gv-btn--primary" href="{% url 'library:request_game' %}">Запропонувати гру</a>
+</div>
+{% endif %}
 
 <section class="gv-card" id="how" aria-labelledby="how-title">
     <div class="gv-section-head">
         <h2 id="how-title">Як працює підбір</h2>
-        <p style="margin: 0">Бал 0–100% складається з трьох частин</p>
+        <p style="margin: 0">Збіг 0–100% складається з трьох частин</p>
     </div>
     <div class="gv-factors">
-        <div class="gv-factor"><b>Ваші смаки · до 50%</b><p>Жанри ігор із бібліотеки з урахуванням статусу та оцінок: пройдені й високо оцінені підвищують інтерес до жанру, закинуті й низько оцінені — знижують.</p></div>
-        <div class="gv-factor"><b>Години в Steam</b><p>Що більше годин і що свіжіша гра, то сильніше вона впливає на смаки — навіть якщо її немає в каталозі.</p></div>
-        <div class="gv-factor"><b>Друзі · до 30%</b><p>Гра є в бібліотеках чи Steam ваших друзів, вони її високо оцінили або багато в неї грали.</p></div>
-        <div class="gv-factor"><b>Якість · до 20%</b><p>Середня оцінка гравців, згладжена за кількістю відгуків.</p></div>
+        <div class="gv-factor"><b><i class="c-genre" style="display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px"></i>Ваші смаки · до 50</b><p>Жанри ігор із бібліотеки з урахуванням статусу, оцінок і годин у Steam: пройдені й високо оцінені підвищують інтерес до жанру, закинуті й низько оцінені — знижують.</p></div>
+        <div class="gv-factor"><b><i class="c-friends" style="display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px"></i>Друзі · до 30</b><p>Гра є в бібліотеках чи Steam ваших друзів, вони її високо оцінили або багато в неї грали.</p></div>
+        <div class="gv-factor"><b><i class="c-quality" style="display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px"></i>Якість · до 20</b><p>Середня оцінка гравців, згладжена за кількістю відгуків.</p></div>
     </div>
 </section>
 

@@ -224,7 +224,9 @@ class FeedGroupingAndPagesTests(GameVaultTestCase):
                 activity.build_feed(self.alice, limit=50)
             return len(ctx.captured_queries)
 
-        activity.record_library_add(bob, self.make_game("First"))
+        first = self.make_game("First")
+        activity.record_library_add(bob, first)
+        activity.record_review(bob, first, 9)  # уривки рецензій — один запит, коли є оцінки
         small = count()
         for i in range(10):
             game = self.make_game(f"Game {i}")
@@ -247,3 +249,51 @@ class FeedGroupingAndPagesTests(GameVaultTestCase):
 
         self.client.post(reverse("library:edit_profile"), {**data, "show_activity": "on"})
         self.assertTrue(User.objects.get(id=self.alice.id).show_activity)
+
+
+class FeedFiltersAndDetailsTests(GameVaultTestCase):
+    def setUp(self):
+        self.alice = self.make_user("alice")
+        self.bob = self.make_user("bob")
+        self.make_friends(self.alice, self.bob)
+        self.game = self.make_game("Hades")
+        activity.record_library_add(self.alice, self.game)
+        activity.record_review(self.bob, self.game, 9)
+        activity.record_status_change(self.bob, self.make_game("Celeste"), "completed")
+        Review.objects.create(user=self.bob, game=self.game, score=9, text="Чудова гра", created_at=timezone.now())
+        self.login(self.alice)
+
+    def types(self, kind):
+        return sorted(e.event_type for e in activity.feed_events(self.alice, kind))
+
+    def test_filters(self):
+        self.assertEqual(self.types("mine"), ["library_add"])
+        self.assertEqual(self.types("friends"), ["review", "status_change"])
+        self.assertEqual(self.types("reviews"), ["review"])
+        self.assertEqual(self.types("completed"), ["status_change"])
+        self.assertEqual(len(self.types("all")), 3)
+
+    def test_feed_page_filter_and_review_excerpt(self):
+        response = self.client.get(reverse("library:feed") + "?filter=reviews")
+
+        self.assertEqual(response.context["selected_filter"], "reviews")
+        self.assertContains(response, "Чудова гра")
+        self.assertContains(response, "Сьогодні")
+
+        response = self.client.get(reverse("library:feed") + "?filter=unknown")
+        self.assertEqual(response.context["selected_filter"], "all")
+
+    def test_completed_event_is_highlighted(self):
+        response = self.client.get(reverse("library:feed"))
+
+        self.assertContains(response, "is-celebrate")
+        self.assertContains(response, "★ Пройдено")
+
+    def test_day_label(self):
+        from library.templatetags.library_extras import day_label
+
+        now = timezone.now()
+        self.assertEqual(day_label(now), "Сьогодні")
+        self.assertEqual(day_label(now - timedelta(days=1)), "Вчора")
+        self.assertRegex(day_label(now - timedelta(days=400)), r"^\d{1,2} [а-яі]+ \d{4}$")
+

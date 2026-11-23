@@ -1,50 +1,56 @@
-{% load library_extras %}{% comment %}Одна подія стрічки (FeedItem з library/services/activity.py).{% endcomment %}
-<article class="feed-item gv-feed-item">
-    <div class="feed-avatar">{% user_avatar item.user "sm" %}</div>
+{% load library_extras %}{% comment %}
+Одна подія стрічки (FeedItem з library/services/activity.py).
+compact=True — для бокових панелей (без уривка рецензії, менші обкладинки, дата біля часу).
+Дієслова в теперішньому часі, щоб не вгадувати рід користувача.
+{% endcomment %}
+<article class="gv-event gv-event--{{ item.event_type }}{% if item.event_type == 'status_change' and item.status == 'completed' %} is-celebrate{% endif %}">
+    <div class="gv-event__who">
+        {% user_avatar item.user "sm" %}
+        {% if item.event_type == 'friendship' and item.target_user %}{% user_avatar item.target_user "sm" %}{% endif %}
+    </div>
 
-    <div class="feed-body">
-        <p>
-            {% if item.user.id == current_library_user.id %}
-            <a class="feed-user" href="{% url 'library:profile' %}">{{ item.user.username }}</a>
-            {% else %}
-            <a class="feed-user" href="{% url 'library:user_profile' item.user.id %}">{{ item.user.username }}</a>
-            {% endif %}
+    <div class="gv-event__body">
+        {% if item.event_type == 'status_change' and item.status == 'completed' %}
+        <span class="gv-event__badge">★ Пройдено</span>
+        {% endif %}
 
+        <p class="gv-event__text">
+            <a class="feed-user" href="{% if item.user.id == current_library_user.id %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' item.user.id %}{% endif %}">{{ item.user.username }}</a>
             {% if item.event_type == 'library_add' %}
             додає до бібліотеки
             {% elif item.event_type == 'status_change' %}
-            {% if item.status == 'completed' %}проходить
-            {% elif item.status == 'playing' %}починає грати в
-            {% elif item.status == 'planned' %}планує зіграти в
-            {% elif item.status == 'paused' %}відкладає
-            {% elif item.status == 'dropped' %}закидає
-            {% else %}змінює статус{% endif %}
+            {% if item.status == 'completed' %}проходить{% else %}оновлює статус{% endif %}
             {% elif item.event_type == 'review' %}
             оцінює
             {% elif item.event_type == 'steam_import' %}
             додає зі Steam ігор до бібліотеки: <b>{{ item.item_count }}</b>
             {% elif item.event_type == 'friendship' %}
-            і
-            {% if item.target_user.id == current_library_user.id %}
-            <a class="feed-user" href="{% url 'library:profile' %}">{{ item.target_user.username }}</a>
-            {% else %}
-            <a class="feed-user" href="{% url 'library:user_profile' item.target_user.id %}">{{ item.target_user.username }}</a>
-            {% endif %}
-            тепер друзі
+            і <a class="feed-user" href="{% if item.target_user.id == current_library_user.id %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' item.target_user.id %}{% endif %}">{{ item.target_user.username }}</a> тепер друзі
             {% elif item.event_type == 'game_approved' %}
             пропонує гру, і її додано в каталог:
             {% endif %}
-
-            {% for game in item.games|slice:":3" %}
-            <a class="feed-game" href="{% url 'library:game_detail' game.id %}">«{{ game.title }}»</a>{% if not forloop.last %},{% endif %}
-            {% endfor %}
-            {% if item.extra_games_count %}і ще {{ item.extra_games_count }}{% endif %}
-
-            {% if item.event_type == 'review' and item.score %}
-            на <b>{{ item.score }}/10</b>
-            {% endif %}
+            {% for game in item.games|slice:":3" %}<a class="feed-game" href="{% url 'library:game_detail' game.id %}">«{{ game.title }}»</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if item.extra_games_count %} і ще {{ item.extra_games_count }}{% endif %}
+            {% if item.event_type == 'review' and item.score %} на <b>{{ item.score }}/10</b>{% endif %}
+            {% if item.event_type == 'status_change' and item.status != 'completed' %}<span class="gv-status gv-status--{{ item.status }}">{{ item.status|status_label_other }}</span>{% endif %}
         </p>
 
-        <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"d.m.Y H:i" }}</time>
+        {% if not compact and item.event_type == 'review' and item.review_text %}
+        <blockquote class="gv-event__quote">«{{ item.review_text|truncatechars:220 }}»</blockquote>
+        {% endif %}
+
+        {% if item.games|length > 1 %}
+        <div class="gv-event__strip" aria-hidden="true">
+            {% for game in item.games|slice:":6" %}<a href="{% url 'library:game_detail' game.id %}" tabindex="-1">{% game_cover game "sm" %}</a>{% endfor %}
+        </div>
+        {% endif %}
+
+        <time datetime="{{ item.created_at|date:'c' }}">{% if compact %}{{ item.created_at|day_label }}, {% endif %}{{ item.created_at|date:"H:i" }}</time>
     </div>
+
+    {% if item.games|length == 1 %}
+    <a class="gv-event__thumb" href="{% url 'library:game_detail' item.game.id %}" tabindex="-1" aria-hidden="true">
+        {% game_cover item.game "sm" %}
+        {% if item.event_type == 'review' and item.score %}<span class="gv-event__score">{{ item.score }}</span>{% endif %}
+    </a>
+    {% endif %}
 </article>

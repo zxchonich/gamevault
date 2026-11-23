@@ -97,9 +97,9 @@
         {% include 'library/_now_playing.html' %}
         {% endwith %}
         {% endif %}
-        <div class="gv-feed">
+        <div class="gv-feed gv-feed--compact">
             {% for item in home_feed %}
-            {% include 'library/_feed_item.html' %}
+            {% include 'library/_feed_item.html' with compact=True %}
             {% endfor %}
         </div>
     </div>

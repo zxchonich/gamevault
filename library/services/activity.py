@@ -13,7 +13,7 @@ from django.db import models
 from django.utils import timezone
 
 from library.access import friend_ids
-from library.models import ActivityEvent, ExternalLibraryItem, Game
+from library.models import ActivityEvent, ExternalLibraryItem, Game, Review
 from library.services.steam_service import attach_steam_apps
 
 # Повторні зміни статусу чи оцінки тієї самої гри протягом цього часу зливаються в одну подію.
@@ -23,6 +23,15 @@ MERGE_WINDOW = timedelta(minutes=10)
 GROUPABLE_TYPES = {ActivityEvent.LIBRARY_ADD, ActivityEvent.STATUS_CHANGE}
 
 FEED_PAGE_SIZE = 40
+
+# Фільтри стрічки: ?filter=<ключ>. Значення — підпис для пігулки.
+FEED_FILTERS = {
+    "all": "Усі",
+    "mine": "Мої",
+    "friends": "Друзі",
+    "reviews": "Оцінки",
+    "completed": "Пройдене",
+}
 
 
 # --- Запис ---------------------------------------------------------------------
@@ -106,6 +115,7 @@ class FeedItem:
     status: str = None
     score: int = None
     item_count: int = None
+    review_text: str = ""
 
     @property
     def game(self):
@@ -156,13 +166,43 @@ def group_events(events):
             score=event.score,
             item_count=event.item_count,
         ))
+
+    _attach_review_texts(items)
     return items
 
 
-def feed_events(viewer):
-    """Queryset подій для стрічки: власні та друзів."""
-    people = friend_ids(viewer) | {viewer.id}
+def _attach_review_texts(items):
+    """Уривок тексту рецензії для подій-оцінок (один запит на всі події)."""
+    reviews = [item for item in items if item.event_type == ActivityEvent.REVIEW and item.game]
+    if not reviews:
+        return
+
+    texts = {
+        (user_id, game_id): text
+        for user_id, game_id, text in Review.objects.filter(
+            user_id__in={item.user.id for item in reviews},
+            game_id__in={item.game.id for item in reviews},
+        ).values_list("user_id", "game_id", "text")
+    }
+    for item in reviews:
+        item.review_text = texts.get((item.user.id, item.game.id)) or ""
+
+
+def feed_events(viewer, kind="all"):
+    """Queryset подій для стрічки: власні та друзів; kind — ключ із FEED_FILTERS."""
+    friends = friend_ids(viewer)
+    people = friends | {viewer.id}
     queryset = _base_queryset().filter(models.Q(user_id__in=people) | models.Q(target_user_id__in=people))
+
+    if kind == "mine":
+        queryset = queryset.filter(models.Q(user=viewer) | models.Q(target_user=viewer))
+    elif kind == "friends":
+        queryset = queryset.filter(user_id__in=friends)
+    elif kind == "reviews":
+        queryset = queryset.filter(event_type=ActivityEvent.REVIEW)
+    elif kind == "completed":
+        queryset = queryset.filter(event_type=ActivityEvent.STATUS_CHANGE, status="completed")
+
     return _visible_to(viewer, queryset)
 
 
