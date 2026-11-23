@@ -60,6 +60,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'library.middleware.SteamAutoSyncMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -166,3 +167,8 @@ EMAIL_TIMEOUT = 15
 # Вхід через Google (OAuth-клієнт у Google Cloud Console). Порожні — кнопка Google прихована.
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+
+# Автосинхронізація Steam: коли користувач заходить на сайт, а з минулої синхронізації минуло
+# більше STEAM_AUTOSYNC_HOURS, вона запускається у фоновому потоці (див. library/services/steam_autosync.py).
+STEAM_AUTOSYNC = os.getenv('STEAM_AUTOSYNC', 'True').lower() in ('1', 'true', 'yes')
+STEAM_AUTOSYNC_HOURS = int(os.getenv('STEAM_AUTOSYNC_HOURS', '6'))

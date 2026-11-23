@@ -197,6 +197,7 @@ CREATE TABLE `external_accounts` (
   `profile_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `avatar_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `connected_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_synced_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_external_account` (`provider`,`external_user_id`),
   UNIQUE KEY `uq_user_provider` (`user_id`,`provider`),
@@ -234,6 +235,32 @@ CREATE TABLE `steam_apps` (
   `found` tinyint(1) NOT NULL DEFAULT '1' COMMENT '0 тАФ ╨│╤А╨╕ ╨╜╨╡╨╝╨░╤Ф ╨▓ Steam Store (╨╜╨╡ ╨╖╨░╨┐╨╕╤В╤Г╨▓╨░╤В╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╜╨╛)',
   `fetched_at` datetime NOT NULL,
   PRIMARY KEY (`appid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notifications` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL COMMENT 'кому',
+  `kind` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'friend_request, friend_accepted, game_approved, game_rejected',
+  `actor_id` int DEFAULT NULL COMMENT 'хто спричинив (друг, модератор)',
+  `connection_id` int DEFAULT NULL,
+  `game_request_id` int DEFAULT NULL,
+  `game_id` int DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `read_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_notifications_user_read` (`user_id`,`read_at`),
+  KEY `idx_notifications_user_created` (`user_id`,`created_at`),
+  KEY `fk_notifications_actor` (`actor_id`),
+  KEY `fk_notifications_connection` (`connection_id`),
+  KEY `fk_notifications_game_request` (`game_request_id`),
+  KEY `fk_notifications_game` (`game_id`),
+  CONSTRAINT `fk_notifications_actor` FOREIGN KEY (`actor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notifications_connection` FOREIGN KEY (`connection_id`) REFERENCES `social_connections` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notifications_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_notifications_game_request` FOREIGN KEY (`game_request_id`) REFERENCES `game_requests` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

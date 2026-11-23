@@ -1,14 +1,14 @@
 """Рекомендації та стрічка активності."""
 
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from ..access import friend_ids, library_login_required, redirect_to_next
-from ..models import DismissedRecommendation, Game
+from ..models import DismissedRecommendation, Game, Notification
 from ..selectors import attach_visible_genres_to_entries
-from ..services import activity
+from ..services import activity, notifications
 from ..services.recommendations import build_recommendations
 
 
@@ -104,3 +104,29 @@ def feed(request):
         "filters": activity.FEED_FILTERS,
         "selected_filter": kind,
     })
+
+
+# --- Сповіщення ------------------------------------------------------------------
+
+NOTIFICATIONS_PAGE_SIZE = 50
+
+
+@library_login_required
+def notifications_page(request):
+    user = request.library_user
+    items = list(
+        Notification.objects.filter(user=user)
+        .select_related("actor", "game", "game_request")
+        .order_by("-created_at", "-id")[:NOTIFICATIONS_PAGE_SIZE]
+    )
+    unread_ids = {item.id for item in items if item.read_at is None}
+    notifications.mark_read(user)  # відкрили сторінку — усе прочитано (виділення лишається до перезавантаження)
+    return render(request, "library/notifications.html", {"items": items, "unread_ids": unread_ids})
+
+
+@require_POST
+@library_login_required
+def notifications_mark_read(request):
+    notifications.mark_read(request.library_user)
+    return redirect_to_next(request, "library:notifications")
+

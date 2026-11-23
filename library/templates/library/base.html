@@ -49,6 +49,33 @@
             </button>
 
             {% if current_library_user %}
+            <details class="gv-menu gv-bell">
+                <summary class="gv-btn gv-btn--icon" aria-label="Сповіщення{% if header_unread_count %}: нових {{ header_unread_count }}{% endif %}" title="Сповіщення">
+                    {% icon "bell" 20 %}
+                    {% if header_unread_count %}<span class="gv-bell__count">{% if header_unread_count > 9 %}9+{% else %}{{ header_unread_count }}{% endif %}</span>{% endif %}
+                </summary>
+                <div class="gv-menu__panel gv-bell__panel">
+                    <div class="gv-bell__head">
+                        <b>Сповіщення</b>
+                        {% if header_unread_count %}
+                        <form method="post" action="{% url 'library:notifications_mark_read' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="gv-bell__mark">Прочитати всі</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div class="gv-notice-list">
+                        {% for item in header_notifications %}
+                        {% if item.read_at %}{% include 'library/components/notification_item.html' with compact=True %}{% else %}{% include 'library/components/notification_item.html' with compact=True unread=True %}{% endif %}
+                        {% empty %}
+                        <p class="gv-bell__empty">Поки тихо — нових сповіщень немає.</p>
+                        {% endfor %}
+                    </div>
+                    <a class="gv-bell__all" href="{% url 'library:notifications' %}">Усі сповіщення</a>
+                </div>
+            </details>
+
             <details class="gv-menu">
                 <summary class="gv-btn gv-btn--icon" aria-label="Меню користувача" style="padding: 0; background: none">
                     {% user_avatar current_library_user %}

@@ -7,9 +7,9 @@ from django.views.decorators.http import require_POST
 
 from ..access import admin_required, library_login_required
 from ..forms import GameRequestForm
-from ..models import Game, GameRequest, Genre
+from ..models import Game, GameRequest, Genre, Notification
 from ..selectors import set_game_genres
-from ..services import activity
+from ..services import activity, notifications
 from ..services.steam_service import (
     SteamError,
     download_steam_poster,
@@ -46,6 +46,7 @@ def request_game(request):
 
 @library_login_required
 def my_requests(request):
+    notifications.mark_read(request.library_user, kinds=[Notification.GAME_APPROVED, Notification.GAME_REJECTED])
     requests = GameRequest.objects.filter(user=request.library_user).select_related("moderator").order_by("-created_at")
 
     return render(request, "library/my_requests.html", {
@@ -99,6 +100,7 @@ def approve_request(request, request_id):
     existing_game = Game.objects.filter(steam_appid=appid).first() if appid else None
     if existing_game:
         game_request.save()
+        notifications.notify_game_request(game_request, approved=True, game=existing_game)
         messages.info(
             request,
             f'Заявку "{game_request.title}" схвалено, але гра з цим Steam AppID '
@@ -118,6 +120,7 @@ def approve_request(request, request_id):
     set_game_genres(game, request.POST.getlist("genres"))
     game_request.save()
     activity.record_game_approved(game_request.user, game)
+    notifications.notify_game_request(game_request, approved=True, game=game)
     added = link_game_to_steam_owners(game) if appid else 0
 
     messages.success(
@@ -137,6 +140,7 @@ def reject_request(request, request_id):
         game_request.moderator = request.library_user
         game_request.reviewed_at = timezone.now()
         game_request.save()
+        notifications.notify_game_request(game_request, approved=False)
         messages.success(request, f'Заявку "{game_request.title}" відхилено.')
 
     return redirect("library:moderation")

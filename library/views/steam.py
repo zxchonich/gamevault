@@ -242,7 +242,7 @@ def _render_steam_library(request, viewer, owner):
         "games_count": all_items.count(),
         "in_catalog_count": all_items.filter(external_game_id__in=catalog_appids).count(),
         "total_hours": round((totals["minutes"] or 0) / 60),
-        "last_synced_at": totals["last_synced"],
+        "last_synced_at": (steam_account.last_synced_at if steam_account else None) or totals["last_synced"],
         "filtered_count": page_obj.paginator.count,
     }
 

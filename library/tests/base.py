@@ -1,7 +1,7 @@
 from unittest import mock
 
 from django.contrib.auth.hashers import make_password
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from library.models import (
@@ -19,6 +19,7 @@ ADMIN_ROLE_ID = 2
 DEFAULT_PASSWORD = "secret-pass-123"
 
 
+@override_settings(STEAM_AUTOSYNC=False)  # фонову синхронізацію вмикають лише тести автосинхронізації
 class GameVaultTestCase(TestCase):
     """Базовий клас із фабриками даних. Ролі user/admin створює schema.sql.
 

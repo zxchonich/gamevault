@@ -15,10 +15,10 @@ from ..access import (
     update_session_after_password_change,
 )
 from ..forms import ProfileForm
-from ..models import LibraryEntry, SocialConnection, User
+from ..models import LibraryEntry, Notification, SocialConnection, User
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
-from ..services import activity
+from ..services import activity, notifications
 from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
 from ..services.social_auth import can_remove_login_method
@@ -58,6 +58,7 @@ def user_list(request):
 @library_login_required
 def friends(request):
     current_user = request.library_user
+    notifications.mark_read(current_user, kinds=[Notification.FRIEND_REQUEST, Notification.FRIEND_ACCEPTED])
 
     sent_requests = SocialConnection.objects.filter(sender=current_user, status="pending").select_related("receiver")
     received_requests = (
@@ -123,9 +124,10 @@ def add_friend(request, user_id):
         return redirect("library:user_list")
 
     if connection_between(current_user, target_user) is None:
-        SocialConnection.objects.create(
+        connection = SocialConnection.objects.create(
             sender=current_user, receiver=target_user, status="pending", created_at=timezone.now()
         )
+        notifications.notify_friend_request(connection)
         messages.success(request, f"Заявку в друзі для {target_user.username} надіслано.")
     else:
         messages.info(request, "Заявка або зв’язок з цим користувачем уже існує.")
@@ -140,10 +142,12 @@ def accept_connection(request, connection_id):
     connection = get_object_or_404(SocialConnection, id=connection_id)
 
     if connection.receiver_id == current_user.id:
-        if connection.status != "accepted":
-            activity.record_friendship(current_user, connection.sender)
+        was_accepted = connection.status == "accepted"
         connection.status = "accepted"
         connection.save()
+        if not was_accepted:
+            activity.record_friendship(current_user, connection.sender)
+            notifications.notify_friend_accepted(connection)
         messages.success(request, "Заявку в друзі прийнято.")
 
     return redirect("library:friends")
@@ -158,6 +162,7 @@ def reject_connection(request, connection_id):
     if connection.receiver_id == current_user.id:
         connection.status = "rejected"
         connection.save()
+        notifications.forget_friend_request(connection)
         messages.success(request, "Заявку в друзі відхилено.")
 
     return redirect("library:friends")

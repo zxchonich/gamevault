@@ -31,6 +31,8 @@ urlpatterns = [
     path('recommendations/<int:game_id>/dismiss/', discover.dismiss_recommendation, name='dismiss_recommendation'),
     path('recommendations/<int:game_id>/restore/', discover.restore_recommendation, name='restore_recommendation'),
     path('feed/', discover.feed, name='feed'),
+    path('notifications/', discover.notifications_page, name='notifications'),
+    path('notifications/read/', discover.notifications_mark_read, name='notifications_mark_read'),
 
     # Користувачі, друзі, профілі
     path('users/', social.user_list, name='user_list'),

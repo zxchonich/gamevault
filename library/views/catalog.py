@@ -12,7 +12,7 @@ from ..selectors import (
     game_page_stats,
     get_status_label,
 )
-from ..services import activity
+from ..services import activity, notifications
 from ..services.recommendations import build_recommendations
 from ..services.steam_service import steam_items_by_appid
 
@@ -119,6 +119,8 @@ def game_detail(request, game_id):
     game = get_object_or_404(Game, id=game_id)
     reviews = Review.objects.filter(game=game).select_related("user").order_by("-created_at")
     user = get_current_user(request)
+    if user:
+        notifications.mark_read(user, game=game)  # «вашу заявку схвалено» — прочитано, щойно відкрили гру
 
     library_entry = None
     user_review = None

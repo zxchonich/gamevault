@@ -278,6 +278,7 @@ class ExternalAccount(models.Model):
     profile_url = models.CharField(max_length=255, blank=True, null=True)
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
     connected_at = models.DateTimeField(auto_now_add=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)  # остання вдала синхронізація (Steam)
 
     class Meta:
         db_table = "external_accounts"
@@ -406,3 +407,31 @@ class ActivityEvent(models.Model):
     def __str__(self):
         return f"{self.user_id} {self.event_type} {self.game_id or ''}"
 
+
+class Notification(models.Model):
+    """Особисте сповіщення (дзвіночок у шапці). Створюються в services/notifications.py."""
+
+    FRIEND_REQUEST = "friend_request"
+    FRIEND_ACCEPTED = "friend_accepted"
+    GAME_APPROVED = "game_approved"
+    GAME_REJECTED = "game_rejected"
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="notifications")
+    kind = models.CharField(max_length=30)
+    actor = models.ForeignKey(
+        User, on_delete=models.CASCADE, db_column="actor_id", null=True, blank=True, related_name="+"
+    )
+    connection = models.ForeignKey(
+        SocialConnection, on_delete=models.CASCADE, db_column="connection_id", null=True, blank=True, related_name="+"
+    )
+    game_request = models.ForeignKey(
+        GameRequest, on_delete=models.CASCADE, db_column="game_request_id", null=True, blank=True, related_name="+"
+    )
+    game = models.ForeignKey(Game, on_delete=models.SET_NULL, db_column="game_id", null=True, blank=True, related_name="+")
+    created_at = models.DateTimeField()
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "notifications"

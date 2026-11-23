@@ -216,6 +216,9 @@ def sync_steam_library(user, steam_account):
             if _add_to_library(user.id, catalog_game, playtime_by_appid[catalog_game.steam_appid], now):
                 added_to_library_count += 1
 
+    steam_account.last_synced_at = now
+    steam_account.save(update_fields=["last_synced_at"])
+
     # Обкладинки та жанри нових ігор (мережеві запити — поза транзакцією).
     details = refresh_steam_apps(playtime_by_appid.keys(), limit=STEAM_APPS_PER_SYNC)
 
@@ -407,7 +410,7 @@ def get_steam_summary(user, top_limit=5):
         "account": account,
         "games_count": items.count(),
         "total_hours": round((totals["minutes"] or 0) / 60),
-        "last_synced_at": totals["last_synced"],
+        "last_synced_at": account.last_synced_at or totals["last_synced"],
         "top_games": attach_steam_apps(
             items.filter(playtime_minutes__gt=0).order_by("-playtime_minutes")[:top_limit]
         ),

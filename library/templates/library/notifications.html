@@ -1,0 +1,27 @@
+{% extends 'library/base.html' %}
+{% load library_extras %}
+
+{% block title %}Сповіщення | GameVault{% endblock %}
+
+{% block content %}
+<header class="gv-page-head">
+    <div>
+        <h1>Сповіщення</h1>
+        <p>Заявки в друзі та рішення щодо ваших заявок на ігри.</p>
+    </div>
+</header>
+
+<section class="gv-card" aria-label="Список сповіщень">
+    <div class="gv-notice-list" style="max-width: 860px">
+        {% for item in items %}
+        {% ifchanged item.created_at|date:"Ymd" %}<h3 class="gv-day">{{ item.created_at|day_label }}</h3>{% endifchanged %}
+        {% if item.id in unread_ids %}{% include 'library/components/notification_item.html' with unread=True %}{% else %}{% include 'library/components/notification_item.html' %}{% endif %}
+        {% empty %}
+        <div class="gv-empty">
+            <h3>Сповіщень поки немає</h3>
+            <p>Тут з'являтимуться заявки в друзі й відповіді на ваші заявки до каталогу.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
