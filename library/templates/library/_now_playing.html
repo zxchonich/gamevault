@@ -1,5 +1,5 @@
 {% comment %}Список "Зараз грають" (activity.now_playing).{% endcomment %}
-<div class="steam-mini-list">
+<div class="steam-mini-list gv-now-playing">
     {% for item in now_playing %}
     <a class="steam-mini-card"
         href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}"

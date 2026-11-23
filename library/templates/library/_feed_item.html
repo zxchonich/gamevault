@@ -1,12 +1,6 @@
-{% comment %}Одна подія стрічки (FeedItem з library/services/activity.py).{% endcomment %}
-<article class="feed-item">
-    <div class="feed-avatar">
-        {% if item.user.avatar %}
-        <img src="{{ item.user.avatar.url }}" alt="{{ item.user.username }}">
-        {% else %}
-        <span>{{ item.user.username|first|upper }}</span>
-        {% endif %}
-    </div>
+{% load library_extras %}{% comment %}Одна подія стрічки (FeedItem з library/services/activity.py).{% endcomment %}
+<article class="feed-item gv-feed-item">
+    <div class="feed-avatar">{% user_avatar item.user "sm" %}</div>
 
     <div class="feed-body">
         <p>

@@ -15,3 +15,43 @@ def status_label(status):
 def status_label_other(status):
     """Про іншого користувача: "Планує", "Грає"."""
     return get_status_label(status, other=True)
+
+
+# --- Компоненти нового дизайну --------------------------------------------------
+
+# Кольори плашок для ігор без постера: (фон, текст). Колір стабільний для гри (за id).
+COVER_PALETTE = [
+    ("#7C5CFF", "#FFFFFF"),
+    ("#FFB547", "#17151F"),
+    ("#4CD6A0", "#17151F"),
+    ("#FF6B5A", "#17151F"),
+    ("#3DA5FF", "#17151F"),
+    ("#FF7AC6", "#17151F"),
+]
+
+AVATAR_COLORS = ["#7C5CFF", "#2F9E6E", "#E0533F", "#2A7FD4", "#C2418F", "#B7791F"]
+
+
+@register.inclusion_tag("library/components/cover.html")
+def game_cover(game, size=""):
+    """{% game_cover game %} — постер гри або кольорова плашка з назвою."""
+    bg, ink = COVER_PALETTE[(game.id or 0) % len(COVER_PALETTE)]
+    return {"game": game, "size": size, "bg": bg, "ink": ink}
+
+
+@register.inclusion_tag("library/components/avatar.html")
+def user_avatar(user, size=""):
+    """{% user_avatar user "sm" %} — фото або перша літера на кольоровому тлі."""
+    return {
+        "user": user,
+        "size": size,
+        "color": AVATAR_COLORS[(user.id or 0) % len(AVATAR_COLORS)],
+    }
+
+
+@register.simple_tag(takes_context=True)
+def nav_active(context, *url_names):
+    """class="{% nav_active 'my_library' 'user_library' %}" -> "is-active" на поточній сторінці."""
+    request = context.get("request")
+    match = getattr(request, "resolver_match", None)
+    return "is-active" if match and match.url_name in url_names else ""

@@ -1,0 +1,7 @@
+<div class="gv-cover{% if size %} gv-cover--{{ size }}{% endif %}" style="--cover-bg: {{ bg }}; --cover-ink: {{ ink }}">
+    {% if game.poster %}
+    <img src="{{ game.poster.url }}" alt="{{ game.title }}" loading="lazy">
+    {% else %}
+    <span class="gv-cover__title" aria-hidden="true">{{ game.title }}</span>
+    {% endif %}
+</div>

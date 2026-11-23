@@ -1,0 +1,553 @@
+/* =============================================================================
+   GameVault — дизайн-система (напрямок «Картридж»).
+   Тема: <html data-theme="dark|light">. Усі кольори — через змінні нижче.
+   Структура: 1 токени · 2 основа · 3 каркас · 4 компоненти · 5 сторінки.
+   ============================================================================= */
+
+/* --- 1. Токени --------------------------------------------------------------- */
+:root,
+:root[data-theme="dark"] {
+    --bg: #101014;
+    --surface: #1A1A21;
+    --surface-2: #24242D;
+    --surface-3: #2E2E39;
+    --line: #30303B;
+    --text: #F4F4F6;
+    --muted: #A6A6B5;
+    --accent: #C8F031;
+    --accent-text: #C8F031;
+    --on-accent: #101014;
+    --chip: #2A2A34;
+    --violet: #7C5CFF;
+    --danger: #FF6B5A;
+    --danger-bg: rgba(255, 107, 90, 0.14);
+    --success-bg: rgba(200, 240, 49, 0.14);
+    --info-bg: rgba(124, 92, 255, 0.18);
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+    --bg: #F5F4EF;
+    --surface: #FFFFFF;
+    --surface-2: #ECEAE3;
+    --surface-3: #E1DED5;
+    --line: #DDDAD0;
+    --text: #17151F;
+    --muted: #5C5868;
+    --accent: #C8F031;
+    --accent-text: #3F5600;
+    --on-accent: #17151F;
+    --chip: #EFEDE6;
+    --violet: #6A48F0;
+    --danger: #C2410C;
+    --danger-bg: rgba(194, 65, 12, 0.10);
+    --success-bg: rgba(63, 86, 0, 0.10);
+    --info-bg: rgba(106, 72, 240, 0.10);
+    --shadow: 0 18px 50px rgba(23, 21, 31, 0.10);
+    color-scheme: light;
+}
+
+:root {
+    --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-display: 'Unbounded', 'Manrope', system-ui, sans-serif;
+    --r-xs: 10px;
+    --r-sm: 14px;
+    --r-md: 20px;
+    --r-lg: 28px;
+    --r-xl: 32px;
+    --r-pill: 999px;
+    --gap: 20px;
+    --container: 1360px;
+}
+
+/* --- 2. Основа --------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--accent-text); }
+
+h1, h2, h3, h4 {
+    margin: 0;
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+p { margin: 0; }
+img { max-width: 100%; display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.muted { color: var(--muted); }
+.display { font-family: var(--font-display); }
+
+/* --- 3. Каркас --------------------------------------------------------------- */
+.gv-shell {
+    min-height: 100vh;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+}
+
+.gv-container {
+    width: 100%;
+    max-width: var(--container);
+    margin: 0 auto;
+}
+
+.gv-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    flex: 1 0 auto;
+}
+
+/* Шапка */
+.gv-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    padding: 10px 10px 10px 20px;
+}
+
+.gv-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+}
+
+.gv-logo:hover { color: var(--text); }
+
+.gv-logo__mark {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-xs);
+    background: var(--accent);
+    color: var(--on-accent);
+    display: grid;
+    place-items: center;
+    font-size: 15px;
+}
+
+.gv-nav {
+    display: flex;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.gv-nav::-webkit-scrollbar { display: none; }
+
+.gv-nav a {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+    border-radius: var(--r-pill);
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.gv-nav a:hover { background: var(--surface-2); color: var(--text); }
+.gv-nav a.is-active { background: var(--text); color: var(--bg); }
+
+.gv-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* Перемикач теми: показуємо іконку протилежної теми */
+.gv-theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .gv-theme-toggle .icon-sun { display: block; }
+:root[data-theme="dark"] .gv-theme-toggle .icon-moon { display: none; }
+
+/* Випадне меню (details/summary — працює без JS) */
+.gv-menu { position: relative; }
+.gv-menu > summary { list-style: none; cursor: pointer; }
+.gv-menu > summary::-webkit-details-marker { display: none; }
+
+.gv-menu__panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 20;
+    min-width: 230px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gv-menu__panel a,
+.gv-menu__panel button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: var(--r-xs);
+    background: none;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.gv-menu__panel a:hover,
+.gv-menu__panel button:hover { background: var(--surface-2); color: var(--text); }
+
+.gv-menu__head {
+    padding: 8px 12px 10px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
+}
+
+.gv-menu__head b { display: block; }
+.gv-menu__head span { font-size: 13px; color: var(--muted); }
+
+.gv-footer {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 0 4px;
+}
+
+/* --- 4. Компоненти ----------------------------------------------------------- */
+
+/* Кнопки */
+.gv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    color: var(--text);
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.gv-btn:hover { color: var(--text); background: var(--surface-3); transform: translateY(-1px); }
+.gv-btn--primary { background: var(--accent); color: var(--on-accent); }
+.gv-btn--primary:hover { background: var(--accent); color: var(--on-accent); filter: brightness(1.05); }
+.gv-btn--inverse { background: var(--text); color: var(--bg); }
+.gv-btn--inverse:hover { background: var(--text); color: var(--bg); }
+.gv-btn--ghost { background: transparent; box-shadow: inset 0 0 0 2px var(--line); }
+.gv-btn--ghost:hover { background: var(--surface-2); }
+.gv-btn--danger { background: var(--danger-bg); color: var(--danger); }
+.gv-btn--danger:hover { background: var(--danger-bg); color: var(--danger); }
+.gv-btn--sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.gv-btn--lg { min-height: 52px; padding: 0 26px; font-size: 15px; }
+.gv-btn--icon { width: 44px; padding: 0; }
+
+/* Кнопка-посилання всередині POST-форми (див. CLAUDE.md, «Действия — только POST») */
+.inline-post-form { display: contents; }
+:where(.link-button) {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: inherit;
+}
+
+/* Пігулки / чипи */
+.gv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    background: var(--chip);
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.gv-chip--sm { padding: 3px 9px; font-size: 11px; }
+.gv-chip--accent { background: var(--accent); color: #101014; }
+.gv-chip--dark { background: #101014; color: #C8F031; }
+a.gv-chip:hover { background: var(--surface-3); color: var(--text); }
+a.gv-chip.is-active { background: var(--text); color: var(--bg); }
+
+.gv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Картки й секції */
+.gv-card {
+    background: var(--surface);
+    border-radius: var(--r-xl);
+    padding: 26px;
+    min-width: 0;
+}
+
+.gv-card--tight { padding: 20px; border-radius: var(--r-lg); }
+
+.gv-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.gv-section-head h2 { font-size: 22px; font-weight: 800; }
+.gv-section-head p { color: var(--muted); font-size: 14px; font-weight: 600; margin-top: 4px; }
+.gv-section-head .gv-link { font-weight: 700; font-size: 14px; color: var(--muted); }
+.gv-section-head .gv-link:hover { color: var(--accent-text); }
+
+.gv-row { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.gv-row > .gv-grow { flex: 999 1 520px; min-width: 0; }
+.gv-row > .gv-side { flex: 1 1 320px; min-width: 0; }
+
+/* Герой-банер */
+.gv-hero {
+    border-radius: var(--r-xl);
+    background: var(--accent);
+    color: #101014;
+    padding: 36px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.gv-hero a:hover { color: #101014; }
+.gv-hero__body { flex: 1 1 360px; display: flex; flex-direction: column; gap: 16px; }
+.gv-hero__title { font-size: clamp(36px, 5vw, 56px); font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.gv-hero__text { font-size: 17px; font-weight: 600; max-width: 560px; }
+.gv-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 6px; }
+.gv-hero .gv-btn { background: #101014; color: #C8F031; }
+.gv-hero .gv-btn--ghost { background: transparent; color: #101014; box-shadow: inset 0 0 0 2px #101014; }
+.gv-hero__art { flex: 0 1 230px; display: flex; align-items: center; justify-content: center; }
+.gv-hero__art .gv-cover { width: 200px; transform: rotate(4deg); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); }
+
+/* Статистика */
+.gv-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.gv-stat {
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.gv-stat span { color: var(--muted); font-weight: 700; font-size: 13px; }
+.gv-stat b { font-family: var(--font-display); font-size: 32px; font-weight: 800; letter-spacing: -0.02em; }
+
+/* Обкладинки */
+.gv-cover {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--cover-bg, var(--surface-2));
+    color: var(--cover-ink, var(--text));
+}
+
+.gv-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+.gv-cover__title {
+    position: absolute;
+    inset: auto 14px 14px 14px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 18px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+}
+
+.gv-cover--sm { border-radius: var(--r-sm); }
+.gv-cover--sm .gv-cover__title { font-size: 12px; inset: auto 8px 8px 8px; }
+
+.gv-game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.gv-game-tile { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gv-game-tile:hover { color: var(--text); }
+.gv-game-tile:hover .gv-cover { transform: translateY(-3px); }
+.gv-game-tile .gv-cover { transition: transform 0.15s ease; }
+.gv-game-tile__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gv-game-tile__title { font-weight: 700; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-game-tile__sub { color: var(--muted); font-size: 13px; font-weight: 600; }
+
+/* Рядки списків (рейтинги, рекомендації) */
+.gv-list { display: flex; flex-direction: column; gap: 10px; }
+
+.gv-list-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px 10px 10px;
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    min-width: 0;
+}
+
+a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
+.gv-list-item .gv-cover { flex: 0 0 52px; }
+.gv-list-item__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gv-list-item__title { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-list-item__sub { color: var(--muted); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-list-item__value { font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+
+.gv-rank {
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: var(--r-xs);
+    background: var(--chip);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+}
+
+.gv-rank--1 { background: var(--accent); color: #101014; }
+
+/* Аватари */
+.gv-avatar {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: var(--avatar-bg, var(--violet));
+    color: #FFFFFF;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.gv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.gv-avatar--sm { width: 34px; height: 34px; font-size: 13px; border-radius: var(--r-xs); }
+.gv-avatar--lg { width: 64px; height: 64px; font-size: 24px; border-radius: var(--r-md); }
+
+/* Стрічка (класи feed-* лишаються для сторінок зі старими стилями) */
+.gv-feed { display: flex; flex-direction: column; gap: 14px; }
+.gv-feed-item { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.gv-feed-item .feed-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gv-feed-item .feed-body p { font-size: 14px; line-height: 1.45; font-weight: 500; }
+.gv-feed-item .feed-user { font-weight: 800; }
+.gv-feed-item .feed-game { font-weight: 800; color: var(--accent-text); }
+.gv-feed-item time { color: var(--muted); font-size: 12px; font-weight: 600; }
+
+/* «Зараз грають» */
+.gv-now-playing { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.gv-now-playing .steam-mini-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px; border-radius: var(--r-md); background: var(--surface-2); min-width: 0;
+}
+.gv-now-playing .steam-mini-card:hover { color: var(--text); background: var(--surface-3); }
+.gv-now-playing img { width: 88px; aspect-ratio: 460 / 215; object-fit: cover; border-radius: var(--r-xs); flex-shrink: 0; background: var(--surface-3); }
+.gv-now-playing .steam-mini-card div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gv-now-playing b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-now-playing span { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+/* Повідомлення */
+.gv-messages { display: flex; flex-direction: column; gap: 8px; }
+
+.gv-message {
+    padding: 14px 18px;
+    border-radius: var(--r-md);
+    background: var(--info-bg);
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.gv-message--success { background: var(--success-bg); color: var(--accent-text); }
+.gv-message--error, .gv-message--warning { background: var(--danger-bg); color: var(--danger); }
+
+/* Порожній стан */
+.gv-empty {
+    padding: 28px;
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.gv-empty h3 { font-size: 17px; }
+.gv-empty p { color: var(--muted); font-weight: 600; }
+
+/* --- 5. Сторінки ------------------------------------------------------------- */
+.gv-greeting { font-size: clamp(30px, 4vw, 44px); font-weight: 800; letter-spacing: -0.03em; }
+
+@media (max-width: 720px) {
+    .gv-shell { padding: 10px; gap: 14px; }
+    .gv-header { padding: 10px 10px 10px 14px; border-radius: var(--r-md); }
+    .gv-nav { order: 3; flex-basis: 100%; }
+    .gv-card { padding: 18px; border-radius: var(--r-lg); }
+    .gv-hero { padding: 24px; border-radius: var(--r-lg); }
+    .gv-hero__art { display: none; }
+    .gv-game-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+}

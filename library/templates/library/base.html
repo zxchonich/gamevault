@@ -1,72 +1,117 @@
-{% load static %}
-
-<!DOCTYPE html>
-<html lang="uk">
-
+{% load static library_extras %}<!DOCTYPE html>
+<html lang="uk" data-theme="dark">
 <head>
-    <title>{% block title %}GameVault{% endblock %}</title>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="GameVault — персональна ігрова бібліотека">
-    <meta name="keywords" content="GameVault, games, library, profile, friends">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'library/css/style.css' %}">
+    <title>{% block title %}GameVault{% endblock %}</title>
+    <script>
+        /* Тема до відмальовування сторінки (без «спалаху»): збережений вибір, інакше системна. */
+        (function () {
+            var theme = null;
+            try { theme = localStorage.getItem('gv-theme'); } catch (e) {}
+            if (theme !== 'light' && theme !== 'dark') {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700;800&display=swap">
+    <link rel="stylesheet" href="{% static 'library/css/gv.css' %}">
+    {% block head %}{% endblock %}
 </head>
-
 <body>
-    <main class="dashboard-page">
+<div class="gv-shell">
+    <header class="gv-header gv-container">
+        <a class="gv-logo" href="{% url 'library:home' %}">
+            <span class="gv-logo__mark" aria-hidden="true">G</span>
+            GameVault
+        </a>
 
-        <header class="dashboard-header">
-            <a class="dashboard-logo" href="{% url 'library:home' %}">
-                <span>Game</span>Vault
-            </a>
-        
-            <nav class="dashboard-nav" aria-label="Головна навігація">
-                <a href="{% url 'library:home' %}">Головна</a>
-                <a href="{% url 'library:game_list' %}">Каталог</a>
-        
-                {% if current_library_user %}
-                <a href="{% url 'library:my_library' %}">Моя бібліотека</a>
-                <a href="{% url 'library:feed' %}">Стрічка</a>
-                <a href="{% url 'library:friends' %}">Друзі</a>
-                <a href="{% url 'library:profile' %}">Профіль</a>
-                {% endif %}
-        
-                {% if current_library_user and current_library_user.role.name == 'admin' %}
-                <a href="{% url 'library:moderation' %}">Модерація</a>
-                <a href="{% url 'library:admin_genre_list' %}">Жанри</a>
-                <a href="{% url 'library:admin_steam_matching' %}">Steam</a>
-                {% endif %}
-        
-                {% if current_library_user %}
-                <form class="inline-post-form" method="post" action="{% url 'library:logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="link-button">Вийти</button>
-                </form>
-                {% else %}
-                <a href="{% url 'library:login' %}">Вхід</a>
-                <a href="{% url 'library:register' %}">Реєстрація</a>
-                {% endif %}
-            </nav>
-        </header>
+        <nav class="gv-nav" aria-label="Головна навігація">
+            <a class="{% nav_active 'home' %}" href="{% url 'library:home' %}">Головна</a>
+            <a class="{% nav_active 'game_list' 'game_detail' %}" href="{% url 'library:game_list' %}">Каталог</a>
+            {% if current_library_user %}
+            <a class="{% nav_active 'my_library' %}" href="{% url 'library:my_library' %}">Бібліотека</a>
+            <a class="{% nav_active 'recommendations' %}" href="{% url 'library:recommendations' %}">Рекомендації</a>
+            <a class="{% nav_active 'feed' %}" href="{% url 'library:feed' %}">Стрічка</a>
+            <a class="{% nav_active 'friends' 'user_list' 'user_profile' 'user_library' 'user_steam_library' %}" href="{% url 'library:friends' %}">Друзі</a>
+            {% endif %}
+        </nav>
 
+        <div class="gv-header__actions">
+            <button type="button" class="gv-btn gv-btn--icon gv-theme-toggle" data-theme-toggle aria-label="Перемкнути світлу/темну тему">
+                <svg class="icon-sun" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+                <svg class="icon-moon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+            </button>
+
+            {% if current_library_user %}
+            <details class="gv-menu">
+                <summary class="gv-btn gv-btn--icon" aria-label="Меню користувача" style="padding: 0; background: none">
+                    {% user_avatar current_library_user %}
+                </summary>
+                <div class="gv-menu__panel">
+                    <div class="gv-menu__head">
+                        <b>{{ current_library_user.username }}</b>
+                        <span>{{ current_library_user.email }}</span>
+                    </div>
+                    <a href="{% url 'library:profile' %}">Профіль</a>
+                    <a href="{% url 'library:steam_library' %}">Steam-бібліотека</a>
+                    <a href="{% url 'library:my_reviews' %}">Мої рецензії</a>
+                    <a href="{% url 'library:my_requests' %}">Мої заявки</a>
+                    <a href="{% url 'library:edit_profile' %}">Налаштування</a>
+                    {% if current_library_user.role.name == 'admin' %}
+                    <div class="gv-menu__head" style="border-top: 1px solid var(--line); border-bottom: 0; margin: 4px 0 0; padding-top: 10px"><span>Адміністрування</span></div>
+                    <a href="{% url 'library:moderation' %}">Модерація заявок</a>
+                    <a href="{% url 'library:admin_genre_list' %}">Жанри</a>
+                    <a href="{% url 'library:admin_steam_matching' %}">Зіставлення зі Steam</a>
+                    <a href="{% url 'library:admin_game_add' %}">Додати гру</a>
+                    {% endif %}
+                    <form method="post" action="{% url 'library:logout' %}" style="border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px">
+                        {% csrf_token %}
+                        <button type="submit">Вийти</button>
+                    </form>
+                </div>
+            </details>
+            {% else %}
+            <a class="gv-btn gv-btn--ghost" href="{% url 'library:login' %}">Вхід</a>
+            <a class="gv-btn gv-btn--primary" href="{% url 'library:register' %}">Реєстрація</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="gv-main gv-container" id="content">
         {% if messages %}
-        <div class="dashboard-section">
+        <div class="gv-messages" role="status">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
+            <div class="gv-message gv-message--{{ message.tags }}">{{ message }}</div>
             {% endfor %}
         </div>
         {% endif %}
 
-        {% block content %}
-        {% endblock %}
-
-        <footer class="dashboard-footer">
-            &copy; 2026 GameVault
-        </footer>
-
+        {% block content %}{% endblock %}
     </main>
-</body>
 
+    <footer class="gv-footer gv-container">© 2026 GameVault</footer>
+</div>
+
+<script>
+    /* Перемикач теми + закриття меню користувача кліком поза ним. */
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('gv-theme', next); } catch (e) {}
+        });
+    });
+    document.addEventListener('click', function (event) {
+        document.querySelectorAll('.gv-menu[open]').forEach(function (menu) {
+            if (!menu.contains(event.target)) { menu.removeAttribute('open'); }
+        });
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
 </html>

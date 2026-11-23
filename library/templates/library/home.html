@@ -1,407 +1,191 @@
 {% extends 'library/base.html' %}
-{% load static %}
+{% load library_extras %}
 
 {% block title %}Головна | GameVault{% endblock %}
 
 {% block content %}
-<section class="home-page page-wide">
-
-    <section class="home-dashboard-hero">
-        <div class="home-dashboard-content">
-            <div class="subtitle">GameVault Dashboard</div>
-
-            {% if current_library_user %}
-            <h1>Вітаємо, {{ current_library_user.username }}</h1>
-            <p>
-                Це головна панель GameVault. Тут зібрано статистику каталогу,
-                активність користувачів, популярні ігри, рейтинги та швидкі переходи
-                до основних розділів системи.
-            </p>
-            {% else %}
-            <h1>GameVault</h1>
-            <p>
-                Персональна система для зберігання ігрової бібліотеки, рецензій,
-                соціальних зв’язків та рекомендацій на основі активності користувачів.
-            </p>
-            {% endif %}
-
-            <div class="home-hero-actions">
-                <a class="pseudo-button" href="{% url 'library:game_list' %}">
-                    <span>Перейти до каталогу</span>
-                </a>
-
-                {% if current_library_user %}
-                <a class="home-secondary-link" href="{% url 'library:my_library' %}">
-                    Моя бібліотека
-                </a>
-                {% else %}
-                <a class="home-secondary-link" href="{% url 'library:login' %}">
-                    Увійти в акаунт
-                </a>
-                {% endif %}
+<section class="gv-row" aria-label="Вітання">
+    {% if current_library_user %}
+    {% with top=home_recommendations.0 %}
+    <div class="gv-hero gv-grow">
+        <div class="gv-hero__body">
+            <span class="gv-chip gv-chip--dark" style="align-self: flex-start">Привіт, {{ current_library_user.username }}</span>
+            {% if top %}
+            <h1 class="gv-hero__title">Сьогодні радимо: {{ top.game.title }}</h1>
+            <p class="gv-hero__text">{{ top.reasons.0 }} · збіг {{ top.score }}%</p>
+            <div class="gv-hero__actions">
+                <form class="inline-post-form" method="post" action="{% url 'library:add_to_library' top.game.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="gv-btn gv-btn--lg">Додати в бібліотеку</button>
+                </form>
+                <a class="gv-btn gv-btn--lg gv-btn--ghost" href="{% url 'library:game_detail' top.game.id %}">Детальніше</a>
             </div>
-        </div>
-
-        <div class="home-user-panel">
-            {% if current_library_user %}
-            <a class="home-user-panel home-user-panel-link" href="{% url 'library:profile' %}">
-                <div class="home-user-avatar">
-                    {% if current_library_user.avatar %}
-                    <img src="{{ current_library_user.avatar.url }}" alt="{{ current_library_user.username }}">
-                    {% else %}
-                    <div class="auto-avatar">
-                        {{ current_library_user.username|slice:":1"|upper }}
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div>
-                    <span>Ваш профіль</span>
-                    <h2>{{ current_library_user.username }}</h2>
-                    <p>{{ current_library_user.email }}</p>
-                </div>
-
-                <div class="home-profile-stats">
-                    <div class="home-profile-stat">
-                        <span>Ігор у бібліотеці</span>
-                        <b>{{ user_library_count }}</b>
-                    </div>
-
-                    <div class="home-profile-stat">
-                        <span>Рецензій</span>
-                        <b>{{ user_review_count }}</b>
-                    </div>
-
-                    <div class="home-profile-stat">
-                        <span>Друзів</span>
-                        <b>{{ user_friends_count }}</b>
-                    </div>
-                </div>
-            </a>
             {% else %}
-            <div class="home-user-panel">
-                <span>Гість</span>
-                <h2>Створіть акаунт</h2>
-                <p>
-                    Після входу ви зможете додавати ігри до бібліотеки,
-                    залишати рецензії, знаходити друзів та отримувати рекомендації.
-                </p>
-
-                <a class="pseudo-button" href="{% url 'library:register' %}">
-                    <span>Реєстрація</span>
-                </a>
+            <h1 class="gv-hero__title">Що граємо сьогодні?</h1>
+            <p class="gv-hero__text">Додавайте ігри до бібліотеки, оцінюйте їх і підключіть Steam — GameVault почне підбирати ігри саме для вас.</p>
+            <div class="gv-hero__actions">
+                <a class="gv-btn gv-btn--lg" href="{% url 'library:game_list' %}">Відкрити каталог</a>
+                <a class="gv-btn gv-btn--lg gv-btn--ghost" href="{% url 'library:my_library' %}">Моя бібліотека</a>
             </div>
             {% endif %}
         </div>
-    </section>
+        {% if top %}
+        <div class="gv-hero__art" aria-hidden="true">{% game_cover top.game %}</div>
+        {% endif %}
+    </div>
+    {% endwith %}
 
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Ігор у каталозі</span>
-            <b>{{ total_games_count }}</b>
-            <p>Загальна кількість ігор у базі GameVault</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Додавань у бібліотеки</span>
-            <b>{{ total_library_entries_count }}</b>
-            <p>Скільки разів ігри були додані користувачами</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Рецензій</span>
-            <b>{{ total_reviews_count }}</b>
-            <p>Оцінки та відгуки користувачів</p>
+    <div class="gv-side gv-stats" style="align-content: stretch">
+        <a class="gv-stat" href="{% url 'library:my_library' %}"><span>Ігор у бібліотеці</span><b>{{ user_library_count }}</b></a>
+        <a class="gv-stat" href="{% url 'library:my_reviews' %}"><span>Рецензій</span><b>{{ user_review_count }}</b></a>
+        <a class="gv-stat" href="{% url 'library:friends' %}"><span>Друзів</span><b>{{ user_friends_count }}</b></a>
+        <a class="gv-stat" href="{% url 'library:game_list' %}"><span>Ігор у каталозі</span><b>{{ total_games_count }}</b></a>
+    </div>
+    {% else %}
+    <div class="gv-hero gv-grow">
+        <div class="gv-hero__body">
+            <span class="gv-chip gv-chip--dark" style="align-self: flex-start">Ігрова бібліотека</span>
+            <h1 class="gv-hero__title">Збирай свою ігрову колекцію</h1>
+            <p class="gv-hero__text">Статуси проходження, оцінки, друзі, Steam і рекомендації, що враховують ваші смаки, — усе в одному місці.</p>
+            <div class="gv-hero__actions">
+                <a class="gv-btn gv-btn--lg" href="{% url 'library:register' %}">Створити акаунт</a>
+                <a class="gv-btn gv-btn--lg gv-btn--ghost" href="{% url 'library:game_list' %}">Переглянути каталог</a>
+            </div>
         </div>
     </div>
 
+    <div class="gv-side gv-stats" style="align-content: stretch">
+        <div class="gv-stat"><span>Ігор у каталозі</span><b>{{ total_games_count }}</b></div>
+        <div class="gv-stat"><span>Користувачів</span><b>{{ total_users_count }}</b></div>
+        <div class="gv-stat"><span>Додавань у бібліотеки</span><b>{{ total_library_entries_count }}</b></div>
+        <div class="gv-stat"><span>Рецензій</span><b>{{ total_reviews_count }}</b></div>
+    </div>
+    {% endif %}
+</section>
+
+{% if home_recommendations or home_feed or home_now_playing %}
+<section class="gv-row">
     {% if home_recommendations %}
-    <section class="dashboard-section">
-        <div class="section-head">
+    <div class="gv-card gv-grow">
+        <div class="gv-section-head">
             <h2>Рекомендовано для вас</h2>
-            <a class="profile-secondary-link" href="{% url 'library:recommendations' %}">Усі рекомендації</a>
+            <a class="gv-link" href="{% url 'library:recommendations' %}">Усі рекомендації →</a>
         </div>
-
-        <div class="leaderboard-list">
+        <div class="gv-list">
             {% for recommendation in home_recommendations %}
-            <a class="leaderboard-item" href="{% url 'library:game_detail' recommendation.game.id %}">
-                <div class="leaderboard-rank">{{ recommendation.score }}%</div>
-
-                <div class="leaderboard-cover">
-                    {% if recommendation.game.poster %}
-                    <img src="{{ recommendation.game.poster.url }}" alt="{{ recommendation.game.title }}">
-                    {% else %}
-                    <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ recommendation.game.title }}">
-                    {% endif %}
-                </div>
-
-                <div class="leaderboard-info">
-                    <h3>{{ recommendation.game.title }}</h3>
-                    <p>{{ recommendation.reasons.0 }}</p>
-                </div>
+            <a class="gv-list-item" href="{% url 'library:game_detail' recommendation.game.id %}">
+                {% game_cover recommendation.game "sm" %}
+                <span class="gv-list-item__body">
+                    <span class="gv-list-item__title">{{ recommendation.game.title }}</span>
+                    <span class="gv-list-item__sub">{{ recommendation.reasons.0 }}</span>
+                </span>
+                <span class="gv-chip gv-chip--accent">{{ recommendation.score }}%</span>
             </a>
             {% endfor %}
         </div>
-    </section>
+    </div>
     {% endif %}
 
     {% if home_feed or home_now_playing %}
-    <section class="dashboard-section">
-        <div class="section-head">
+    <div class="gv-card gv-side">
+        <div class="gv-section-head">
             <h2>Активність</h2>
-            <a class="profile-secondary-link" href="{% url 'library:feed' %}">Уся стрічка</a>
+            <a class="gv-link" href="{% url 'library:feed' %}">Уся стрічка →</a>
         </div>
-
         {% if home_now_playing %}
         {% with now_playing=home_now_playing %}
         {% include 'library/_now_playing.html' %}
         {% endwith %}
         {% endif %}
-
-        <div class="feed-list">
+        <div class="gv-feed">
             {% for item in home_feed %}
             {% include 'library/_feed_item.html' %}
             {% endfor %}
         </div>
-    </section>
+    </div>
     {% endif %}
+</section>
+{% endif %}
 
-    <section class="home-leaderboard-grid">
-
-        <div class="dashboard-section home-board">
-            <div class="section-head">
-                <h2>Топ за рейтингом</h2>
-                <span>Ігри з найкращими оцінками</span>
-            </div>
-
-            <div class="leaderboard-list">
-                {% for game in top_rated_games %}
-                <a class="leaderboard-item" href="{% url 'library:game_detail' game.id %}">
-                    <div class="leaderboard-rank">{{ forloop.counter }}</div>
-
-                    <div class="leaderboard-cover">
-                        {% if game.poster %}
-                        <img src="{{ game.poster.url }}" alt="{{ game.title }}">
-                        {% else %}
-                        <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
-                        {% endif %}
-                    </div>
-
-                    <div class="leaderboard-info">
-                        <h3>{{ game.title }}</h3>
-                        <p>Середня оцінка</p>
-                    </div>
-
-                    <strong>
-                        {% if game.avg_score %}
-                        {{ game.avg_score|floatformat:1 }}
-                        {% else %}
-                        —
-                        {% endif %}
-                    </strong>
-                </a>
-                {% empty %}
-                <div class="empty-card">
-                    <h3>Рейтинг ще не сформовано</h3>
-                    <p>Потрібні рецензії користувачів.</p>
-                </div>
-                {% endfor %}
-            </div>
+<section class="gv-row">
+    <div class="gv-card gv-grow" style="flex-basis: 380px">
+        <div class="gv-section-head">
+            <h2>Топ за рейтингом</h2>
         </div>
-
-        <div class="dashboard-section home-board">
-            <div class="section-head">
-                <h2>Популярні в бібліотеках</h2>
-                <span>Найчастіше додані ігри</span>
-            </div>
-
-            <div class="leaderboard-list">
-                {% for game in most_added_games %}
-                <a class="leaderboard-item" href="{% url 'library:game_detail' game.id %}">
-                    <div class="leaderboard-rank">{{ forloop.counter }}</div>
-
-                    <div class="leaderboard-cover">
-                        {% if game.poster %}
-                        <img src="{{ game.poster.url }}" alt="{{ game.title }}">
-                        {% else %}
-                        <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
-                        {% endif %}
-                    </div>
-
-                    <div class="leaderboard-info">
-                        <h3>{{ game.title }}</h3>
-                        <p>Додавань у бібліотеки</p>
-                    </div>
-
-                    <strong>{{ game.library_count }}</strong>
-                </a>
-                {% empty %}
-                <div class="empty-card">
-                    <h3>Популярність ще не визначена</h3>
-                    <p>Користувачі ще не додавали ігри до бібліотек.</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-    </section>
-
-    <section class="dashboard-section home-users-top-section">
-        <div class="section-head">
-            <h2>Топ користувачів</h2>
-            <span>Лідери активності GameVault</span>
-        </div>
-
-        <div class="users-top-list">
-            {% for user in active_users %}
-            <a class="users-top-item top-place-{{ forloop.counter }}" href="{% url 'library:user_profile' user.id %}">
-                <div class="users-top-rank">
-                    #{{ forloop.counter }}
-                </div>
-
-                <div class="users-top-avatar">
-                    {% if user.avatar %}
-                    <img src="{{ user.avatar.url }}" alt="{{ user.username }}">
-                    {% else %}
-                    <div class="auto-avatar">
-                        {{ user.username|slice:":1"|upper }}
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div class="users-top-info">
-                    <span>
-                        {% if user.role %}
-                        {{ user.role.name }}
-                        {% else %}
-                        user
-                        {% endif %}
-                    </span>
-
-                    <h3>{{ user.username }}</h3>
-                    <p>{{ user.email }}</p>
-                </div>
-
-                <div class="users-top-stats">
-                    <div>
-                        <b>{{ user.library_count }}</b>
-                        <span>ігор</span>
-                    </div>
-
-                    <div>
-                        <b>{{ user.review_count }}</b>
-                        <span>рецензій</span>
-                    </div>
-
-                    <div class="users-top-score">
-                        <b>{{ user.activity_score }}</b>
-                        <span>очок</span>
-                    </div>
-                </div>
+        <div class="gv-list">
+            {% for game in top_rated_games %}
+            <a class="gv-list-item" href="{% url 'library:game_detail' game.id %}">
+                <span class="gv-rank{% if forloop.first %} gv-rank--1{% endif %}">{{ forloop.counter }}</span>
+                {% game_cover game "sm" %}
+                <span class="gv-list-item__body">
+                    <span class="gv-list-item__title">{{ game.title }}</span>
+                    <span class="gv-list-item__sub">Середня оцінка</span>
+                </span>
+                <span class="gv-list-item__value">{{ game.avg_score|floatformat:1 }}</span>
             </a>
             {% empty %}
-            <div class="empty-card">
-                <h3>Топ ще не сформовано</h3>
-                <p>
-                    Коли користувачі почнуть додавати ігри та залишати рецензії,
-                    рейтинг активності з’явиться тут.
-                </p>
-            </div>
+            <div class="gv-empty"><h3>Рейтинг ще не сформовано</h3><p>Потрібні рецензії користувачів.</p></div>
             {% endfor %}
         </div>
-    </section>
+    </div>
 
-    <section class="dashboard-section">
-        <div class="section-head">
-            <h2>Швидкі дії</h2>
-            <span>Основні розділи GameVault</span>
+    <div class="gv-card gv-grow" style="flex-basis: 380px">
+        <div class="gv-section-head">
+            <h2>Популярні в бібліотеках</h2>
         </div>
-
-        <div class="home-action-grid">
-            <a class="home-action-card" href="{% url 'library:game_list' %}">
-                <span>Catalog</span>
-                <h3>Каталог ігор</h3>
-                <p>Перегляд усіх ігор, фільтрація за жанрами, пошук та сортування.</p>
-            </a>
-
-            {% if current_library_user %}
-            <a class="home-action-card" href="{% url 'library:my_library' %}">
-                <span>Library</span>
-                <h3>Моя бібліотека</h3>
-                <p>Список доданих ігор, статуси проходження та керування бібліотекою.</p>
-            </a>
-
-            <a class="home-action-card" href="{% url 'library:recommendations' %}">
-                <span>Recommendations</span>
-                <h3>Рекомендації</h3>
-                <p>Персональний підбір ігор на основі жанрів, оцінок і друзів.</p>
-            </a>
-
-            <a class="home-action-card" href="{% url 'library:friends' %}">
-                <span>Social</span>
-                <h3>Друзі</h3>
-                <p>Заявки, профілі інших користувачів та перегляд їхніх бібліотек.</p>
-            </a>
-            {% else %}
-            <a class="home-action-card" href="{% url 'library:login' %}">
-                <span>Login</span>
-                <h3>Вхід</h3>
-                <p>Увійдіть в акаунт, щоб користуватися персональною бібліотекою.</p>
-            </a>
-
-            <a class="home-action-card" href="{% url 'library:register' %}">
-                <span>Register</span>
-                <h3>Реєстрація</h3>
-                <p>Створіть профіль і почніть збирати власну ігрову бібліотеку.</p>
-            </a>
-            {% endif %}
-        </div>
-    </section>
-
-    <section class="dashboard-section">
-        <div class="section-head">
-            <h2>Останні додані ігри</h2>
-            <span>Нові записи в каталозі</span>
-        </div>
-
-        <section class="library-grid">
-            {% for game in games %}
-            <a class="library-game-card clickable-game-card" href="{% url 'library:game_detail' game.id %}">
-                {% if game.poster %}
-                <img src="{{ game.poster.url }}" alt="{{ game.title }}">
-                {% else %}
-                <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ game.title }}">
-                {% endif %}
-
-                <div class="library-game-content">
-                    <span class="game-status active">У каталозі</span>
-
-                    <h3>{{ game.title }}</h3>
-                    <div class="game-card-genres">
-                        {% for genre in game.visible_genres %}
-                        <span>{{ genre.name }}</span>
-                        {% empty %}
-                        <span>Без жанру</span>
-                        {% endfor %}
-                    </div>
-
-                    <p>
-                        {% if game.description %}
-                        {{ game.description|truncatechars:130 }}
-                        {% else %}
-                        Опис гри поки що відсутній.
-                        {% endif %}
-                    </p>
-                </div>
+        <div class="gv-list">
+            {% for game in most_added_games %}
+            <a class="gv-list-item" href="{% url 'library:game_detail' game.id %}">
+                <span class="gv-rank{% if forloop.first %} gv-rank--1{% endif %}">{{ forloop.counter }}</span>
+                {% game_cover game "sm" %}
+                <span class="gv-list-item__body">
+                    <span class="gv-list-item__title">{{ game.title }}</span>
+                    <span class="gv-list-item__sub">Додавань у бібліотеки</span>
+                </span>
+                <span class="gv-list-item__value">{{ game.library_count }}</span>
             </a>
             {% empty %}
-            <div class="empty-card library-empty-wide">
-                <h3>Ігор поки що немає</h3>
-                <p>Додайте ігри через адмінку або через модерацію заявок.</p>
-            </div>
+            <div class="gv-empty"><h3>Популярність ще не визначена</h3><p>Користувачі ще не додавали ігри до бібліотек.</p></div>
             {% endfor %}
-        </section>
-    </section>
+        </div>
+    </div>
+</section>
 
+<section class="gv-card" aria-labelledby="latest-games">
+    <div class="gv-section-head">
+        <h2 id="latest-games">Нове в каталозі</h2>
+        <a class="gv-link" href="{% url 'library:game_list' %}?sort=newest">Увесь каталог →</a>
+    </div>
+    <div class="gv-game-grid">
+        {% for game in games %}
+        <a class="gv-game-tile" href="{% url 'library:game_detail' game.id %}">
+            {% game_cover game %}
+            <span class="gv-game-tile__title">{{ game.title }}</span>
+            <span class="gv-chips">
+                {% for genre in game.visible_genres %}<span class="gv-chip gv-chip--sm">{{ genre.name }}</span>{% endfor %}
+            </span>
+        </a>
+        {% empty %}
+        <div class="gv-empty"><h3>Ігор поки що немає</h3><p>Ігри з'являться після модерації заявок.</p></div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="gv-card" aria-labelledby="top-users">
+    <div class="gv-section-head">
+        <h2 id="top-users">Найактивніші гравці</h2>
+    </div>
+    <div class="gv-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))">
+        {% for user in active_users %}
+        <a class="gv-list-item" href="{% if current_library_user and user.id == current_library_user.id %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' user.id %}{% endif %}">
+            <span class="gv-rank{% if forloop.first %} gv-rank--1{% endif %}">{{ forloop.counter }}</span>
+            {% user_avatar user %}
+            <span class="gv-list-item__body">
+                <span class="gv-list-item__title">{{ user.username }}</span>
+                <span class="gv-list-item__sub">{{ user.library_count }} ігор · {{ user.review_count }} рецензій</span>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
 </section>
 {% endblock %}
