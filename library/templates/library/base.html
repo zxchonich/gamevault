@@ -128,6 +128,31 @@
             if (label && input.files.length) { label.textContent = input.files[0].name; }
         });
     });
+    /* POST-форми: після першого натискання кнопки блокуються, щоб повільна відповідь
+       не призвела до повторної відправки (подвійна реєстрація тощо). */
+    document.querySelectorAll('form[method="post"]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) { return; }
+            if (form.dataset.submitting) { event.preventDefault(); return; }
+            form.dataset.submitting = '1';
+            setTimeout(function () {
+                form.querySelectorAll('button[type="submit"], button:not([type])').forEach(function (button) {
+                    button.disabled = true;
+                    button.classList.add('is-busy');
+                });
+                document.querySelectorAll('button[form="' + form.id + '"]').forEach(function (button) { button.disabled = true; });
+            }, 0);
+        });
+    });
+    window.addEventListener('pageshow', function (event) {
+        /* Повернення «Назад» зі сторінки після відправки — кнопки знову активні. */
+        if (event.persisted) {
+            document.querySelectorAll('form[data-submitting]').forEach(function (form) {
+                delete form.dataset.submitting;
+                form.querySelectorAll('button').forEach(function (button) { button.disabled = false; button.classList.remove('is-busy'); });
+            });
+        }
+    });
     document.addEventListener('click', function (event) {
         document.querySelectorAll('.gv-menu[open]').forEach(function (menu) {
             if (!menu.contains(event.target)) { menu.removeAttribute('open'); }

@@ -39,6 +39,17 @@ class RegistrationVerificationTests(GameVaultTestCase):
         self.assertIsNotNone(user.email_verified_at)
         self.assertEqual(self.client.session["library_user_id"], user.id)
 
+    def test_double_submit_leads_to_verify_page_not_error(self):
+        self.register()
+        self.client.session.flush()
+        response = self.register()  # та сама форма вдруге (подвійний клік / інша вкладка)
+        self.assertRedirects(response, reverse("library:verify_pending"))
+        self.assertEqual(User.objects.filter(username="newbie").count(), 1)
+
+    def test_letter_has_explicit_message_id(self):
+        self.register()
+        self.assertIn("@gamevault.local>", mail.outbox[0].extra_headers["Message-ID"])
+
     def test_unverified_login_shows_verify_page_and_stays_guest(self):
         self.make_user("alice", verified=False)
         response = self.client.post(reverse("library:login"), {"username": "alice", "password": DEFAULT_PASSWORD})

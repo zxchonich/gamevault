@@ -106,6 +106,12 @@ def register_view(request):
     error = None
 
     if request.method == "POST":
+        pending = _same_unverified_signup(request.POST)
+        if pending:
+            # Повторна відправка тієї ж форми (подвійний клік, «Назад»): акаунт уже створено —
+            # ведемо на «Підтвердіть email», а не лякаємо «логін зайнятий».
+            return _send_pending_verification(request, pending)
+
         form = RegisterForm(request.POST)
         role = Role.objects.filter(name="user").first()
 
@@ -129,6 +135,16 @@ def register_view(request):
                 return _send_pending_verification(request, user)
 
     return render(request, "library/register.html", {"error": error})
+
+
+def _same_unverified_signup(data):
+    """Непідтверджений акаунт із тими самими логіном, email і паролем, що й у формі, або None."""
+    user = User.objects.filter(
+        username=data.get("username", "").strip(), email=data.get("email", "").strip(), email_verified_at__isnull=True
+    ).first()
+    if user and check_password(data.get("password", ""), user.password_hash):
+        return user
+    return None
 
 
 def verify_pending(request):

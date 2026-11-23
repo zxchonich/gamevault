@@ -6,10 +6,12 @@
   * скидання пароля: {id, відбиток поточного хешу пароля} — стає недійсним, щойно пароль змінено.
 """
 
+from email.utils import make_msgid
+
 from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.crypto import constant_time_compare, salted_hmac
@@ -73,7 +75,11 @@ def read_reset_token(token):
 
 def _send(subject, template, to, context):
     body = render_to_string(f"library/emails/{template}.txt", context)
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to])
+    # Message-ID задаємо самі: інакше Django для нього викликає socket.getfqdn(), а на Windows
+    # перший такий виклик може тривати секунди — і реєстрація «зависає».
+    domain = settings.DEFAULT_FROM_EMAIL.rsplit("@", 1)[-1].strip("> ") or "gamevault.local"
+    EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [to],
+                 headers={"Message-ID": make_msgid(domain=domain)}).send()
 
 
 def send_verification_email(request, user, email):
