@@ -57,8 +57,12 @@
     --r-lg: 28px;
     --r-xl: 32px;
     --r-pill: 999px;
-    --gap: 20px;
-    --container: 1360px;
+    /* Адаптивність: сторінка займає весь екран; відступи, проміжки й шрифти
+       плавно ростуть з шириною вікна. Обмеження ширини — лише для тексту (--measure). */
+    --gap: clamp(14px, 1.2vw, 28px);
+    --page-pad: clamp(10px, 1.6vw, 40px);
+    --measure: 70ch;
+    --tile-min: clamp(130px, 10.5vw, 230px);
 }
 
 /* --- 2. Основа --------------------------------------------------------------- */
@@ -71,7 +75,7 @@ body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
-    font-size: 15px;
+    font-size: clamp(14px, 0.2vw + 13.2px, 17px);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
 }
@@ -105,12 +109,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .muted { color: var(--muted); }
+
+/* Текст для читання не розтягується на всю ширину екрана. */
+.gv-prose { max-width: var(--measure); }
+.gv-prose p + p { margin-top: 0.8em; }
 .display { font-family: var(--font-display); }
 
 /* --- 3. Каркас --------------------------------------------------------------- */
 .gv-shell {
     min-height: 100vh;
-    padding: 16px;
+    padding: var(--page-pad);
     display: flex;
     flex-direction: column;
     gap: var(--gap);
@@ -118,8 +126,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .gv-container {
     width: 100%;
-    max-width: var(--container);
-    margin: 0 auto;
 }
 
 .gv-main {
@@ -328,7 +334,7 @@ a.gv-chip.is-active { background: var(--text); color: var(--bg); }
 .gv-card {
     background: var(--surface);
     border-radius: var(--r-xl);
-    padding: 26px;
+    padding: clamp(18px, 1.6vw, 36px);
     min-width: 0;
 }
 
@@ -343,21 +349,24 @@ a.gv-chip.is-active { background: var(--text); color: var(--bg); }
     margin-bottom: 18px;
 }
 
-.gv-section-head h2 { font-size: 22px; font-weight: 800; }
+.gv-section-head h2 { font-size: clamp(19px, 0.6vw + 15px, 28px); font-weight: 800; }
 .gv-section-head p { color: var(--muted); font-size: 14px; font-weight: 600; margin-top: 4px; }
 .gv-section-head .gv-link { font-weight: 700; font-size: 14px; color: var(--muted); }
 .gv-section-head .gv-link:hover { color: var(--accent-text); }
 
 .gv-row { display: flex; flex-wrap: wrap; gap: var(--gap); }
 .gv-row > .gv-grow { flex: 999 1 520px; min-width: 0; }
-.gv-row > .gv-side { flex: 1 1 320px; min-width: 0; }
+.gv-row > .gv-side { flex: 1 1 320px; min-width: 0; max-width: 100%; }
+@media (min-width: 1100px) {
+    .gv-row > .gv-side { max-width: clamp(380px, 28vw, 620px); }
+}
 
 /* Герой-банер */
 .gv-hero {
     border-radius: var(--r-xl);
     background: var(--accent);
     color: #101014;
-    padding: 36px;
+    padding: clamp(22px, 2.6vw, 56px);
     display: flex;
     flex-wrap: wrap;
     gap: 28px;
@@ -367,13 +376,13 @@ a.gv-chip.is-active { background: var(--text); color: var(--bg); }
 
 .gv-hero a:hover { color: #101014; }
 .gv-hero__body { flex: 1 1 360px; display: flex; flex-direction: column; gap: 16px; }
-.gv-hero__title { font-size: clamp(36px, 5vw, 56px); font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
-.gv-hero__text { font-size: 17px; font-weight: 600; max-width: 560px; }
+.gv-hero__title { font-size: clamp(32px, 3.6vw, 72px); max-width: 18ch; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.gv-hero__text { font-size: clamp(15px, 0.35vw + 13px, 20px); font-weight: 600; max-width: 60ch; }
 .gv-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 6px; }
 .gv-hero .gv-btn { background: #101014; color: #C8F031; }
 .gv-hero .gv-btn--ghost { background: transparent; color: #101014; box-shadow: inset 0 0 0 2px #101014; }
 .gv-hero__art { flex: 0 1 230px; display: flex; align-items: center; justify-content: center; }
-.gv-hero__art .gv-cover { width: 200px; transform: rotate(4deg); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); }
+.gv-hero__art .gv-cover { width: clamp(170px, 13vw, 280px); transform: rotate(4deg); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); }
 
 /* Статистика */
 .gv-stats {
@@ -394,7 +403,7 @@ a.gv-chip.is-active { background: var(--text); color: var(--bg); }
 }
 
 .gv-stat span { color: var(--muted); font-weight: 700; font-size: 13px; }
-.gv-stat b { font-family: var(--font-display); font-size: 32px; font-weight: 800; letter-spacing: -0.02em; }
+.gv-stat b { font-family: var(--font-display); font-size: clamp(26px, 1.6vw + 12px, 42px); font-weight: 800; letter-spacing: -0.02em; }
 
 /* Обкладинки */
 .gv-cover {
@@ -424,8 +433,8 @@ a.gv-chip.is-active { background: var(--text); color: var(--bg); }
 
 .gv-game-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
+    gap: clamp(12px, 1vw, 22px);
 }
 
 .gv-game-tile { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -542,12 +551,18 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 /* --- 5. Сторінки ------------------------------------------------------------- */
 .gv-greeting { font-size: clamp(30px, 4vw, 44px); font-weight: 800; letter-spacing: -0.03em; }
 
-@media (max-width: 720px) {
-    .gv-shell { padding: 10px; gap: 14px; }
-    .gv-header { padding: 10px 10px 10px 14px; border-radius: var(--r-md); }
+/* Планшет: меню переходить на окремий рядок під логотипом. */
+@media (max-width: 1024px) {
     .gv-nav { order: 3; flex-basis: 100%; }
-    .gv-card { padding: 18px; border-radius: var(--r-lg); }
-    .gv-hero { padding: 24px; border-radius: var(--r-lg); }
+    .gv-hero__art { flex-basis: 170px; }
+}
+
+/* Телефон */
+@media (max-width: 720px) {
+    .gv-header { padding: 10px 10px 10px 14px; border-radius: var(--r-md); }
+    .gv-card { border-radius: var(--r-lg); }
+    .gv-hero { border-radius: var(--r-lg); }
     .gv-hero__art { display: none; }
-    .gv-game-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+    .gv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gv-game-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 }
