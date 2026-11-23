@@ -112,7 +112,7 @@ def game_list(request):
 
 def game_detail(request, game_id):
     game = get_object_or_404(Game, id=game_id)
-    reviews = Review.objects.filter(game=game).order_by("-created_at")
+    reviews = Review.objects.filter(game=game).select_related("user").order_by("-created_at")
     user = get_current_user(request)
 
     library_entry = None

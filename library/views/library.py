@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from ..access import can_view_profile, connection_between, library_login_required
+from ..access import can_view_profile, connection_between, library_login_required, redirect_to_next
 from ..forms import ReviewForm, StatusForm
 from ..models import Game, LibraryEntry, Review, User
 from ..selectors import library_context
@@ -83,7 +83,7 @@ def update_library_status(request, entry_id):
     else:
         messages.error(request, "Невідомий статус.")
 
-    return redirect("library:my_library")
+    return redirect_to_next(request, "library:my_library")
 
 
 @require_POST

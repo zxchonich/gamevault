@@ -14,6 +14,7 @@
                 theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
             }
             document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.classList.add('js');
         })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -98,13 +99,17 @@
 </div>
 
 <script>
-    /* Перемикач теми + закриття меню користувача кліком поза ним. */
+    /* Перемикач теми, автосабміт форм, закриття меню користувача кліком поза ним. */
     document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
         button.addEventListener('click', function () {
             var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', next);
             try { localStorage.setItem('gv-theme', next); } catch (e) {}
         });
+    });
+    /* Форми з data-autosubmit (статус гри, фільтри) надсилаються одразу при зміні. */
+    document.querySelectorAll('form[data-autosubmit]').forEach(function (form) {
+        form.addEventListener('change', function () { form.requestSubmit ? form.requestSubmit() : form.submit(); });
     });
     document.addEventListener('click', function (event) {
         document.querySelectorAll('.gv-menu[open]').forEach(function (menu) {

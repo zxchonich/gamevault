@@ -34,6 +34,17 @@ class LibraryTests(GameVaultTestCase):
         entry.refresh_from_db()
         self.assertEqual(entry.status, "completed")
 
+    def test_status_change_returns_to_safe_next(self):
+        entry = self.make_entry(self.user, self.game)
+        url = reverse("library:update_library_status", args=[entry.id])
+        game_page = reverse("library:game_detail", args=[self.game.id])
+
+        response = self.client.post(url, {"status": "playing", "next": game_page})
+        self.assertRedirects(response, game_page)
+
+        response = self.client.post(url, {"status": "completed", "next": "https://evil.example/"})
+        self.assertRedirects(response, reverse("library:my_library"))
+
     def test_delete_entry_also_deletes_review(self):
         entry = self.make_entry(self.user, self.game)
         Review.objects.create(user=self.user, game=self.game, score=9, created_at=timezone.now())

@@ -552,8 +552,143 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-empty h3 { font-size: 17px; }
 .gv-empty p { color: var(--muted); font-weight: 600; }
 
+/* Поля форм */
+.gv-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gv-field > span, .gv-label { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+.gv-input, .gv-select, .gv-textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 2px solid transparent;
+    border-radius: var(--r-sm);
+    background: var(--surface-2);
+    color: var(--text);
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.gv-input:focus, .gv-select:focus, .gv-textarea:focus { border-color: var(--accent); background: var(--surface); }
+.gv-input::placeholder, .gv-textarea::placeholder { color: var(--muted); font-weight: 500; }
+.gv-textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+
+.gv-select {
+    appearance: none;
+    padding-right: 40px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23A6A6B5' stroke-width='2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+}
+
+.gv-select--pill { border-radius: var(--r-pill); min-height: 38px; padding: 6px 36px 6px 14px; font-size: 13px; font-weight: 800; }
+
+.gv-search { position: relative; }
+.gv-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.gv-search .gv-input { padding-left: 42px; border-radius: var(--r-pill); }
+
+/* Пігулки-чекбокси й радіо (жанри, оцінка) — працюють без JS */
+.gv-chip-check { position: relative; display: inline-flex; }
+.gv-chip-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.gv-chip-check span {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--chip); font-weight: 700; font-size: 13px; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.gv-chip-check span:hover { background: var(--surface-3); }
+.gv-chip-check input:checked + span { background: var(--text); color: var(--bg); }
+.gv-chip-check input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Панель фільтрів */
+.gv-filters { display: flex; flex-direction: column; gap: 14px; }
+.gv-filters__row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.gv-filters__row .gv-search { flex: 1 1 260px; }
+.gv-filters__row .gv-select { flex: 0 1 220px; width: auto; border-radius: var(--r-pill); }
+
+/* Вкладки-статуси з лічильниками */
+.gv-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.gv-tabs::-webkit-scrollbar { display: none; }
+.gv-tab {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: var(--r-pill); background: var(--surface);
+    font-weight: 800; font-size: 14px;
+}
+.gv-tab b { font-family: var(--font-display); font-size: 13px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--chip); }
+.gv-tab:hover { color: var(--text); background: var(--surface-2); }
+.gv-tab.is-active { background: var(--accent); color: var(--on-accent); }
+.gv-tab.is-active b { background: rgba(16, 16, 20, 0.15); }
+
+/* Пагінація */
+.gv-pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 22px; }
+.gv-pagination a, .gv-pagination span {
+    min-width: 44px; height: 44px; padding: 0 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--r-pill); background: var(--surface-2); font-weight: 800; font-size: 14px;
+}
+.gv-pagination a:hover { color: var(--text); background: var(--surface-3); }
+.gv-pagination .is-current { background: var(--accent); color: var(--on-accent); }
+.gv-pagination .is-gap { background: none; min-width: 20px; padding: 0; }
+
+/* З увімкненим JS ховаємо кнопки «Зберегти» у формах, що надсилаються самі */
+.js .gv-js-hide { display: none !important; }
+
 /* --- 5. Сторінки ------------------------------------------------------------- */
 .gv-greeting { font-size: clamp(30px, 4vw, 44px); font-weight: 800; letter-spacing: -0.03em; }
+
+.gv-page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.gv-page-head h1 { font-size: clamp(30px, 2.6vw, 52px); font-weight: 800; letter-spacing: -0.03em; }
+.gv-page-head p { color: var(--muted); font-weight: 600; margin-top: 8px; max-width: var(--measure); }
+.gv-page-head__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Картка гри в каталозі */
+.gv-game-tile__rating { font-family: var(--font-display); font-weight: 800; font-size: 13px; white-space: nowrap; }
+.gv-tile-admin { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Сторінка гри */
+.gv-game { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-start; }
+.gv-game__aside { flex: 1 1 260px; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
+.gv-game__aside .gv-cover { width: 100%; box-shadow: var(--shadow); }
+.gv-game__aside .gv-btn { width: 100%; }
+.gv-game__main { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.gv-game__title { font-size: clamp(34px, 3.4vw, 64px); font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+
+.gv-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.gv-meta > div { background: var(--surface-2); border-radius: var(--r-md); padding: 14px 16px; min-width: 0; }
+.gv-meta span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+.gv-meta b { font-size: 15px; overflow-wrap: anywhere; }
+.gv-meta a { color: var(--accent-text); }
+
+.gv-score-big { display: flex; align-items: baseline; gap: 6px; }
+.gv-score-big b { font-family: var(--font-display); font-size: clamp(40px, 3vw, 60px); font-weight: 800; letter-spacing: -0.03em; }
+.gv-score-big span { color: var(--muted); font-weight: 700; }
+
+/* Вибір оцінки 1–10 */
+.gv-score-picker { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.gv-score-picker legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.gv-score-picker .gv-chip-check span { min-width: 44px; height: 44px; justify-content: center; font-family: var(--font-display); font-size: 15px; }
+.gv-score-picker .gv-chip-check input:checked + span { background: var(--accent); color: var(--on-accent); }
+
+.gv-review { background: var(--surface-2); border-radius: var(--r-md); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.gv-review__head { display: flex; align-items: center; gap: 12px; }
+.gv-review__head .gv-chip { margin-left: auto; }
+.gv-review__text { max-width: var(--measure); line-height: 1.6; }
+.gv-review__date { color: var(--muted); font-size: 12px; font-weight: 600; }
+
+/* Картки бібліотеки */
+.gv-lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(150px, 12vw, 240px), 1fr)); gap: clamp(12px, 1vw, 22px); }
+.gv-lib-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gv-lib-card__cover { position: relative; display: block; }
+.gv-lib-card__cover:hover { color: inherit; }
+.gv-lib-card__badge { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.gv-lib-card__badge .gv-chip { background: rgba(16, 16, 20, 0.82); color: #F4F4F6; backdrop-filter: blur(6px); }
+.gv-lib-card__badge .gv-chip--accent { background: var(--accent); color: #101014; }
+.gv-lib-card__title { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-lib-card__controls { display: flex; gap: 6px; align-items: center; }
+.gv-lib-card__controls form:first-child { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; }
+.gv-lib-card__controls .gv-select { flex: 1 1 auto; min-width: 0; }
+
 
 /* Планшет: меню переходить на окремий рядок під логотипом. */
 @media (max-width: 1024px) {

@@ -1,0 +1,11 @@
+{% load library_extras %}{% if page_obj.has_other_pages %}
+<nav class="gv-pagination" aria-label="Сторінки">
+    {% if page_obj.has_previous %}<a href="{% url_with page=page_obj.previous_page_number %}" aria-label="Попередня сторінка">←</a>{% endif %}
+    {% for number in items %}
+    {% if number is None %}<span class="is-gap" aria-hidden="true">…</span>
+    {% elif number == page_obj.number %}<span class="is-current" aria-current="page">{{ number }}</span>
+    {% else %}<a href="{% url_with page=number %}">{{ number }}</a>{% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}<a href="{% url_with page=page_obj.next_page_number %}" aria-label="Наступна сторінка">→</a>{% endif %}
+</nav>
+{% endif %}

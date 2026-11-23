@@ -55,3 +55,29 @@ def nav_active(context, *url_names):
     request = context.get("request")
     match = getattr(request, "resolver_match", None)
     return "is-active" if match and match.url_name in url_names else ""
+
+
+@register.simple_tag(takes_context=True)
+def url_with(context, **params):
+    """?поточні_параметри з заміною: href="{% url_with page=2 %}" (фільтри зберігаються)."""
+    query = context["request"].GET.copy()
+    for key, value in params.items():
+        if value in ("", None):
+            query.pop(key, None)  # порожнє значення прибирає параметр
+        else:
+            query[key] = value
+    return "?" + query.urlencode()
+
+
+@register.inclusion_tag("library/components/pagination.html", takes_context=True)
+def pagination(context, page_obj):
+    """{% pagination page_obj %} — номери сторінок навколо поточної, з першою й останньою."""
+    current, last = page_obj.number, page_obj.paginator.num_pages
+    pages = sorted({1, last, *range(max(1, current - 2), min(last, current + 2) + 1)})
+    items, previous = [], 0
+    for number in pages:
+        if number - previous > 1:
+            items.append(None)  # «…»
+        items.append(number)
+        previous = number
+    return {"request": context["request"], "page_obj": page_obj, "items": items}
