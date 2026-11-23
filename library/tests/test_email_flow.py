@@ -47,8 +47,9 @@ class RegistrationVerificationTests(GameVaultTestCase):
         self.assertEqual(User.objects.filter(username="newbie").count(), 1)
 
     def test_letter_has_explicit_message_id(self):
-        self.register()
-        self.assertIn("@gamevault.local>", mail.outbox[0].extra_headers["Message-ID"])
+        with self.settings(DEFAULT_FROM_EMAIL="GameVault <noreply@gamevault.test>"):
+            self.register()
+        self.assertIn("@gamevault.test>", mail.outbox[0].extra_headers["Message-ID"])
 
     def test_unverified_login_shows_verify_page_and_stays_guest(self):
         self.make_user("alice", verified=False)
