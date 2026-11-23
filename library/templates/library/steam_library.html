@@ -1,191 +1,132 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
+{% load library_extras %}
 
 {% block title %}Steam-бібліотека{% if not is_own %} {{ profile_user.username }}{% endif %} | GameVault{% endblock %}
 
 {% block content %}
-<section class="steam-library-page page-wide">
-
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Steam</div>
-
-            {% if is_own %}
-            <h1>Моя бібліотека Steam</h1>
-            <p>
-                Ігри, імпортовані з вашого Steam-акаунта. Ігри, які є в каталозі GameVault,
-                можна додати до бібліотеки, а відсутні — запропонувати адміністратору.
-            </p>
-            {% else %}
-            <h1>Steam-бібліотека {{ profile_user.username }}</h1>
-            <p>Ігри, імпортовані з Steam-акаунта користувача.</p>
-            {% endif %}
-
-            <div class="moderation-hero-actions">
-                {% if is_own %}
-                {% if steam_account %}
-                <form class="inline-post-form" method="post" action="{% url 'library:steam_sync_library' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button type="submit" class="link-button profile-secondary-link">Синхронізувати</button>
-                </form>
-                {% else %}
-                <a class="profile-secondary-link" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
-                {% endif %}
-                <a class="profile-secondary-link" href="{% url 'library:profile' %}">До профілю</a>
-                {% else %}
-                <a class="profile-secondary-link" href="{% url 'library:user_profile' profile_user.id %}">До профілю</a>
-                {% endif %}
-            </div>
-        </div>
+<header class="gv-page-head">
+    <div>
+        <h1>{% if is_own %}Моя бібліотека Steam{% else %}Steam · {{ profile_user.username }}{% endif %}</h1>
+        <p>
+            {% if last_synced_at %}Синхронізовано {{ last_synced_at|date:"d.m.Y H:i" }}{% else %}Ще не синхронізовано{% endif %}
+            {% if is_own %} · ігри з каталогу можна додати в бібліотеку, решту — запропонувати{% endif %}
+        </p>
     </div>
-
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Ігор у Steam</span>
-            <b>{{ games_count }}</b>
-            <p>
-                {% if last_synced_at %}
-                Синхронізовано {{ last_synced_at|date:"d.m.Y H:i" }}
-                {% else %}
-                Ще не синхронізовано
-                {% endif %}
-            </p>
-        </div>
-
-        <div class="stat-card">
-            <span>Годин у грі</span>
-            <b>{{ total_hours }}</b>
-            <p>Загальний час за даними Steam</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Є в каталозі</span>
-            <b>{{ in_catalog_count }}</b>
-            <p>Ігри, які вже є в GameVault</p>
-        </div>
-    </div>
-
-    <div class="dashboard-section">
-        <div class="section-head">
-            <h2>Ігри</h2>
-            <span>Знайдено: {{ filtered_count }}</span>
-        </div>
-
-        <form method="get" class="steam-filter-form">
-            <input type="text" name="q" value="{{ query }}" placeholder="Пошук за назвою...">
-
-            <select name="catalog">
-                <option value="" {% if not catalog_filter %}selected{% endif %}>Усі ігри</option>
-                <option value="in" {% if catalog_filter == 'in' %}selected{% endif %}>Є в каталозі</option>
-                <option value="out" {% if catalog_filter == 'out' %}selected{% endif %}>Немає в каталозі</option>
-            </select>
-
-            <select name="sort">
-                <option value="playtime" {% if selected_sort == 'playtime' %}selected{% endif %}>За часом у грі</option>
-                <option value="recent" {% if selected_sort == 'recent' %}selected{% endif %}>Нещодавно запущені</option>
-                <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>За назвою</option>
-            </select>
-
-            <button class="pseudo-button" type="submit"><span>Застосувати</span></button>
+    <div class="gv-page-head__actions">
+        {% if is_own %}
+        {% if steam_account %}
+        <form method="post" action="{% url 'library:steam_sync_library' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="gv-btn gv-btn--primary">↻ Синхронізувати</button>
         </form>
-
-        <div class="steam-game-grid">
-            {% for item in items %}
-            <article class="steam-game-card">
-                <a href="{{ item.store_url }}" target="_blank" rel="noopener" class="steam-game-cover">
-                    <img src="{{ item.cover_url }}" alt="{{ item.game_title }}" loading="lazy"
-                        onerror="this.remove()">
-                </a>
-
-                <div class="steam-game-body">
-                    <h3>
-                        {% if item.catalog_game %}
-                        <a class="plain-title-link" href="{% url 'library:game_detail' item.catalog_game.id %}">
-                            {{ item.game_title }}
-                        </a>
-                        {% else %}
-                        {{ item.game_title }}
-                        {% endif %}
-                    </h3>
-
-                    {% if item.steam_app.genres %}
-                    <p class="steam-game-meta">{{ item.steam_app.genres }}</p>
-                    {% endif %}
-
-                    <p class="steam-game-meta">
-                        {{ item.playtime_hours }} год
-                        {% if item.playtime_2weeks_minutes %} · {{ item.playtime_2weeks_hours }} год за 2 тижні{% endif %}
-                        {% if item.last_played_at %}<br>Востаннє: {{ item.last_played_at|date:"d.m.Y" }}{% endif %}
-                    </p>
-
-                    <div class="steam-game-actions">
-                        {% if is_own %}
-                        <a class="secondary-action-link" href="{{ item.launch_url }}">Запустити</a>
-                        {% endif %}
-
-                        {% if item.catalog_game %}
-                        {% if item.viewer_entry %}
-                        <a class="secondary-action-link" href="{% url 'library:game_detail' item.catalog_game.id %}">
-                            {% if is_own %}У бібліотеці{% else %}У вас{% endif %}: {{ item.viewer_status_label }}
-                        </a>
-                        {% else %}
-                        <form class="inline-post-form" method="post"
-                            action="{% url 'library:add_to_library' item.catalog_game.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="link-button secondary-action-link">Додати в бібліотеку</button>
-                        </form>
-                        {% endif %}
-                        {% elif item.request_pending %}
-                        <span class="steam-game-note">Заявку подано</span>
-                        {% elif is_own %}
-                        <form class="inline-post-form" method="post"
-                            action="{% url 'library:steam_suggest_game' item.external_game_id %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <button type="submit" class="link-button secondary-action-link">Запропонувати в каталог</button>
-                        </form>
-                        {% else %}
-                        <span class="steam-game-note">Немає в каталозі</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </article>
-            {% empty %}
-            <div class="empty-card profile-wide-empty">
-                {% if games_count %}
-                <h3>Нічого не знайдено</h3>
-                <p>Спробуйте змінити пошук або фільтр.</p>
-                {% elif is_own %}
-                <h3>Steam-бібліотека порожня</h3>
-                <p>Підключіть Steam або запустіть синхронізацію.</p>
-                {% else %}
-                <h3>Steam-бібліотека порожня</h3>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <nav class="pagination">
-            {% if page_obj.has_previous %}
-            <a href="?q={{ query|urlencode }}&catalog={{ catalog_filter }}&sort={{ selected_sort }}&page={{ page_obj.previous_page_number }}">Назад</a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-            {% if num == page_obj.number %}
-            <span class="active-page">{{ num }}</span>
-            {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
-            <a href="?q={{ query|urlencode }}&catalog={{ catalog_filter }}&sort={{ selected_sort }}&page={{ num }}">{{ num }}</a>
-            {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-            <a href="?q={{ query|urlencode }}&catalog={{ catalog_filter }}&sort={{ selected_sort }}&page={{ page_obj.next_page_number }}">Далі</a>
-            {% endif %}
-        </nav>
+        {% else %}
+        <a class="gv-btn gv-btn--primary" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
+        {% endif %}
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:profile' %}">До профілю</a>
+        {% else %}
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:user_profile' profile_user.id %}">До профілю</a>
         {% endif %}
     </div>
+</header>
 
+<div class="gv-stats">
+    <div class="gv-stat"><span>Ігор у Steam</span><b>{{ games_count }}</b></div>
+    <div class="gv-stat"><span>Годин у грі</span><b>{{ total_hours }}</b></div>
+    <div class="gv-stat"><span>Є в каталозі</span><b>{{ in_catalog_count }}</b></div>
+</div>
+
+<section class="gv-card" aria-labelledby="games">
+    <div class="gv-section-head">
+        <h2 id="games">Ігри</h2>
+        <p style="margin: 0">Знайдено: {{ filtered_count }}</p>
+    </div>
+
+    {% if games_count %}
+    <form method="get" class="gv-filters" data-autosubmit style="margin-bottom: 18px">
+        <div class="gv-filters__row">
+            <label class="gv-search">
+                <span class="visually-hidden">Пошук</span>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                <input class="gv-input" type="search" name="q" value="{{ query }}" placeholder="Пошук за назвою…">
+            </label>
+            <label>
+                <span class="visually-hidden">Каталог</span>
+                <select class="gv-select" name="catalog">
+                    <option value="" {% if not catalog_filter %}selected{% endif %}>Усі ігри</option>
+                    <option value="in" {% if catalog_filter == 'in' %}selected{% endif %}>Є в каталозі</option>
+                    <option value="out" {% if catalog_filter == 'out' %}selected{% endif %}>Немає в каталозі</option>
+                </select>
+            </label>
+            <label>
+                <span class="visually-hidden">Сортування</span>
+                <select class="gv-select" name="sort">
+                    <option value="playtime" {% if selected_sort == 'playtime' %}selected{% endif %}>За часом у грі</option>
+                    <option value="recent" {% if selected_sort == 'recent' %}selected{% endif %}>Нещодавно запущені</option>
+                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>За назвою</option>
+                </select>
+            </label>
+            <button class="gv-btn gv-btn--inverse" type="submit">Знайти</button>
+            {% if query or catalog_filter or selected_sort != 'playtime' %}<a class="gv-btn gv-btn--ghost" href="?">Скинути</a>{% endif %}
+        </div>
+    </form>
+    {% endif %}
+
+    <div class="gv-steam-grid">
+        {% for item in items %}
+        <article class="gv-np-card gv-np-card--static">
+            <a class="gv-np-card__media" href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}" {% if not item.catalog_game %}target="_blank" rel="noopener"{% endif %} aria-label="{{ item.game_title }}">
+                <span class="gv-np-card__fallback" aria-hidden="true">{{ item.game_title }}</span>
+                <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
+                {% if item.playtime_2weeks_minutes %}<span class="gv-np-card__hours" title="За останні 2 тижні">{{ item.playtime_2weeks_hours }} год за 2 тиж.</span>{% endif %}
+            </a>
+            <div class="gv-np-card__body">
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                    <span class="gv-np-card__title" title="{{ item.game_title }}">{% if item.catalog_game %}<a href="{% url 'library:game_detail' item.catalog_game.id %}">{{ item.game_title }}</a>{% else %}{{ item.game_title }}{% endif %}</span>
+                    <span class="gv-np-card__sub">{{ item.playtime_hours }} год{% if item.last_played_at %} · {{ item.last_played_at|date:"d.m.Y" }}{% endif %}</span>
+                    {% if item.steam_app.genres %}<span class="gv-np-card__sub" title="{{ item.steam_app.genres }}">{{ item.steam_app.genres }}</span>{% endif %}
+                </div>
+                <div class="gv-np-card__actions">
+                    {% if item.catalog_game %}
+                    {% if item.viewer_entry %}
+                    <a class="gv-btn gv-btn--sm" href="{% url 'library:game_detail' item.catalog_game.id %}">✓ {% if is_own %}{{ item.viewer_status_label }}{% else %}У вас: {{ item.viewer_status_label }}{% endif %}</a>
+                    {% else %}
+                    <form method="post" action="{% url 'library:add_to_library' item.catalog_game.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">+ У бібліотеку</button>
+                    </form>
+                    {% endif %}
+                    {% elif item.request_pending %}
+                    <span class="gv-np-card__note">Заявку подано</span>
+                    {% elif is_own %}
+                    <form method="post" action="{% url 'library:steam_suggest_game' item.external_game_id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="gv-btn gv-btn--sm">Запропонувати в каталог</button>
+                    </form>
+                    {% else %}
+                    <span class="gv-np-card__note">Немає в каталозі</span>
+                    {% endif %}
+                    {% if is_own %}<a class="gv-btn gv-btn--sm gv-btn--ghost" href="{{ item.launch_url }}" title="Запустити в Steam">▶</a>{% endif %}
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="gv-empty" style="grid-column: 1 / -1">
+            {% if games_count %}
+            <h3>Нічого не знайдено</h3>
+            <p>Спробуйте змінити пошук або фільтр.</p>
+            <a class="gv-btn" href="?">Скинути фільтри</a>
+            {% elif is_own %}
+            <h3>Steam-бібліотека порожня</h3>
+            <p>{% if steam_account %}Запустіть синхронізацію, щоб імпортувати ігри.{% else %}Підключіть Steam, щоб імпортувати ігри та години.{% endif %}</p>
+            {% else %}
+            <h3>Steam-бібліотека порожня</h3>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% pagination page_obj %}
 </section>
 {% endblock %}

@@ -111,6 +111,23 @@
     document.querySelectorAll('form[data-autosubmit]').forEach(function (form) {
         form.addEventListener('change', function () { form.requestSubmit ? form.requestSubmit() : form.submit(); });
     });
+    /* Кнопка «Показати» в полі пароля (.gv-password). */
+    document.querySelectorAll('.gv-password button').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var input = button.parentNode.querySelector('input');
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.textContent = show ? 'Сховати' : 'Показати';
+            button.setAttribute('aria-pressed', show ? 'true' : 'false');
+        });
+    });
+    /* Назва вибраного файлу в .gv-file. */
+    document.querySelectorAll('.gv-file input[type=file]').forEach(function (input) {
+        input.addEventListener('change', function () {
+            var label = input.closest('.gv-file').querySelector('[data-file-name]');
+            if (label && input.files.length) { label.textContent = input.files[0].name; }
+        });
+    });
     document.addEventListener('click', function (event) {
         document.querySelectorAll('.gv-menu[open]').forEach(function (menu) {
             if (!menu.contains(event.target)) { menu.removeAttribute('open'); }

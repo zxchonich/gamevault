@@ -1,88 +1,45 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
 
 {% block title %}Запропонувати гру | GameVault{% endblock %}
 
 {% block content %}
-<section class="request-game-page page-wide">
-
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Нова заявка</div>
-
-            <h1>Запропонувати гру</h1>
-
-            <p>
-                Якщо потрібної гри ще немає в каталозі GameVault, ви можете створити заявку
-                на її додавання. Після перевірки адміністратором гра може бути додана до бази.
-            </p>
-        </div>
+<header class="gv-page-head">
+    <div>
+        <h1>Запропонувати гру</h1>
+        <p>Немає потрібної гри в каталозі? Надішліть заявку — після перевірки адміністратор додасть її.</p>
     </div>
-
-    <div class="request-game-layout">
-        <section class="request-form-card">
-            <div class="section-head">
-                <h2>Форма заявки</h2>
-                <span>Назва та короткий опис гри</span>
-            </div>
-
-            {% if user %}
-            <form method="post" class="request-game-form">
-                {% csrf_token %}
-
-                <label>
-                    <span>Назва гри</span>
-                    <input type="text" name="title" placeholder="Наприклад, Hollow Knight" required>
-                </label>
-
-                <label>
-                    <span>Опис гри</span>
-                    <textarea name="description" rows="7"
-                        placeholder="Коротко опишіть гру, її жанр, особливості або чому її варто додати до каталогу..."></textarea>
-                </label>
-
-                <button class="pseudo-button" type="submit">
-                    <span>Надіслати заявку</span>
-                </button>
-            </form>
-            {% else %}
-            <div class="empty-card">
-                <h3>Потрібен вхід</h3>
-                <p>Щоб створити заявку на додавання гри, необхідно увійти в систему.</p>
-
-                <a href="{% url 'library:login' %}">
-                    Увійти
-                </a>
-            </div>
-            {% endif %}
-        </section>
-
-        <aside class="request-info-card">
-            <div class="panel-title">Як це працює</div>
-
-            <div class="activity-card">
-                <span>Крок 1</span>
-                <b>Користувач створює заявку</b>
-                <p>Вказується назва гри та короткий опис.</p>
-            </div>
-
-            <div class="activity-card">
-                <span>Крок 2</span>
-                <b>Адміністратор перевіряє</b>
-                <p>Заявка проходить модерацію та отримує статус.</p>
-            </div>
-
-            <div class="activity-card">
-                <span>Крок 3</span>
-                <b>Гра додається в каталог</b>
-                <p>Після схвалення гра з’являється у загальному списку GameVault.</p>
-            </div>
-
-            <a class="request-side-link" href="{% url 'library:my_requests' %}">
-                Переглянути мої заявки
-            </a>
-        </aside>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:my_requests' %}">Мої заявки</a>
     </div>
+</header>
 
-</section>
+<div class="gv-row">
+    <section class="gv-card gv-grow" aria-labelledby="request-form">
+        <div class="gv-section-head"><h2 id="request-form">Заявка</h2></div>
+        <form method="post" class="gv-form" style="max-width: 760px">
+            {% csrf_token %}
+            <label class="gv-field">
+                <span>Назва гри</span>
+                <input class="gv-input" type="text" name="title" value="{{ request.POST.title }}" required autofocus placeholder="Наприклад, Hollow Knight">
+            </label>
+            <label class="gv-field">
+                <span>Опис</span>
+                <textarea class="gv-textarea" name="description" rows="7" placeholder="Жанр, розробник, чим цікава гра — усе, що допоможе її знайти й додати">{{ request.POST.description }}</textarea>
+            </label>
+            <div class="gv-form__actions">
+                <button class="gv-btn gv-btn--primary gv-btn--lg" type="submit">Надіслати заявку</button>
+            </div>
+        </form>
+    </section>
+
+    <aside class="gv-card gv-side" aria-labelledby="how">
+        <div class="gv-section-head"><h2 id="how">Як це працює</h2></div>
+        <ol class="gv-steps">
+            <li><b>Ви надсилаєте заявку</b><span>Назва гри й короткий опис.</span></li>
+            <li><b>Адміністратор перевіряє</b><span>Статус видно на сторінці «Мої заявки».</span></li>
+            <li><b>Гра з'являється в каталозі</b><span>Її можна додати в бібліотеку й оцінити.</span></li>
+        </ol>
+        <p class="muted" style="font-weight: 600; margin-top: 16px; font-size: 14px">Гру зі своєї Steam-бібліотеки простіше запропонувати одним кліком на сторінці <a href="{% url 'library:steam_library' %}" style="color: var(--accent-text); font-weight: 800">Steam-бібліотеки</a>.</p>
+    </aside>
+</div>
 {% endblock %}

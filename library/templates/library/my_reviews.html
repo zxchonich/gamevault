@@ -1,130 +1,49 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
+{% load library_extras %}
 
 {% block title %}Мої рецензії | GameVault{% endblock %}
 
 {% block content %}
-<section class="reviews-page page-wide">
-
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Оцінки та відгуки</div>
-
-            <h1>Мої рецензії</h1>
-
-            <p>
-                На цій сторінці зібрані всі оцінки та текстові відгуки, які ви залишили
-                до ігор у каталозі. Рецензії впливають на середній рейтинг ігор
-                та персональні рекомендації.
-            </p>
-        </div>
+<header class="gv-page-head">
+    <div>
+        <h1>Мої рецензії</h1>
+        <p>{% if reviews %}{{ reviews|length }} оцінок · вони впливають на рейтинг ігор і ваші рекомендації{% else %}Оцінки й відгуки, які ви залишили{% endif %}</p>
     </div>
-
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Усього рецензій</span>
-            <b>{{ reviews|length }}</b>
-            <p>Кількість ваших оцінок і відгуків</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Рейтинг</span>
-            <b>1–10</b>
-            <p>Оцінки використовуються у рекомендаційному алгоритмі</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Вплив</span>
-            <b>Рекомендації</b>
-            <p>Високі оцінки формують ваші жанрові вподобання</p>
-        </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:my_library' %}">Моя бібліотека</a>
     </div>
+</header>
 
-    <div class="dashboard-section">
-        <div class="section-head">
-            <h2>Список рецензій</h2>
-            <span>Ваші оцінки до ігор</span>
-        </div>
-
-        <div class="user-reviews-grid">
-            {% for review in reviews %}
-            <article class="user-review-card my-review-card">
-                <a class="user-review-cover" href="{% url 'library:game_detail' review.game.id %}">
-                    {% if review.game.poster %}
-                    <img src="{{ review.game.poster.url }}" alt="{{ review.game.title }}">
-                    {% else %}
-                    <img src="{% static 'library/media/game-placeholder.svg' %}" alt="{{ review.game.title }}">
-                    {% endif %}
-
-                    <div class="review-score-badge">
-                        {{ review.score }}/10
-                    </div>
-                </a>
-
-                <div class="user-review-content">
-                    <div class="my-review-card-head">
-                        <span class="game-status active">Рецензія</span>
-
-                        <form method="post" action="{% url 'library:admin_review_delete' review.id %}"
-                            class="review-delete-form">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.path }}">
-
-                            <button type="submit" onclick="return confirm('Видалити цю рецензію?');">
-                                Видалити
-                            </button>
-                        </form>
-                    </div>
-
-                    <h3>
-                        <a class="plain-title-link" href="{% url 'library:game_detail' review.game.id %}">
-                            {{ review.game.title }}
-                        </a>
-                    </h3>
-
-                    {% if review.text %}
-                    <p>{{ review.text|truncatechars:190 }}</p>
-                    {% else %}
-                    <p class="muted">Текстовий відгук відсутній.</p>
-                    {% endif %}
-
-                    <div class="review-meta">
-                        <div>
-                            <span>Дата створення</span>
-                            <b>{{ review.created_at }}</b>
-                        </div>
-
-                        {% if review.updated_at %}
-                        <div>
-                            <span>Оновлено</span>
-                            <b>{{ review.updated_at }}</b>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="my-review-actions">
-                        <a href="{% url 'library:game_detail' review.game.id %}" class="secondary-action-link">
-                            Сторінка гри
-                        </a>
-                    </div>
+<section class="gv-card" aria-label="Рецензії">
+    <div class="gv-grid-auto" style="--min: 420px">
+        {% for review in reviews %}
+        <article class="gv-box" style="flex-direction: row; gap: 16px">
+            <a href="{% url 'library:game_detail' review.game.id %}" style="flex: 0 0 84px" aria-label="{{ review.game.title }}">{% game_cover review.game "sm" %}</a>
+            <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+                <div class="gv-box__head" style="flex-wrap: nowrap; align-items: flex-start">
+                    <a class="gv-box__title" href="{% url 'library:game_detail' review.game.id %}">{{ review.game.title }}</a>
+                    <span class="gv-chip gv-chip--accent" title="Оцінка" style="flex: 0 0 auto">{{ review.score }}/10</span>
                 </div>
-            </article>
-
-            {% empty %}
-            <div class="empty-card">
-                <h3>Рецензій поки що немає</h3>
-                <p>
-                    Ви ще не залишали оцінок до ігор. Відкрийте сторінку гри
-                    та створіть першу рецензію.
-                </p>
-
-                <a href="{% url 'library:game_list' %}">
-                    Перейти до каталогу
-                </a>
+                {% if review.text %}<p class="gv-box__text">{{ review.text|truncatechars:220 }}</p>{% else %}<p class="gv-box__text" style="font-style: italic">Без тексту — лише оцінка.</p>{% endif %}
+                <div class="gv-box__actions">
+                    <span class="gv-box__meta">{{ review.created_at|date:"d.m.Y" }}{% if review.updated_at %} · змінено {{ review.updated_at|date:"d.m.Y" }}{% endif %}</span>
+                    <span style="flex: 1"></span>
+                    <a class="gv-btn gv-btn--sm" href="{% url 'library:game_detail' review.game.id %}#my-review">Змінити</a>
+                    <form method="post" action="{% url 'library:admin_review_delete' review.id %}" onsubmit="return confirm('Видалити цю рецензію?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--danger">Видалити</button>
+                    </form>
+                </div>
             </div>
-            {% endfor %}
+        </article>
+        {% empty %}
+        <div class="gv-empty" style="grid-column: 1 / -1">
+            <h3>Рецензій поки немає</h3>
+            <p>Оцініть гру на її сторінці — оцінки покращують ваші рекомендації.</p>
+            <a class="gv-btn gv-btn--primary" href="{% url 'library:my_library' %}">До бібліотеки</a>
         </div>
+        {% endfor %}
     </div>
-
 </section>
 {% endblock %}

@@ -24,13 +24,14 @@
     <div class="gv-carousel">
         {% for item in now_playing %}
         <a class="gv-np-card" href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}" {% if not item.catalog_game %}target="_blank" rel="noopener"{% endif %}>
-            <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
-            <span class="gv-np-card__info">
-                {% user_avatar item.user "sm" %}
-                <span class="gv-np-card__text">
-                    <b>{{ item.game_title }}</b>
-                    <span>{{ item.user.username }} · {{ item.playtime_2weeks_hours }} год</span>
-                </span>
+            <span class="gv-np-card__media">
+                <span class="gv-np-card__fallback" aria-hidden="true">{{ item.game_title }}</span>
+                <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
+                <span class="gv-np-card__hours" title="За останні 2 тижні">{{ item.playtime_2weeks_hours }} год</span>
+            </span>
+            <span class="gv-np-card__body">
+                <span class="gv-np-card__title" title="{{ item.game_title }}">{{ item.game_title }}</span>
+                <span class="gv-np-card__who">{% user_avatar item.user "sm" %}<span class="gv-np-card__name">{% if item.user.id == current_library_user.id %}Ви{% else %}{{ item.user.username }}{% endif %}</span></span>
             </span>
         </a>
         {% endfor %}

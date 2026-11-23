@@ -1,175 +1,111 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
+{% load library_extras %}
 
-{% block title %}Редагування профілю | GameVault{% endblock %}
+{% block title %}Налаштування | GameVault{% endblock %}
 
 {% block content %}
-<section class="edit-profile-page page-wide">
+<header class="gv-page-head">
+    <div>
+        <h1>Налаштування</h1>
+        <p>Дані акаунта, пароль, аватар і приватність.</p>
+    </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:profile' %}">До профілю</a>
+    </div>
+</header>
 
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Налаштування акаунта</div>
+<form method="post" enctype="multipart/form-data" class="gv-row">
+    {% csrf_token %}
 
-            <h1>Редагування профілю</h1>
+    <div class="gv-grow" style="display: flex; flex-direction: column; gap: var(--gap)">
+        {% if error %}<p class="gv-form__error" role="alert">{{ error }}</p>{% endif %}
 
-            <p>
-                Тут можна оновити основні дані акаунта, змінити пароль та завантажити
-                новий аватар. Зміни будуть відображатися у профілі, бібліотеці,
-                рецензіях та соціальній частині сайту.
-            </p>
-        </div>
+        <section class="gv-card gv-form" aria-labelledby="account">
+            <div class="gv-section-head"><h2 id="account">Акаунт</h2></div>
+
+            <label class="gv-file">
+                {% user_avatar user "lg" %}
+                <span class="gv-file__text">
+                    <b>Змінити аватар</b>
+                    <span data-file-name>Квадратне зображення виглядає найкраще</span>
+                </span>
+                <input type="file" name="avatar" accept="image/*">
+            </label>
+
+            <div class="gv-form__grid">
+                <label class="gv-field">
+                    <span>Логін</span>
+                    <input class="gv-input" type="text" name="username" value="{{ user.username }}" required autocomplete="username">
+                </label>
+                <label class="gv-field">
+                    <span>Email</span>
+                    <input class="gv-input" type="email" name="email" value="{{ user.email }}" required autocomplete="email">
+                    <span class="gv-field__hint">Бачите тільки ви.</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="gv-card gv-form" aria-labelledby="password">
+            <div class="gv-section-head">
+                <h2 id="password">Пароль</h2>
+                <p style="margin: 0">Залиште порожнім, якщо не змінюєте</p>
+            </div>
+            <div class="gv-form__grid">
+                <label class="gv-field">
+                    <span>Новий пароль</span>
+                    <span class="gv-password">
+                        <input class="gv-input" type="password" name="password" autocomplete="new-password" placeholder="Новий пароль">
+                        <button type="button" aria-pressed="false">Показати</button>
+                    </span>
+                </label>
+                <label class="gv-field">
+                    <span>Повторіть пароль</span>
+                    <span class="gv-password">
+                        <input class="gv-input" type="password" name="password_confirm" autocomplete="new-password" placeholder="Ще раз">
+                        <button type="button" aria-pressed="false">Показати</button>
+                    </span>
+                </label>
+            </div>
+        </section>
     </div>
 
-    <div class="edit-profile-card">
+    <aside class="gv-side" style="display: flex; flex-direction: column; gap: var(--gap)">
+        <section class="gv-card gv-form" aria-labelledby="privacy">
+            <div class="gv-section-head"><h2 id="privacy">Приватність</h2></div>
 
-        <aside class="edit-profile-preview">
-            <div class="edit-profile-avatar">
-                {% if user.avatar %}
-                <img src="{{ user.avatar.url }}" alt="{{ user.username }}">
-                {% else %}
-                <div class="auto-avatar">
-                    {{ user.username|slice:":1"|upper }}
-                </div>
-                {% endif %}
-            </div>
+            <label class="gv-switch">
+                <input type="checkbox" name="is_private" {% if user.is_private %}checked{% endif %}>
+                <span class="gv-switch__track" aria-hidden="true"></span>
+                <span class="gv-switch__text">
+                    <b>Закритий профіль</b>
+                    <span>Профіль і бібліотеку бачать лише ваші друзі.</span>
+                </span>
+            </label>
 
-            <div class="edit-profile-user-info">
-                <span>Поточний профіль</span>
-                <h2>{{ user.username }}</h2>
-                <p>{{ user.email }}</p>
+            <label class="gv-switch">
+                <input type="checkbox" name="show_activity" {% if user.show_activity %}checked{% endif %}>
+                <span class="gv-switch__track" aria-hidden="true"></span>
+                <span class="gv-switch__text">
+                    <b>Показувати мою активність</b>
+                    <span>Додані й пройдені ігри, оцінки та ігри в Steam з'являються у стрічці друзів і у вашому профілі.</span>
+                </span>
+            </label>
+        </section>
 
-                <div class="edit-profile-role">
-                    {% if user.role %}
-                    {{ user.role.name }}
-                    {% else %}
-                    user
-                    {% endif %}
-                </div>
-            </div>
-        </aside>
+        <section class="gv-card gv-form" aria-labelledby="steam">
+            <div class="gv-section-head"><h2 id="steam">Steam</h2></div>
+            {% with account=user.external_accounts.first %}
+            {% if account %}
+            <p class="muted" style="font-weight: 600">Підключено{% if account.username %}: <b style="color: var(--text)">{{ account.username }}</b>{% endif %}.</p>
+            <a class="gv-btn" href="{% url 'library:steam_library' %}">Відкрити Steam-бібліотеку</a>
+            {% else %}
+            <p class="muted" style="font-weight: 600">Підключіть Steam, щоб імпортувати ігри й години.</p>
+            <a class="gv-btn" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
+            {% endif %}
+            {% endwith %}
+        </section>
 
-        <div class="edit-profile-form-area">
-            <div class="section-head">
-                <h2>Дані користувача</h2>
-                <span>Оновлення профілю</span>
-            </div>
-
-            <form method="post" enctype="multipart/form-data" class="edit-profile-form">
-                {% csrf_token %}
-
-                {% if error %}
-                <p class="form-error">{{ error }}</p>
-                {% endif %}
-
-                <label class="avatar-upload-box">
-                    <span>Аватар</span>
-
-                    <div class="avatar-upload-content">
-                        <b>Завантажити нове зображення</b>
-                        <p>Оберіть файл з комп’ютера. Найкраще виглядає квадратне зображення.</p>
-                    </div>
-
-                    <input type="file" name="avatar" accept="image/*">
-                </label>
-
-                <div class="edit-form-grid">
-                    <label>
-                        <span>Логін</span>
-                        <input type="text" name="username" value="{{ user.username }}" required>
-                    </label>
-
-                    <label>
-                        <span>Email</span>
-                        <input type="email" name="email" value="{{ user.email }}" required>
-                    </label>
-                </div>
-
-                <div class="edit-form-grid">
-                    <label>
-                        <span>Новий пароль</span>
-                        <div class="password-field">
-                            <input type="password" name="password" id="edit-password"
-                                placeholder="Залиште порожнім, якщо не хочете змінювати">
-                            <button type="button" class="password-toggle" data-target="edit-password">
-                                Показати
-                            </button>
-                        </div>
-                    </label>
-
-                    <label>
-                        <span>Повторіть новий пароль</span>
-                        <div class="password-field">
-                            <input type="password" name="password_confirm" id="edit-password-confirm"
-                                placeholder="Повторіть новий пароль">
-                            <button type="button" class="password-toggle" data-target="edit-password-confirm">
-                                Показати
-                            </button>
-                        </div>
-                    </label>
-                </div>
-
-                <label class="privacy-toggle">
-                    <input type="checkbox" name="is_private" {% if user.is_private %}checked{% endif %}>
-
-                    <div>
-                        <span>Закритий профіль</span>
-                        <p>
-                            Якщо увімкнено, інші користувачі не зможуть переглядати ваш профіль
-                            і бібліотеку, окрім друзів.
-                        </p>
-                    </div>
-                </label>
-
-                <label class="privacy-toggle">
-                    <input type="checkbox" name="show_activity" {% if user.show_activity %}checked{% endif %}>
-
-                    <div>
-                        <span>Показувати мою активність</span>
-                        <p>
-                            Якщо вимкнено, ваші події (додані й пройдені ігри, оцінки, ігри в Steam)
-                            не з'являтимуться у стрічці друзів і у вашому профілі для інших.
-                        </p>
-                    </div>
-                </label>
-
-                <div class="edit-profile-actions">
-                    <button class="pseudo-button" type="submit">
-                        <span>Зберегти зміни</span>
-                    </button>
-
-                    <a class="profile-secondary-link" href="{% url 'library:profile' %}">
-                        До профілю
-                    </a>
-                </div>
-            </form>
-        </div>
-
-    </div>
-
-</section>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const buttons = document.querySelectorAll('.password-toggle');
-
-        buttons.forEach(function (button) {
-            button.addEventListener('click', function () {
-                const targetId = button.dataset.target;
-                const input = document.getElementById(targetId);
-
-                if (!input) {
-                    return;
-                }
-
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    button.textContent = 'Сховати';
-                } else {
-                    input.type = 'password';
-                    button.textContent = 'Показати';
-                }
-            });
-        });
-    });
-</script>
+        <button class="gv-btn gv-btn--primary gv-btn--lg" type="submit">Зберегти зміни</button>
+    </aside>
+</form>
 {% endblock %}

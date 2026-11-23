@@ -1,121 +1,77 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
 
 {% block title %}Зіставлення зі Steam | GameVault{% endblock %}
 
 {% block content %}
-<section class="steam-matching-page page-wide">
+<header class="gv-page-head">
+    <div>
+        <h1>Зіставлення зі Steam</h1>
+        <p>Гра каталогу зі Steam AppID сама з'являється в бібліотеках тих, у кого вона є в Steam.</p>
+    </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:moderation' %}">Модерація</a>
+        <a class="gv-btn gv-btn--primary" href="{% url 'library:admin_game_add' %}">+ Додати гру</a>
+    </div>
+</header>
 
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Адміністративна панель</div>
-            <h1>Зіставлення каталогу зі Steam</h1>
-            <p>
-                Гра каталогу з Steam AppID автоматично з'являється в бібліотеках користувачів,
-                у яких вона є в Steam. Тут можна прив'язати AppID до ігор каталогу та
-                додати популярні Steam-ігри користувачів, яких ще немає в каталозі.
-            </p>
+<div class="gv-stats">
+    <div class="gv-stat"><span>Прив'язано до Steam</span><b>{{ linked_count }}</b></div>
+    <div class="gv-stat"><span>Без AppID</span><b>{{ unlinked_games|length }}</b></div>
+    <div class="gv-stat"><span>Steam-ігри поза каталогом</span><b>{{ popular_steam_games|length }}{% if popular_steam_games|length == 20 %}+{% endif %}</b></div>
+</div>
 
-            <div class="moderation-hero-actions">
-                <a class="profile-secondary-link" href="{% url 'library:moderation' %}">Модерація</a>
-                <a class="profile-secondary-link" href="{% url 'library:admin_game_add' %}">Додати гру</a>
+<section class="gv-card" aria-labelledby="unlinked">
+    <div class="gv-section-head">
+        <h2 id="unlinked">Ігри каталогу без AppID</h2>
+        <p style="margin: 0">Кандидати — за назвою в Steam-бібліотеках користувачів</p>
+    </div>
+    <div class="gv-list">
+        {% for game in unlinked_games %}
+        <div class="gv-admin-row">
+            <div class="gv-admin-row__main">
+                <a href="{% url 'library:game_detail' game.id %}">{{ game.title }}</a>
+                {% if not game.steam_candidates %}<span>Збігів не знайдено</span>{% endif %}
+            </div>
+            <div class="gv-admin-row__actions">
+                {% for candidate in game.steam_candidates %}
+                <form method="post" action="{% url 'library:admin_steam_link' game.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="steam_appid" value="{{ candidate.external_game_id }}">
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary" title="AppID {{ candidate.external_game_id }} · у {{ candidate.owners }} корист.">Прив'язати «{{ candidate.title }}» · {{ candidate.external_game_id }}</button>
+                </form>
+                {% endfor %}
+                <form method="post" action="{% url 'library:admin_steam_link' game.id %}" class="gv-inline-form">
+                    {% csrf_token %}
+                    <label class="visually-hidden" for="appid-{{ game.id }}">AppID для {{ game.title }}</label>
+                    <input class="gv-input" id="appid-{{ game.id }}" type="text" name="steam_appid" inputmode="numeric" pattern="[0-9]+" required placeholder="AppID вручну">
+                    <button type="submit" class="gv-btn gv-btn--sm">Прив'язати</button>
+                </form>
+                <a class="gv-btn gv-btn--sm gv-btn--ghost" href="{% url 'library:admin_game_edit' game.id %}">Редагувати</a>
             </div>
         </div>
+        {% empty %}
+        <div class="gv-empty"><h3>Усі ігри каталогу прив'язані до Steam</h3></div>
+        {% endfor %}
     </div>
+</section>
 
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Прив'язано до Steam</span>
-            <b>{{ linked_count }}</b>
-            <p>Ігри каталогу з AppID</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Без AppID</span>
-            <b>{{ unlinked_games|length }}</b>
-            <p>Ігри каталогу без зв'язку зі Steam</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Поза каталогом</span>
-            <b>{{ popular_steam_games|length }}{% if popular_steam_games|length == 20 %}+{% endif %}</b>
-            <p>Steam-ігри користувачів, яких немає в каталозі</p>
-        </div>
+<section class="gv-card" aria-labelledby="popular">
+    <div class="gv-section-head">
+        <h2 id="popular">Популярні Steam-ігри поза каталогом</h2>
+        <p style="margin: 0">За кількістю власників серед користувачів</p>
     </div>
-
-    <div class="dashboard-section">
-        <div class="section-head">
-            <h2>Ігри каталогу без Steam AppID</h2>
-            <span>Збіги шукаються за назвою в Steam-бібліотеках користувачів</span>
-        </div>
-
-        <div class="steam-match-list">
-            {% for game in unlinked_games %}
-            <article class="steam-match-row">
-                <div class="steam-match-title">
-                    <a class="plain-title-link" href="{% url 'library:game_detail' game.id %}">{{ game.title }}</a>
-                </div>
-
-                <div class="steam-match-actions">
-                    {% for candidate in game.steam_candidates %}
-                    <form class="inline-post-form" method="post" action="{% url 'library:admin_steam_link' game.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="steam_appid" value="{{ candidate.external_game_id }}">
-                        <button type="submit" class="link-button secondary-action-link">
-                            Прив'язати «{{ candidate.title }}» ({{ candidate.external_game_id }}, у {{ candidate.owners }} корист.)
-                        </button>
-                    </form>
-                    {% endfor %}
-
-                    <form method="post" action="{% url 'library:admin_steam_link' game.id %}" class="steam-inline-row">
-                        {% csrf_token %}
-                        <input type="text" name="steam_appid" inputmode="numeric" pattern="[0-9]+" required
-                            placeholder="AppID вручну">
-                        <button type="submit" class="link-button secondary-action-link">Прив'язати</button>
-                    </form>
-
-                    <a class="secondary-action-link" href="{% url 'library:admin_game_edit' game.id %}">Редагувати</a>
-                </div>
-            </article>
-            {% empty %}
-            <div class="empty-card profile-wide-empty">
-                <h3>Усі ігри каталогу прив'язані до Steam</h3>
+    <div class="gv-grid-auto" style="--min: 380px">
+        {% for steam_game in popular_steam_games %}
+        <div class="gv-admin-row">
+            <div class="gv-admin-row__main">
+                <a href="https://store.steampowered.com/app/{{ steam_game.external_game_id }}/" target="_blank" rel="noopener">{{ steam_game.title }} ↗</a>
+                <span>AppID {{ steam_game.external_game_id }} · у {{ steam_game.owners }} корист.</span>
             </div>
-            {% endfor %}
+            <a class="gv-btn gv-btn--sm gv-btn--primary" href="{% url 'library:admin_game_add' %}?steam_appid={{ steam_game.external_game_id }}">+ У каталог</a>
         </div>
+        {% empty %}
+        <div class="gv-empty" style="grid-column: 1 / -1"><h3>Немає Steam-ігор поза каталогом</h3></div>
+        {% endfor %}
     </div>
-
-    <div class="dashboard-section">
-        <div class="section-head">
-            <h2>Популярні Steam-ігри поза каталогом</h2>
-            <span>За кількістю власників серед користувачів GameVault</span>
-        </div>
-
-        <div class="steam-match-list">
-            {% for steam_game in popular_steam_games %}
-            <article class="steam-match-row">
-                <div class="steam-match-title">
-                    <a class="plain-title-link" href="https://store.steampowered.com/app/{{ steam_game.external_game_id }}/"
-                        target="_blank" rel="noopener">{{ steam_game.title }}</a>
-                    <span class="steam-game-note">
-                        AppID {{ steam_game.external_game_id }} · у {{ steam_game.owners }} корист.
-                    </span>
-                </div>
-
-                <div class="steam-match-actions">
-                    <a class="secondary-action-link"
-                        href="{% url 'library:admin_game_add' %}?steam_appid={{ steam_game.external_game_id }}">
-                        Додати в каталог зі Steam
-                    </a>
-                </div>
-            </article>
-            {% empty %}
-            <div class="empty-card profile-wide-empty">
-                <h3>Немає Steam-ігор поза каталогом</h3>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
 </section>
 {% endblock %}

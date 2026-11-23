@@ -1,105 +1,55 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
 
-{% block title %}Керування жанрами | GameVault{% endblock %}
+{% block title %}Жанри | GameVault{% endblock %}
 
 {% block content %}
-<section class="admin-genres-page page-wide">
-
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Адміністрування каталогу</div>
-
-            <h1>Керування жанрами</h1>
-
-            <p>
-                На цій сторінці адміністратор може створювати нові жанри для каталогу.
-                Після додавання жанр одразу з’явиться у формах створення та редагування ігор,
-                а також у фільтрах каталогу.
-            </p>
-        </div>
+<header class="gv-page-head">
+    <div>
+        <h1>Жанри</h1>
+        <p>{{ genres_count }} жанрів у каталозі · використовуються у фільтрах, картках ігор і рекомендаціях.</p>
     </div>
-
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Жанрів</span>
-            <b>{{ genres_count }}</b>
-            <p>Загальна кількість жанрів у системі</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Доступ</span>
-            <b>Admin</b>
-            <p>Сторінка доступна тільки адміністраторам</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Використання</span>
-            <b>Catalog</b>
-            <p>Жанри використовуються у картках ігор та фільтрах</p>
-        </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:moderation' %}">Модерація</a>
     </div>
+</header>
 
-    <div class="admin-genres-layout">
-        <section class="dashboard-section admin-genre-form-card">
-            <div class="section-head">
-                <h2>Додати жанр</h2>
-                <span>Новий запис у таблиці genres</span>
-            </div>
-
-            <form method="post" class="admin-genre-form">
-                {% csrf_token %}
-
-                <label>
-                    <span>Назва жанру</span>
-                    <input type="text" name="name" required placeholder="Наприклад, RPG">
-                </label>
-
-                <button class="pseudo-button" type="submit">
-                    <span>Додати жанр</span>
-                </button>
-            </form>
-        </section>
-
-        <section class="dashboard-section admin-genres-list-card">
-            <div class="section-head">
-                <h2>Список жанрів</h2>
-                <span>Наявні жанри каталогу</span>
-            </div>
-
-            <div class="admin-genres-list">
-                {% for item in genres_data %}
-                <article class="admin-genre-row">
-                    <div>
-                        <span>Жанр</span>
-                        <h3>{{ item.genre.name }}</h3>
-                        <p>Використовується в іграх: {{ item.games_count }}</p>
-                    </div>
-
-                    {% if item.games_count == 0 %}
-                    <form method="post" action="{% url 'library:admin_genre_delete' item.genre.id %}"
-                        class="admin-genre-delete-form">
-                        {% csrf_token %}
-
-                        <button type="submit" onclick="return confirm('Видалити цей жанр?');">
-                            Видалити
-                        </button>
-                    </form>
-                    {% else %}
-                    <span class="genre-used-badge">
-                        Використовується
-                    </span>
-                    {% endif %}
-                </article>
-                {% empty %}
-                <div class="empty-card">
-                    <h3>Жанрів поки що немає</h3>
-                    <p>Додайте перший жанр через форму зліва.</p>
+<div class="gv-row">
+    <section class="gv-card gv-grow" aria-labelledby="genres">
+        <div class="gv-section-head"><h2 id="genres">Усі жанри</h2></div>
+        <div class="gv-grid-auto" style="--min: 260px">
+            {% for item in genres_data %}
+            <div class="gv-admin-row">
+                <div class="gv-admin-row__main">
+                    <b>{{ item.genre.name }}</b>
+                    <span>{% if item.games_count %}Ігор: {{ item.games_count }}{% else %}Не використовується{% endif %}</span>
                 </div>
-                {% endfor %}
+                {% if item.games_count == 0 %}
+                <form method="post" action="{% url 'library:admin_genre_delete' item.genre.id %}" onsubmit="return confirm('Видалити жанр «{{ item.genre.name|escapejs }}»?');">
+                    {% csrf_token %}
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--danger">Видалити</button>
+                </form>
+                {% endif %}
             </div>
-        </section>
-    </div>
+            {% empty %}
+            <div class="gv-empty" style="grid-column: 1 / -1">
+                <h3>Жанрів поки немає</h3>
+                <p>Додайте перший жанр через форму.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
 
-</section>
+    <aside class="gv-card gv-side" aria-labelledby="add-genre" style="align-self: flex-start">
+        <div class="gv-section-head"><h2 id="add-genre">Новий жанр</h2></div>
+        <form method="post" class="gv-form">
+            {% csrf_token %}
+            <label class="gv-field">
+                <span>Назва</span>
+                <input class="gv-input" type="text" name="name" required placeholder="Наприклад, Roguelike">
+            </label>
+            <button class="gv-btn gv-btn--primary" type="submit">Додати жанр</button>
+            <p class="gv-field__hint">Видалити можна лише жанр, який не прив'язаний до жодної гри.</p>
+        </form>
+    </aside>
+</div>
 {% endblock %}

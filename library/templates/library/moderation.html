@@ -1,220 +1,105 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
+{% load library_extras %}
 
 {% block title %}Модерація | GameVault{% endblock %}
 
 {% block content %}
-<section class="moderation-page page-wide">
+<header class="gv-page-head">
+    <div>
+        <h1>Модерація заявок</h1>
+        <p>Схвалена заявка стає грою в каталозі з вибраними жанрами.</p>
+    </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:admin_genre_list' %}">Жанри</a>
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:admin_steam_matching' %}">Зіставлення зі Steam</a>
+        <a class="gv-btn gv-btn--primary" href="{% url 'library:admin_game_add' %}">+ Додати гру</a>
+    </div>
+</header>
 
-    <div class="dashboard-hero">
-        <div>
-            <div class="subtitle">Адміністративна панель</div>
+<section class="gv-card" aria-labelledby="pending">
+    <div class="gv-section-head">
+        <h2 id="pending">Очікують перевірки</h2>
+        <p style="margin: 0">{{ pending_requests|length }}</p>
+    </div>
 
-            <h1>Модерація заявок</h1>
-
-            <p>
-                На цій сторінці адміністратор перевіряє заявки користувачів
-                на додавання нових ігор до каталогу. Після схвалення гра автоматично
-                створюється в базі даних, а вибрані жанри записуються у проміжну
-                таблицю game_genres. Якщо потрібного жанру немає, його можна створити
-                на сторінці керування жанрами.
-            </p>
-
-            <div class="moderation-hero-actions">
-                <a class="profile-secondary-link" href="{% url 'library:admin_genre_list' %}">
-                    Керувати жанрами
-                </a>
-
-                <a class="profile-secondary-link" href="{% url 'library:admin_game_add' %}">
-                    Додати гру вручну
-                </a>
-
-                <a class="profile-secondary-link" href="{% url 'library:admin_steam_matching' %}">
-                    Зіставлення зі Steam
-                </a>
+    <div class="gv-grid-auto" style="--min: 440px">
+        {% for request_item in pending_requests %}
+        <article class="gv-box">
+            <div class="gv-box__head">
+                <span class="gv-state gv-state--pending">Очікує</span>
+                <span class="gv-box__meta">{{ request_item.created_at|date:"d.m.Y H:i" }}</span>
             </div>
-        </div>
-    </div>
+            <h3 class="gv-box__title">{{ request_item.title }}</h3>
+            <div class="gv-box__meta" style="align-items: center">
+                <a href="{% url 'library:user_profile' request_item.user.id %}" style="display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-weight: 800">{% user_avatar request_item.user "sm" %}{{ request_item.user.username }}</a>
+                {% if request_item.steam_appid %}<a href="https://store.steampowered.com/app/{{ request_item.steam_appid }}/" target="_blank" rel="noopener">Steam AppID <b>{{ request_item.steam_appid }}</b> ↗</a>{% endif %}
+            </div>
+            {% if request_item.description %}<p class="gv-box__text">{{ request_item.description }}</p>{% endif %}
+            {% if request_item.steam_appid %}<p class="gv-field__hint">Опис, розробник, дата виходу й постер підтягнуться зі Steam, а гра з'явиться в бібліотеках усіх, у кого вона є в Steam.</p>{% endif %}
 
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <span>Очікують</span>
-            <b>{{ pending_requests|length }}</b>
-            <p>Заявки, які ще не перевірені</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Схвалені</span>
-            <b>{{ approved_requests|length }}</b>
-            <p>Останні схвалені заявки</p>
-        </div>
-
-        <div class="stat-card">
-            <span>Відхилені</span>
-            <b>{{ rejected_requests|length }}</b>
-            <p>Останні відхилені заявки</p>
-        </div>
-    </div>
-
-    <div class="dashboard-section">
-        <div class="section-head">
-            <h2>Очікують перевірки</h2>
-            <span>Нові заявки від користувачів</span>
-        </div>
-
-        <div class="moderation-grid">
-            {% for request_item in pending_requests %}
-            <article class="moderation-card">
-                <div class="moderation-card-head">
-                    <span class="request-status status-pending">Очікує</span>
-                    <small>{{ request_item.created_at }}</small>
+            <form method="post" action="{% url 'library:approve_request' request_item.id %}" class="gv-form" style="gap: 12px">
+                {% csrf_token %}
+                <fieldset class="gv-field">
+                    <div class="gv-field__head">
+                        <span>Жанри</span>
+                        <a href="{% url 'library:admin_genre_list' %}">Керувати жанрами</a>
+                    </div>
+                    <div class="gv-chips--wrap">
+                        {% for genre in genres %}
+                        <label class="gv-chip-check"><input type="checkbox" name="genres" value="{{ genre.id }}"><span>{{ genre.name }}</span></label>
+                        {% empty %}
+                        <p class="gv-field__hint">Жанрів ще немає.</p>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <div class="gv-box__actions">
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary">Схвалити</button>
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--danger" formaction="{% url 'library:reject_request' request_item.id %}">Відхилити</button>
                 </div>
+            </form>
+        </article>
+        {% empty %}
+        <div class="gv-empty" style="grid-column: 1 / -1">
+            <h3>Нових заявок немає</h3>
+            <p>Нові пропозиції користувачів з'являться тут.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
 
-                <h3>{{ request_item.title }}</h3>
-
-                <p>
-                    {% if request_item.description %}
-                    {{ request_item.description }}
-                    {% else %}
-                    Опис відсутній.
-                    {% endif %}
-                </p>
-
-                <div class="moderation-meta">
-                    <div>
-                        <span>Автор заявки</span>
-                        <b>{{ request_item.user.username }}</b>
-                    </div>
-
-                    <div>
-                        <span>Email</span>
-                        <b>{{ request_item.user.email }}</b>
-                    </div>
-
-                    {% if request_item.steam_appid %}
-                    <div>
-                        <span>Steam</span>
-                        <b>
-                            <a href="https://store.steampowered.com/app/{{ request_item.steam_appid }}/" target="_blank"
-                                rel="noopener">AppID {{ request_item.steam_appid }}</a>
-                        </b>
-                    </div>
-                    {% endif %}
+<div class="gv-row">
+    <section class="gv-card gv-grow" style="flex-basis: 420px" aria-labelledby="approved">
+        <div class="gv-section-head"><h2 id="approved">Останні схвалені</h2></div>
+        <div class="gv-list">
+            {% for request_item in approved_requests %}
+            <div class="gv-admin-row">
+                <div class="gv-admin-row__main">
+                    <b>{{ request_item.title }}</b>
+                    <span>{{ request_item.user.username }}{% if request_item.reviewed_at %} · {{ request_item.reviewed_at|date:"d.m.Y" }}{% endif %}{% if request_item.moderator %} · модератор {{ request_item.moderator.username }}{% endif %}</span>
                 </div>
-
-                {% if request_item.steam_appid %}
-                <p class="steam-note">
-                    Після схвалення опис, розробник, дата виходу та постер підтягнуться зі Steam,
-                    а гра з'явиться в бібліотеках усіх, у кого вона є в Steam.
-                </p>
-                {% endif %}
-
-                <form method="post" action="{% url 'library:approve_request' request_item.id %}"
-                    class="moderation-form">
-                    {% csrf_token %}
-
-                    <label>
-                        <span>Жанри гри</span>
-                        <a class="admin-genre-manage-link moderation-genre-link"
-                            href="{% url 'library:admin_genre_list' %}">
-                            Додати або змінити жанри
-                        </a>
-
-                        <div class="moderation-genres">
-                            {% for genre in genres %}
-                            <label>
-                                <input type="checkbox" name="genres" value="{{ genre.id }}">
-                                {{ genre.name }}
-                            </label>
-                            {% empty %}
-                            <p>Жанри ще не додані в базу.</p>
-                            {% endfor %}
-                        </div>
-                    </label>
-
-                    <div class="moderation-actions">
-                        <button type="submit">
-                            Схвалити
-                        </button>
-
-                        <button type="submit" class="link-button"
-                            formaction="{% url 'library:reject_request' request_item.id %}">
-                            Відхилити
-                        </button>
-                    </div>
-                </form>
-            </article>
+                <span class="gv-state gv-state--approved">Схвалено</span>
+            </div>
             {% empty %}
-            <div class="empty-card">
-                <h3>Нових заявок немає</h3>
-                <p>
-                    Усі заявки вже перевірені. Нові пропозиції користувачів
-                    з’являться в цьому блоці.
-                </p>
-            </div>
+            <p class="muted" style="font-weight: 600">Схвалених заявок поки немає.</p>
             {% endfor %}
         </div>
-    </div>
+    </section>
 
-    <div class="moderation-history-grid">
-        <section class="dashboard-section">
-            <div class="section-head">
-                <h2>Останні схвалені</h2>
-                <span>Додані до каталогу</span>
+    <section class="gv-card gv-grow" style="flex-basis: 420px" aria-labelledby="rejected">
+        <div class="gv-section-head"><h2 id="rejected">Останні відхилені</h2></div>
+        <div class="gv-list">
+            {% for request_item in rejected_requests %}
+            <div class="gv-admin-row">
+                <div class="gv-admin-row__main">
+                    <b>{{ request_item.title }}</b>
+                    <span>{{ request_item.user.username }}{% if request_item.reviewed_at %} · {{ request_item.reviewed_at|date:"d.m.Y" }}{% endif %}{% if request_item.moderator %} · модератор {{ request_item.moderator.username }}{% endif %}</span>
+                </div>
+                <span class="gv-state gv-state--rejected">Відхилено</span>
             </div>
-
-            <div class="history-list">
-                {% for request_item in approved_requests %}
-                <article class="history-card">
-                    <span class="request-status status-approved">Схвалено</span>
-
-                    <h3>{{ request_item.title }}</h3>
-
-                    <p>Автор: {{ request_item.user.username }}</p>
-
-                    {% if request_item.moderator %}
-                    <p>Модератор: {{ request_item.moderator.username }}</p>
-                    {% endif %}
-
-                    {% if request_item.reviewed_at %}
-                    <small>{{ request_item.reviewed_at }}</small>
-                    {% endif %}
-                </article>
-                {% empty %}
-                <p>Схвалених заявок поки що немає.</p>
-                {% endfor %}
-            </div>
-        </section>
-
-        <section class="dashboard-section">
-            <div class="section-head">
-                <h2>Останні відхилені</h2>
-                <span>Не додані до каталогу</span>
-            </div>
-
-            <div class="history-list">
-                {% for request_item in rejected_requests %}
-                <article class="history-card">
-                    <span class="request-status status-rejected">Відхилено</span>
-
-                    <h3>{{ request_item.title }}</h3>
-
-                    <p>Автор: {{ request_item.user.username }}</p>
-
-                    {% if request_item.moderator %}
-                    <p>Модератор: {{ request_item.moderator.username }}</p>
-                    {% endif %}
-
-                    {% if request_item.reviewed_at %}
-                    <small>{{ request_item.reviewed_at }}</small>
-                    {% endif %}
-                </article>
-                {% empty %}
-                <p>Відхилених заявок поки що немає.</p>
-                {% endfor %}
-            </div>
-        </section>
-    </div>
-
-</section>
+            {% empty %}
+            <p class="muted" style="font-weight: 600">Відхилених заявок поки немає.</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
 {% endblock %}

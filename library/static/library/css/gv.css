@@ -576,20 +576,29 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
     scrollbar-width: thin;
 }
 .gv-np-card {
-    scroll-snap-align: start; position: relative; display: block;
-    aspect-ratio: 460 / 215; border-radius: var(--r-md); overflow: hidden;
-    background: linear-gradient(135deg, var(--violet), #3DA5FF);
-    color: #F4F4F6;
+    scroll-snap-align: start; display: flex; flex-direction: column;
+    border-radius: var(--r-md); overflow: hidden;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    transition: border-color 0.2s ease, transform 0.2s ease;
 }
-.gv-np-card:hover { color: #F4F4F6; }
-.gv-np-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.25s ease; }
-.gv-np-card:hover img { transform: scale(1.04); }
-.gv-np-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10, 10, 14, 0.9) 0%, rgba(10, 10, 14, 0.15) 65%); }
-.gv-np-card__info { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: flex-end; gap: 10px; }
-.gv-np-card__info .gv-avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); }
-.gv-np-card__text { min-width: 0; display: flex; flex-direction: column; }
-.gv-np-card__text b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gv-np-card__text span { font-size: 12px; font-weight: 700; opacity: 0.85; }
+.gv-np-card:hover { color: var(--text); border-color: var(--accent); transform: translateY(-2px); }
+.gv-np-card__media {
+    position: relative; display: block; aspect-ratio: 460 / 215; overflow: hidden;
+    background: linear-gradient(135deg, var(--violet), #3DA5FF);
+}
+.gv-np-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.25s ease; }
+.gv-np-card:hover .gv-np-card__media img { transform: scale(1.04); }
+.gv-np-card__fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; text-align: center; font-family: var(--font-display); font-weight: 800; color: #F4F4F6; }
+.gv-np-card__hours {
+    position: absolute; z-index: 1; top: 8px; right: 8px; padding: 3px 9px; border-radius: var(--r-pill);
+    background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 800;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.gv-np-card__body { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.gv-np-card__title { font-weight: 800; font-size: 15px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-np-card__who { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; color: var(--muted); }
+.gv-np-card__who .gv-avatar { width: 26px; height: 26px; font-size: 11px; }
+.gv-np-card__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 
 /* Кільце відсотка збігу */
 .gv-ring { position: relative; flex: 0 0 auto; width: var(--ring-size, 64px); height: var(--ring-size, 64px); display: inline-grid; place-items: center; }
@@ -943,6 +952,149 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-lib-card__controls form:first-child { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; }
 .gv-lib-card__controls .gv-select { flex: 1 1 auto; min-width: 0; }
 
+
+/* ---------- Етап 4: форми, авторизація, заявки, Steam, адмінка ---------- */
+
+/* Форми */
+.gv-form { display: flex; flex-direction: column; gap: 16px; }
+.gv-form__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.gv-form__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 4px; }
+.gv-form__error { padding: 12px 16px; border-radius: var(--r-sm); background: var(--danger-bg); color: var(--danger); font-weight: 700; }
+.gv-field .gv-field__hint, .gv-field__hint { color: var(--muted); font-size: 12px; font-weight: 600; }
+.gv-field > .gv-password { font-size: inherit; font-weight: inherit; color: inherit; }
+.gv-field__head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.gv-field__head > span { font-size: 13px; font-weight: 700; color: var(--muted); }
+.gv-field__head a { font-size: 13px; font-weight: 700; color: var(--muted); }
+.gv-field__head a:hover { color: var(--accent-text); }
+fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
+.gv-chips--wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.gv-inline-form { display: flex; gap: 8px; align-items: stretch; min-width: 0; }
+.gv-inline-form .gv-input { flex: 1 1 auto; min-width: 0; }
+
+/* Поле пароля з кнопкою «Показати» */
+.gv-password { position: relative; }
+.gv-password .gv-input { padding-right: 104px; }
+.gv-password button {
+    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+    border: 0; border-radius: var(--r-pill); padding: 6px 12px;
+    background: var(--chip); color: var(--text); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+.gv-password button:hover { background: var(--surface-3); }
+
+/* Перемикач (чекбокс) з описом */
+.gv-switch { position: relative; display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: var(--r-md); background: var(--surface-2); cursor: pointer; }
+.gv-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.gv-switch__track {
+    flex: 0 0 auto; position: relative; width: 44px; height: 26px; margin-top: 1px;
+    border-radius: var(--r-pill); background: var(--surface-3); transition: background 0.15s ease;
+}
+.gv-switch__track::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--muted); transition: transform 0.15s ease, background 0.15s ease;
+}
+.gv-switch input:checked + .gv-switch__track { background: var(--accent); }
+.gv-switch input:checked + .gv-switch__track::after { transform: translateX(18px); background: #101014; }
+.gv-switch input:focus-visible + .gv-switch__track { outline: 3px solid var(--accent); outline-offset: 2px; }
+.gv-switch__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gv-switch__text b { font-size: 15px; }
+.gv-switch__text span { color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.45; }
+
+/* Завантаження файлу */
+.gv-file { position: relative; display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: var(--r-md); border: 2px dashed var(--line); cursor: pointer; transition: border-color 0.15s ease; }
+.gv-file:hover, .gv-file:focus-within { border-color: var(--accent); }
+.gv-file input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.gv-file__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gv-file__text b { font-size: 14px; }
+.gv-file__text span { color: var(--muted); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Вхід і реєстрація */
+.gv-auth { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--gap); align-items: stretch; max-width: 1180px; width: 100%; margin: clamp(8px, 3vw, 48px) auto 0; }
+.gv-auth__promo {
+    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+    padding: clamp(24px, 3vw, 52px); border-radius: var(--r-xl); background: var(--accent); color: #101014;
+}
+.gv-auth__promo h1 { font-size: clamp(30px, 3vw, 54px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.02; }
+.gv-auth__promo p { font-weight: 600; font-size: 16px; line-height: 1.5; max-width: 46ch; margin-top: 14px; }
+.gv-auth__perks { display: grid; gap: 10px; }
+.gv-auth__perks div { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--r-sm); background: rgba(16, 16, 20, 0.08); font-weight: 800; }
+.gv-auth__perks i { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-xs); background: #101014; color: #C8F031; font-style: normal; font-family: var(--font-display); font-size: 14px; }
+.gv-auth__deco { position: absolute; right: -40px; top: -40px; width: 180px; height: 180px; border-radius: 40px; border: 18px solid rgba(16, 16, 20, 0.08); transform: rotate(18deg); pointer-events: none; }
+.gv-auth__form { display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+.gv-auth__form h2 { font-size: clamp(22px, 1.4vw + 10px, 32px); font-weight: 800; }
+.gv-auth__switch { color: var(--muted); font-weight: 600; text-align: center; }
+.gv-auth__switch a { color: var(--accent-text); font-weight: 800; }
+
+/* Невелика картка-блок усередині gv-card */
+.gv-box { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--r-md); background: var(--surface-2); min-width: 0; }
+.gv-box__head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gv-box__title { font-size: 17px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+.gv-box__text { color: var(--muted); font-weight: 600; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.gv-box__meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.gv-box__meta b { color: var(--text); }
+.gv-box__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: auto; }
+.gv-grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--min, 320px)), 1fr)); gap: 12px; }
+
+/* Стан заявки */
+.gv-state { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 800; color: #101014; }
+.gv-state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+.gv-state--pending { background: #FFB547; }
+.gv-state--approved { background: #C8F031; }
+.gv-state--rejected { background: #FF8A7A; }
+
+/* Кроки (як це працює) */
+.gv-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: step; }
+.gv-steps li { counter-increment: step; display: grid; grid-template-columns: 38px 1fr; gap: 4px 14px; padding: 14px; border-radius: var(--r-md); background: var(--surface-2); }
+.gv-steps li::before {
+    content: counter(step); grid-row: span 2; display: grid; place-items: center; width: 38px; height: 38px;
+    border-radius: var(--r-xs); background: var(--accent); color: #101014; font-family: var(--font-display); font-weight: 800;
+}
+.gv-steps b { font-size: 15px; }
+.gv-steps span { color: var(--muted); font-size: 13px; font-weight: 600; }
+
+/* Steam-бібліотека: картка гри з діями (на основі gv-np-card) */
+.gv-steam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 16vw, 300px), 1fr)); gap: 12px; }
+.gv-np-card--static:hover { transform: none; border-color: var(--line); }
+.gv-np-card--static:hover .gv-np-card__media img { transform: none; }
+.gv-np-card--static .gv-np-card__media:hover img { transform: scale(1.04); }
+.gv-np-card--static .gv-np-card__body { flex: 1 1 auto; }
+.gv-np-card__title a { color: inherit; }
+.gv-np-card__title a:hover { color: var(--accent-text); }
+.gv-np-card__sub { color: var(--muted); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-np-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.gv-np-card__note { display: inline-flex; align-items: center; min-height: 36px; color: var(--muted); font-size: 13px; font-weight: 700; }
+
+/* Звичайна кнопка на тлі surface-2 (картки-блоки) — на тон світліша/темніша, щоб не зливалася. */
+:is(.gv-box, .gv-np-card, .gv-admin-row, .gv-switch) .gv-btn:not(.gv-btn--primary, .gv-btn--ghost, .gv-btn--danger, .gv-btn--inverse) { background: var(--surface-3); }
+:is(.gv-box, .gv-np-card, .gv-admin-row) .gv-btn:not(.gv-btn--primary, .gv-btn--ghost, .gv-btn--danger, .gv-btn--inverse):hover { background: var(--line); }
+:is(.gv-box, .gv-admin-row) .gv-input { background: var(--surface); }
+.gv-box .gv-chip-check span { background: var(--surface-3); }
+.gv-box .gv-chip-check span:hover { background: var(--line); }
+.gv-box .gv-chip-check input:checked + span { background: var(--text); }
+
+/* Рядок адмін-списку */
+.gv-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); }
+.gv-admin-row__main { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gv-admin-row__main > a, .gv-admin-row__main > b { font-weight: 800; font-size: 15px; overflow-wrap: anywhere; }
+.gv-admin-row__main > span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.gv-admin-row__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gv-admin-row__actions .gv-inline-form .gv-input { width: 150px; min-height: 36px; padding: 6px 12px; font-size: 13px; }
+
+/* Постер у формі гри */
+.gv-poster-preview { aspect-ratio: 3 / 4; border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); font-weight: 800; }
+.gv-poster-preview img { width: 100%; height: 100%; object-fit: cover; }
+.gv-poster-preview--wide { aspect-ratio: 460 / 215; }
+
+/* Сторінка «немає доступу» */
+.gv-denied { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; }
+.gv-denied__icon { flex: 0 0 auto; display: grid; place-items: center; width: clamp(84px, 7vw, 120px); aspect-ratio: 1; border-radius: var(--r-lg); background: var(--danger-bg); color: var(--danger); font-family: var(--font-display); font-weight: 800; font-size: clamp(40px, 3.4vw, 60px); }
+.gv-denied__body { flex: 1 1 360px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.gv-denied__body h1 { font-size: clamp(28px, 2.4vw, 46px); font-weight: 800; letter-spacing: -0.03em; }
+.gv-denied__body p { color: var(--muted); font-weight: 600; max-width: var(--measure); }
+
+@media (max-width: 900px) {
+    .gv-auth { grid-template-columns: minmax(0, 1fr); }
+    .gv-auth__perks { display: none; }
+}
 
 /* Планшет: меню переходить на окремий рядок під логотипом. */
 @media (max-width: 1024px) {

@@ -1,65 +1,17 @@
-{% extends 'library/base_legacy.html' %}
-{% load static %}
+{% extends 'library/base.html' %}
 
 {% block title %}Доступ заборонено | GameVault{% endblock %}
 
 {% block content %}
-<section class="access-page page-wide">
-
-    <div class="access-card">
-        <div class="access-icon">
-            !
-        </div>
-
-        <div class="access-content">
-            <div class="subtitle">Обмежений доступ</div>
-
-            <h1>Доступ заборонено</h1>
-
-            <p>
-                Ця сторінка доступна лише користувачам із роллю адміністратора.
-                Якщо вам потрібен доступ до модерації, зверніться до адміністратора системи
-                або увійдіть під акаунтом із відповідними правами.
-            </p>
-
-            <div class="access-actions">
-                <a class="pseudo-button" href="{% url 'library:home' %}">
-                    <span>На головну</span>
-                </a>
-
-                <a class="access-link" href="{% url 'library:profile' %}">
-                    До профілю
-                </a>
-            </div>
+<section class="gv-card gv-denied">
+    <div class="gv-denied__icon" aria-hidden="true">!</div>
+    <div class="gv-denied__body">
+        <h1>Доступ заборонено</h1>
+        <p>Ця сторінка доступна лише адміністраторам: тут модерація заявок, керування каталогом і жанрами. Якщо доступ вам потрібен, зверніться до адміністратора.</p>
+        <div class="gv-page-head__actions">
+            <a class="gv-btn gv-btn--primary" href="{% url 'library:home' %}">На головну</a>
+            <a class="gv-btn gv-btn--ghost" href="{% url 'library:profile' %}">До профілю</a>
         </div>
     </div>
-
-    <div class="dashboard-section">
-        <div class="section-head">
-            <h2>Чому доступ обмежено?</h2>
-            <span>Система ролей</span>
-        </div>
-
-        <div class="access-info-grid">
-            <article>
-                <span>User</span>
-                <h3>Звичайний користувач</h3>
-                <p>
-                    Може переглядати каталог, додавати ігри до бібліотеки,
-                    залишати рецензії, подавати заявки та користуватися рекомендаціями.
-                </p>
-            </article>
-
-            <article>
-                <span>Admin</span>
-                <h3>Адміністратор</h3>
-                <p>
-                    Має доступ до модерації заявок, може схвалювати або відхиляти
-                    запропоновані ігри та додавати їх до каталогу.
-                </p>
-            </article>
-        </div>
-    </div>
-
 </section>
 {% endblock %}
