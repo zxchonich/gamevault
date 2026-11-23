@@ -17,6 +17,22 @@ def status_label_other(status):
     return get_status_label(status, other=True)
 
 
+@register.simple_tag
+def static_v(path):
+    """{% static_v 'library/css/gv.css' %} — URL статики з ?v=<час зміни файлу>,
+    щоб браузер не тримав стару закешовану версію після оновлення стилів."""
+    import os
+
+    from django.contrib.staticfiles import finders
+    from django.templatetags.static import static
+
+    url = static(path)
+    found = finders.find(path)
+    if found:
+        url = f"{url}?v={int(os.path.getmtime(found))}"
+    return url
+
+
 # --- Компоненти нового дизайну --------------------------------------------------
 
 AVATAR_COLORS = ["#7C5CFF", "#2F9E6E", "#E0533F", "#2A7FD4", "#C2418F", "#B7791F"]
