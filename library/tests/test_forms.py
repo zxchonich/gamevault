@@ -84,4 +84,6 @@ class FormValidationTests(GameVaultTestCase):
         self.make_entry(alice, self.make_game("Hades"), status="completed")
         self.login(alice)
 
-        self.assertContains(self.client.get(reverse("library:profile")), "<span>Пройдено</span>")
+        response = self.client.get(reverse("library:profile"))
+        self.assertContains(response, ">Пройдено</span>")
+        self.assertNotContains(response, ">completed<")

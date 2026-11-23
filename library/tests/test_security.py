@@ -157,3 +157,22 @@ class AnonymousAccessTests(GameVaultTestCase):
 
         self.assertIn("Не можна додати в друзі самого себе.", self.messages_of(response))
 
+
+
+class EmailPrivacyTests(GameVaultTestCase):
+    def test_other_users_emails_are_not_shown(self):
+        alice, bob = self.make_user("alice"), self.make_user("bob")
+        self.make_friends(alice, bob)
+        self.make_entry(bob, self.make_game("Hades"))
+        self.login(alice)
+
+        pages = ["library:home", "library:user_list", "library:friends", "library:feed"]
+        urls = [reverse(name) for name in pages] + [
+            reverse("library:user_profile", args=[bob.id]),
+            reverse("library:user_library", args=[bob.id]),
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertNotContains(self.client.get(url), bob.email)
+
+        self.assertContains(self.client.get(reverse("library:profile")), alice.email)

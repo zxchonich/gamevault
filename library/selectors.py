@@ -157,8 +157,18 @@ def profile_stats(user):
         "review_count": reviews.count(),
         "friends_count": len(friend_ids(user)),
         "average_score": reviews.aggregate(avg=models.Avg("score"))["avg"] or 0,
-        "recent_entries": entries[:4],
-        "recent_reviews": reviews[:3],
+        "recent_entries": entries[:8],
+        "recent_reviews": reviews[:4],
+        "status_breakdown": [
+            {
+                "status": status,
+                "label": STATUS_LABELS[status],
+                "count": count,
+                "percent": round(count / library_count * 100) if library_count else 0,
+                "color": STATUS_COLORS[status],
+            }
+            for status, count in counts.items()
+        ],
     }
     for status, count in counts.items():
         stats[f"{status}_count"] = count

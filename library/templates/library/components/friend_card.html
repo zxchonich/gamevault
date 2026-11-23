@@ -1,0 +1,15 @@
+{% load library_extras %}{% comment %}Картка друга: friend, connection.{% endcomment %}
+<article class="gv-user-card">
+    <a class="gv-user-card__head" href="{% url 'library:user_profile' friend.id %}">
+        {% user_avatar friend %}
+        <span class="gv-user-card__name">{{ friend.username }}</span>
+    </a>
+    <div class="gv-user-card__actions">
+        <a class="gv-btn gv-btn--sm gv-btn--inverse" href="{% url 'library:user_library' friend.id %}">Бібліотека</a>
+        <a class="gv-btn gv-btn--sm" href="{% url 'library:user_profile' friend.id %}">Профіль</a>
+        <form method="post" action="{% url 'library:delete_connection' connection.id %}">
+            {% csrf_token %}
+            <button type="submit" class="gv-btn gv-btn--sm gv-btn--danger" onclick="return confirm('Видалити {{ friend.username|escapejs }} з друзів?');">Видалити</button>
+        </form>
+    </div>
+</article>

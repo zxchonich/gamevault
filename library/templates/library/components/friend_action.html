@@ -1,0 +1,22 @@
+{% comment %}Стан дружби з користувачем other: {% include 'library/components/friend_action.html' with other=profile_user connection=connection %}{% endcomment %}
+{% if connection.status == 'accepted' %}
+<span class="gv-chip gv-chip--accent">✓ Ви друзі</span>
+{% elif connection.status == 'pending' and connection.receiver_id == current_library_user.id %}
+<form method="post" action="{% url 'library:accept_connection' connection.id %}">
+    {% csrf_token %}
+    <button type="submit" class="gv-btn gv-btn--primary">Прийняти заявку</button>
+</form>
+<form method="post" action="{% url 'library:reject_connection' connection.id %}">
+    {% csrf_token %}
+    <button type="submit" class="gv-btn gv-btn--ghost">Відхилити</button>
+</form>
+{% elif connection.status == 'pending' %}
+<span class="gv-chip">Заявку надіслано</span>
+{% elif connection.status == 'rejected' %}
+<span class="gv-chip">Заявку відхилено</span>
+{% else %}
+<form method="post" action="{% url 'library:add_friend' other.id %}">
+    {% csrf_token %}
+    <button type="submit" class="gv-btn gv-btn--primary">+ Додати в друзі</button>
+</form>
+{% endif %}

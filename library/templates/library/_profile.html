@@ -1,0 +1,171 @@
+{% load library_extras %}{% comment %}
+Тіло профілю (свій — profile.html, чужий — user_profile.html).
+Контекст: profile_user, is_own_profile, connection, статистика з selectors.profile_stats,
+steam_summary, recent_activity.
+{% endcomment %}
+<section class="gv-profile-head">
+    {% user_avatar profile_user "lg" %}
+    <div class="gv-profile-head__body">
+        <div class="gv-chips">
+            {% if profile_user.role.name == 'admin' %}<span class="gv-chip gv-chip--accent">Адміністратор</span>{% endif %}
+            {% if profile_user.is_private %}<span class="gv-chip">Закритий профіль</span>{% endif %}
+        </div>
+        <h1 class="gv-profile-head__name">{{ profile_user.username }}</h1>
+        <p class="gv-profile-head__sub">
+            У GameVault з {{ profile_user.created_at|date:"d.m.Y" }}{% if is_own_profile %} · {{ profile_user.email }}{% endif %}
+        </p>
+    </div>
+    <div class="gv-profile-head__actions">
+        {% if is_own_profile %}
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:edit_profile' %}">Налаштування</a>
+        <a class="gv-btn gv-btn--primary" href="{% url 'library:my_library' %}">Моя бібліотека</a>
+        {% else %}
+        {% include 'library/components/friend_action.html' with other=profile_user connection=connection %}
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:user_library' profile_user.id %}">Бібліотека</a>
+        {% endif %}
+    </div>
+</section>
+
+<div class="gv-stats">
+    <a class="gv-stat" href="{% if is_own_profile %}{% url 'library:my_library' %}{% else %}{% url 'library:user_library' profile_user.id %}{% endif %}"><span>Ігор</span><b>{{ library_count }}</b></a>
+    <div class="gv-stat"><span>Пройдено</span><b>{{ completed_count }}</b></div>
+    <div class="gv-stat"><span>Рецензій</span><b>{{ review_count }}</b></div>
+    <div class="gv-stat"><span>Середня оцінка</span><b>{% if review_count %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</b></div>
+    <div class="gv-stat"><span>Друзів</span><b>{{ friends_count }}</b></div>
+    {% if steam_summary %}<div class="gv-stat"><span>Годин у Steam</span><b>{{ steam_summary.total_hours }}</b></div>{% endif %}
+</div>
+
+<div class="gv-row">
+    <div class="gv-grow" style="display: flex; flex-direction: column; gap: var(--gap)">
+        <section class="gv-card" aria-labelledby="progress">
+            <div class="gv-section-head"><h2 id="progress">Прогрес бібліотеки</h2></div>
+            {% if library_count %}
+            <div class="gv-stack-bar" aria-hidden="true">
+                {% for s in status_breakdown %}{% if s.count %}<span style="width: {{ s.percent }}%; background: {{ s.color }}"></span>{% endif %}{% endfor %}
+            </div>
+            <div class="gv-legend" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 20px">
+                {% for s in status_breakdown %}
+                <div><i style="background: {{ s.color }}"></i>{% if is_own_profile %}{{ s.label }}{% else %}{{ s.status|status_label_other }}{% endif %}<b>{{ s.count }}</b><em>{{ s.percent }}%</em></div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted" style="font-weight: 600">Бібліотека поки порожня.</p>
+            {% endif %}
+        </section>
+
+        <section class="gv-card" aria-labelledby="recent-games">
+            <div class="gv-section-head">
+                <h2 id="recent-games">Нещодавно додані</h2>
+                <a class="gv-link" href="{% if is_own_profile %}{% url 'library:my_library' %}{% else %}{% url 'library:user_library' profile_user.id %}{% endif %}">Уся бібліотека →</a>
+            </div>
+            <div class="gv-game-grid">
+                {% for entry in recent_entries %}
+                <a class="gv-game-tile" href="{% url 'library:game_detail' entry.game.id %}">
+                    {% game_cover entry.game %}
+                    <span class="gv-game-tile__title">{{ entry.game.title }}</span>
+                    <span class="gv-game-tile__sub">{% if is_own_profile %}{{ entry.status|status_label }}{% else %}{{ entry.status|status_label_other }}{% endif %}</span>
+                </a>
+                {% empty %}
+                <div class="gv-empty">
+                    <h3>Ігор поки немає</h3>
+                    {% if is_own_profile %}<a class="gv-btn gv-btn--primary" href="{% url 'library:game_list' %}">Відкрити каталог</a>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="gv-card" aria-labelledby="recent-reviews">
+            <div class="gv-section-head">
+                <h2 id="recent-reviews">Останні рецензії</h2>
+                {% if is_own_profile %}<a class="gv-link" href="{% url 'library:my_reviews' %}">Усі рецензії →</a>{% endif %}
+            </div>
+            <div class="gv-list">
+                {% for review in recent_reviews %}
+                <a class="gv-list-item" href="{% url 'library:game_detail' review.game.id %}">
+                    {% game_cover review.game "sm" %}
+                    <span class="gv-list-item__body">
+                        <span class="gv-list-item__title">{{ review.game.title }}</span>
+                        <span class="gv-list-item__sub">{% if review.text %}{{ review.text|truncatechars:140 }}{% else %}Без тексту{% endif %}</span>
+                    </span>
+                    <span class="gv-chip gv-chip--accent">{{ review.score }}/10</span>
+                </a>
+                {% empty %}
+                <div class="gv-empty"><h3>Рецензій поки немає</h3></div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <div class="gv-side" style="display: flex; flex-direction: column; gap: var(--gap)">
+        {% if steam_summary or is_own_profile %}
+        <section class="gv-card gv-card--tight" aria-labelledby="steam">
+            <div class="gv-section-head">
+                <h2 id="steam">Steam</h2>
+                {% if steam_summary %}<a class="gv-link" href="{{ steam_summary.account.profile_url }}" target="_blank" rel="noopener">{{ steam_summary.account.username }} ↗</a>{% endif %}
+            </div>
+            {% if steam_summary %}
+            <p class="muted" style="font-weight: 600; margin-bottom: 14px">
+                {{ steam_summary.games_count }} ігор · {{ steam_summary.total_hours }} год
+                {% if is_own_profile and steam_summary.last_synced_at %}<br>Синхронізовано {{ steam_summary.last_synced_at|date:"d.m.Y H:i" }}{% endif %}
+            </p>
+            {% if steam_summary.recent_games %}
+            <p class="gv-label" style="margin-bottom: 8px">Нещодавно грав</p>
+            <div class="gv-now-playing" style="grid-template-columns: 1fr">
+                {% for item in steam_summary.recent_games %}
+                <a class="steam-mini-card" href="{{ item.store_url }}" target="_blank" rel="noopener">
+                    <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
+                    <div><b>{{ item.game_title }}</b><span>{{ item.playtime_2weeks_hours }} год за 2 тижні</span></div>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if steam_summary.top_games %}
+            <p class="gv-label" style="margin-bottom: 8px">Найбільше годин</p>
+            <div class="gv-now-playing" style="grid-template-columns: 1fr">
+                {% for item in steam_summary.top_games %}
+                <a class="steam-mini-card" href="{{ item.store_url }}" target="_blank" rel="noopener">
+                    <img src="{{ item.cover_url }}" alt="" loading="lazy" onerror="this.remove()">
+                    <div><b>{{ item.game_title }}</b><span>{{ item.playtime_hours }} год</span></div>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                {% if is_own_profile %}
+                <a class="gv-btn gv-btn--sm gv-btn--inverse" href="{% url 'library:steam_library' %}">Steam-бібліотека</a>
+                <form method="post" action="{% url 'library:steam_sync_library' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="gv-btn gv-btn--sm">Синхронізувати</button>
+                </form>
+                <form method="post" action="{% url 'library:steam_disconnect' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--danger" onclick="return confirm('Відв\'язати Steam? Імпортовані ігри Steam буде видалено, бібліотека GameVault залишиться.');">Відв'язати</button>
+                </form>
+                {% else %}
+                <a class="gv-btn gv-btn--sm gv-btn--inverse" href="{% url 'library:user_steam_library' profile_user.id %}">Steam-бібліотека</a>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="muted" style="font-weight: 600; margin-bottom: 14px">Підключіть Steam, щоб імпортувати ігри, бачити години в іграх і отримувати точніші рекомендації.</p>
+            <a class="gv-btn gv-btn--primary" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if recent_activity or is_own_profile %}
+        <section class="gv-card gv-card--tight" aria-labelledby="activity">
+            <div class="gv-section-head">
+                <h2 id="activity">Остання активність</h2>
+                {% if is_own_profile %}<a class="gv-link" href="{% url 'library:feed' %}">Уся стрічка</a>{% endif %}
+            </div>
+            <div class="gv-feed">
+                {% for item in recent_activity %}
+                {% include 'library/_feed_item.html' %}
+                {% empty %}
+                <p class="muted" style="font-weight: 600">Активності поки немає.</p>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
