@@ -162,3 +162,7 @@ else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'GameVault <noreply@gamevault.local>')
 EMAIL_TIMEOUT = 15
+
+# Вхід через Google (OAuth-клієнт у Google Cloud Console). Порожні — кнопка Google прихована.
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')

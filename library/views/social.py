@@ -21,6 +21,7 @@ from ..storage import delete_unused_file
 from ..services import activity
 from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
+from ..services.social_auth import can_remove_login_method
 from ..services.steam_service import get_steam_summary
 
 SUGGESTED_USERS = 3
@@ -262,4 +263,11 @@ def edit_profile(request):
 
         error = form.first_error()
 
-    return render(request, "library/edit_profile.html", {"user": user, "error": error})
+    accounts = {account.provider: account for account in user.external_accounts.all()}
+    return render(request, "library/edit_profile.html", {
+        "user": user,
+        "error": error,
+        "steam_account": accounts.get("steam"),
+        "google_account": accounts.get("google"),
+        "can_remove": {method: can_remove_login_method(user, method) for method in ("steam", "google")},
+    })

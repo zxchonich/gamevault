@@ -47,10 +47,12 @@
 
         <section class="gv-card gv-form" aria-labelledby="password">
             <div class="gv-section-head">
-                <h2 id="password">Пароль</h2>
+                <h2 id="password">{% if user.has_usable_password %}Пароль{% else %}Задати пароль{% endif %}</h2>
                 <p style="margin: 0">Щонайменше 8 символів · залиште порожнім, якщо не змінюєте</p>
             </div>
+            {% if not user.has_usable_password %}<p class="gv-field__hint">Зараз ви входите через {% if steam_account %}Steam{% endif %}{% if steam_account and google_account %} або {% endif %}{% if google_account %}Google{% endif %}. З паролем і підтвердженим email зможете входити й за логіном.</p>{% endif %}
             <div class="gv-form__grid">
+                {% if user.has_usable_password %}
                 <label class="gv-field">
                     <span>Поточний пароль</span>
                     <span class="gv-password">
@@ -58,6 +60,7 @@
                         <button type="button" aria-pressed="false">Показати</button>
                     </span>
                 </label>
+                {% endif %}
                 <label class="gv-field">
                     <span>Новий пароль</span>
                     <span class="gv-password">
@@ -99,20 +102,51 @@
             </label>
         </section>
 
-        <section class="gv-card gv-form" aria-labelledby="steam">
-            <div class="gv-section-head"><h2 id="steam">Steam</h2></div>
-            {% with account=user.external_accounts.first %}
-            {% if account %}
-            <p class="muted" style="font-weight: 600">Підключено{% if account.username %}: <b style="color: var(--text)">{{ account.username }}</b>{% endif %}.</p>
-            <a class="gv-btn" href="{% url 'library:steam_library' %}">Відкрити Steam-бібліотеку</a>
-            {% else %}
-            <p class="muted" style="font-weight: 600">Підключіть Steam, щоб імпортувати ігри й години.</p>
-            <a class="gv-btn" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
-            {% endif %}
-            {% endwith %}
+        <section class="gv-card gv-form" aria-labelledby="methods">
+            <div class="gv-section-head"><h2 id="methods">Способи входу</h2></div>
+            <div class="gv-list gv-methods">
+                <div class="gv-admin-row">
+                    <span class="gv-method-icon" aria-hidden="true">{% icon "key" 18 %}</span>
+                    <div class="gv-admin-row__main">
+                        <b>Логін і пароль</b>
+                        <span>{% if not user.has_usable_password %}Пароль не задано{% elif not user.is_email_verified %}Потрібен підтверджений email{% else %}Увімкнено{% endif %}</span>
+                    </div>
+                </div>
+                <div class="gv-admin-row">
+                    <span class="gv-method-icon gv-method-icon--steam" aria-hidden="true">{% icon "steam" 18 %}</span>
+                    <div class="gv-admin-row__main">
+                        <b>Steam</b>
+                        <span>{% if steam_account %}{{ steam_account.username|default:"Підключено" }}{% else %}Не підключено{% endif %}</span>
+                    </div>
+                    {% if steam_account %}
+                    <button type="submit" form="disconnect-steam" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--danger" title="{% if can_remove.steam %}Відключити Steam{% else %}Це єдиний спосіб входу{% endif %}" aria-label="Відключити Steam" {% if not can_remove.steam %}disabled{% endif %} onclick="return confirm('Відв\'язати Steam? Імпортовані ігри Steam буде видалено, бібліотека GameVault залишиться.');">{% icon "unlink" 16 %}</button>
+                    {% else %}
+                    <a class="gv-btn gv-btn--sm" href="{% url 'library:steam_connect' %}">Підключити</a>
+                    {% endif %}
+                </div>
+                {% if google_login_enabled or google_account %}
+                <div class="gv-admin-row">
+                    <span class="gv-method-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg></span>
+                    <div class="gv-admin-row__main">
+                        <b>Google</b>
+                        <span>{% if google_account %}{{ google_account.username|default:"Підключено" }}{% else %}Не підключено{% endif %}</span>
+                    </div>
+                    {% if google_account %}
+                    <button type="submit" form="disconnect-google" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--danger" title="{% if can_remove.google %}Відключити Google{% else %}Це єдиний спосіб входу{% endif %}" aria-label="Відключити Google" {% if not can_remove.google %}disabled{% endif %}>{% icon "unlink" 16 %}</button>
+                    {% else %}
+                    <a class="gv-btn gv-btn--sm" href="{% url 'library:google_connect' %}">Підключити</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <p class="gv-field__hint">Останній спосіб входу відключити не можна.</p>
         </section>
 
         <button class="gv-btn gv-btn--primary gv-btn--lg" type="submit">Зберегти зміни</button>
     </aside>
 </form>
+
+{# Окремі форми для кнопок «Відключити» (вкладати форми в головну не можна — кнопки посилаються на них через form=). #}
+<form id="disconnect-steam" method="post" action="{% url 'library:steam_disconnect' %}" hidden>{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"></form>
+<form id="disconnect-google" method="post" action="{% url 'library:google_disconnect' %}" hidden>{% csrf_token %}</form>
 {% endblock %}

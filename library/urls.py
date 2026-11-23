@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import accounts, catalog, catalog_admin, discover, library, moderation, social, steam
+from .views import accounts, catalog, catalog_admin, discover, google, library, moderation, social, steam
 
 app_name = 'library'
 
@@ -61,6 +61,9 @@ urlpatterns = [
     path('manage/genres/<int:genre_id>/delete/', catalog_admin.admin_genre_delete, name='admin_genre_delete'),
 
     # Steam
+    path("google/connect/", google.google_connect, name="google_connect"),
+    path("google/callback/", google.google_callback, name="google_callback"),
+    path("google/disconnect/", google.google_disconnect, name="google_disconnect"),
     path("steam/connect/", steam.steam_connect, name="steam_connect"),
     path("steam/callback/", steam.steam_callback, name="steam_callback"),
     path("steam/disconnect/", steam.steam_disconnect, name="steam_disconnect"),

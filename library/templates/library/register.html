@@ -18,7 +18,11 @@
     </div>
 
     <div class="gv-card gv-auth__form">
-        <h2>Новий акаунт</h2>
+        <div>
+            <h2>Новий акаунт</h2>
+            <p class="gv-field__hint" style="margin-top: 6px">Через Steam чи Google — в один клік, без форм: логін, email і пароль зміните потім у налаштуваннях.</p>
+        </div>
+        {% include 'library/components/social_buttons.html' %}
 
         <form method="post" class="gv-form">
             {% csrf_token %}

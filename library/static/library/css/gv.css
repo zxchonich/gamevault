@@ -1042,6 +1042,14 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
 .gv-auth-single__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .gv-auth-single__actions form { display: contents; }
 
+/* Вхід через Steam / Google */
+.gv-social { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.gv-social__btn { background: var(--surface-2); }
+.gv-social__btn--steam { background: #2A475E; color: #FFFFFF; }
+.gv-social__btn--steam:hover { background: #3B6585; color: #FFFFFF; }
+.gv-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.gv-divider::before, .gv-divider::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--line); }
+
 /* Невелика картка-блок усередині gv-card */
 .gv-box { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--r-md); background: var(--surface-2); min-width: 0; }
 .gv-box__head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1103,6 +1111,12 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
 .gv-admin-row__main > span { color: var(--muted); font-size: 13px; font-weight: 600; }
 .gv-admin-row__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .gv-admin-row__actions .gv-inline-form .gv-input { width: 150px; min-height: 36px; padding: 6px 12px; font-size: 13px; }
+
+.gv-method-icon { flex: 0 0 auto; display: grid; place-items: center; width: 38px; height: 38px; border-radius: var(--r-xs); background: var(--surface-3); }
+.gv-method-icon--steam { background: #2A475E; color: #FFFFFF; }
+.gv-methods .gv-admin-row { flex-wrap: nowrap; }
+.gv-methods .gv-admin-row__main { flex: 1 1 auto; }
+.gv-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 /* Постер у формі гри */
 .gv-poster-preview { aspect-ratio: 3 / 4; border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); font-weight: 800; }

@@ -8,10 +8,18 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from ..access import admin_required, can_view_profile, library_login_required, redirect_to_next
+from ..access import (
+    admin_required,
+    can_view_profile,
+    get_current_user,
+    library_login_required,
+    log_in,
+    redirect_to_next,
+)
 from ..models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry, User
 from ..selectors import get_status_label
 from ..services import activity
+from ..services.social_auth import can_remove_login_method, create_social_user
 from ..services.steam_service import (
     SteamError,
     attach_steam_apps,
@@ -54,49 +62,46 @@ def _sync_and_report(request, user, steam_account):
 
 # --- Підключення та синхронізація ---------------------------------------------
 
-@library_login_required
 def steam_connect(request):
-    user = request.library_user
-
+    """Увійти / зареєструватися через Steam (гість) або прив'язати Steam (увійшов)."""
     return redirect(build_steam_login_url(request))
 
 
-@library_login_required
+def _steam_account_defaults(steam_id, steam_profile):
+    return {
+        "username": steam_profile["username"] if steam_profile else f"Steam user {steam_id}",
+        "profile_url": steam_profile["profile_url"] if steam_profile else f"https://steamcommunity.com/profiles/{steam_id}",
+        "avatar_url": steam_profile["avatar_url"] if steam_profile else None,
+    }
+
+
 def steam_callback(request):
-    user = request.library_user
+    user = get_current_user(request)
+    fail_redirect = "library:profile" if user else "library:login"
 
     if not validate_steam_openid_response(request):
         messages.error(request, "Не вдалося підтвердити вхід через Steam. Спробуйте ще раз.")
-        return redirect("library:profile")
+        return redirect(fail_redirect)
 
     steam_id = extract_steam_id_from_openid(request)
 
     if not steam_id:
         messages.error(request, "Steam повернув некоректний ідентифікатор акаунта.")
-        return redirect("library:profile")
+        return redirect(fail_redirect)
 
-    linked_to_other_user = (
-        ExternalAccount.objects
-        .filter(provider="steam", external_user_id=steam_id)
-        .exclude(user=user)
-        .exists()
-    )
+    existing = ExternalAccount.objects.select_related("user").filter(provider="steam", external_user_id=steam_id).first()
 
-    if linked_to_other_user:
+    if user is None:
+        return _steam_login_or_signup(request, steam_id, existing)
+
+    if existing and existing.user_id != user.id:
         messages.error(request, "Цей Steam-акаунт уже прив'язаний до іншого користувача GameVault.")
         return redirect("library:profile")
-
-    steam_profile = get_steam_profile(steam_id)
 
     steam_account, _ = ExternalAccount.objects.update_or_create(
         user=user,
         provider="steam",
-        defaults={
-            "external_user_id": steam_id,
-            "username": steam_profile["username"] if steam_profile else f"Steam user {steam_id}",
-            "profile_url": steam_profile["profile_url"] if steam_profile else f"https://steamcommunity.com/profiles/{steam_id}",
-            "avatar_url": steam_profile["avatar_url"] if steam_profile else None,
-        }
+        defaults={"external_user_id": steam_id, **_steam_account_defaults(steam_id, get_steam_profile(steam_id))},
     )
 
     messages.success(request, "Steam-акаунт підключено.")
@@ -107,10 +112,42 @@ def steam_callback(request):
     return redirect("library:steam_library")
 
 
+def _steam_login_or_signup(request, steam_id, existing):
+    """Гість: вхід у прив'язаний акаунт або новий акаунт зі Steam в один клік."""
+    if existing:
+        log_in(request, existing.user)
+        return redirect("library:home")
+
+    steam_profile = get_steam_profile(steam_id)
+    defaults = _steam_account_defaults(steam_id, steam_profile)
+    user = create_social_user(
+        "steam",
+        steam_id,
+        username_hint=steam_profile["username"] if steam_profile else "",
+        avatar_url=(steam_profile or {}).get("avatar_url"),
+        account_defaults=defaults,
+    )
+    log_in(request, user)
+    messages.success(
+        request,
+        f"Акаунт {user.username} створено через Steam. Логін, email і пароль можна змінити в налаштуваннях.",
+    )
+    _sync_and_report(request, user, user.external_accounts.get(provider="steam"))
+    return redirect("library:profile")
+
+
 @require_POST
 @library_login_required
 def steam_disconnect(request):
     user = request.library_user
+
+    if not can_remove_login_method(user, "steam"):
+        messages.error(
+            request,
+            "Steam — єдиний спосіб входу в цей акаунт. Спершу задайте пароль і підтвердіть email "
+            "або підключіть Google у налаштуваннях.",
+        )
+        return redirect_to_next(request, "library:profile")
 
     # Імпортовані ігри Steam (external_library_items) видаляються каскадно;
     # записи в бібліотеці GameVault залишаються.

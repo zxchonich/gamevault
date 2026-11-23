@@ -19,6 +19,7 @@
 
     <div class="gv-card gv-auth__form">
         <h2>Вхід</h2>
+        {% include 'library/components/social_buttons.html' %}
 
         <form method="post" class="gv-form">
             {% csrf_token %}
