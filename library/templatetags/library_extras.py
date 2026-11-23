@@ -1,6 +1,6 @@
 from django import template
 
-from library.selectors import get_status_label
+from library.selectors import cover_colors, get_status_label
 
 register = template.Library()
 
@@ -19,23 +19,13 @@ def status_label_other(status):
 
 # --- Компоненти нового дизайну --------------------------------------------------
 
-# Кольори плашок для ігор без постера: (фон, текст). Колір стабільний для гри (за id).
-COVER_PALETTE = [
-    ("#7C5CFF", "#FFFFFF"),
-    ("#FFB547", "#17151F"),
-    ("#4CD6A0", "#17151F"),
-    ("#FF6B5A", "#17151F"),
-    ("#3DA5FF", "#17151F"),
-    ("#FF7AC6", "#17151F"),
-]
-
 AVATAR_COLORS = ["#7C5CFF", "#2F9E6E", "#E0533F", "#2A7FD4", "#C2418F", "#B7791F"]
 
 
 @register.inclusion_tag("library/components/cover.html")
 def game_cover(game, size=""):
     """{% game_cover game %} — постер гри або кольорова плашка з назвою."""
-    bg, ink = COVER_PALETTE[(game.id or 0) % len(COVER_PALETTE)]
+    bg, ink = cover_colors(game)
     return {"game": game, "size": size, "bg": bg, "ink": ink}
 
 

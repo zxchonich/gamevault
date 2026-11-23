@@ -6,7 +6,12 @@ from django.shortcuts import get_object_or_404, render
 
 from ..access import friend_ids, get_current_user
 from ..models import Game, Genre, LibraryEntry, Review, User
-from ..selectors import attach_visible_genres_to_entries, attach_visible_genres_to_games, get_status_label
+from ..selectors import (
+    attach_visible_genres_to_entries,
+    attach_visible_genres_to_games,
+    game_page_stats,
+    get_status_label,
+)
 from ..services import activity
 from ..services.recommendations import build_recommendations
 from ..services.steam_service import steam_items_by_appid
@@ -132,4 +137,5 @@ def game_detail(request, game_id):
         "reviews_count": reviews.count(),
         "user_review_status": "Додана" if user_review else "Не додана",
         "library_status_label": get_status_label(library_entry.status) if library_entry else None,
+        **game_page_stats(game, user),
     })

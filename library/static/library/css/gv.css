@@ -647,18 +647,82 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-tile-admin { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Сторінка гри */
-.gv-game { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-start; }
-.gv-game__aside { flex: 1 1 260px; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
-.gv-game__aside .gv-cover { width: 100%; box-shadow: var(--shadow); }
-.gv-game__aside .gv-btn { width: 100%; }
-.gv-game__main { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
-.gv-game__title { font-size: clamp(34px, 3.4vw, 64px); font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.gv-game-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-xl);
+    background: var(--hero-bg, var(--accent));
+    color: var(--hero-ink, #101014);
+    padding: clamp(22px, 2.6vw, 52px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(20px, 2.4vw, 48px);
+    align-items: center;
+}
 
-.gv-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+/* З картинкою: розмитий постер/обкладинка Steam як фон + затемнення для читабельності */
+.gv-game-hero.has-image { color: #F4F4F6; background: #101014; }
+.gv-game-hero__backdrop {
+    position: absolute;
+    inset: -40px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(28px) saturate(1.3);
+    opacity: 0.55;
+}
+.gv-game-hero.has-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(16, 16, 20, 0.92) 0%, rgba(16, 16, 20, 0.55) 60%, rgba(16, 16, 20, 0.35) 100%);
+}
+.gv-game-hero > *:not(.gv-game-hero__backdrop) { position: relative; z-index: 1; }
+
+.gv-game-hero__cover { flex: 0 0 clamp(160px, 15vw, 280px); }
+.gv-game-hero__cover .gv-cover { transform: rotate(-3deg); box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35); }
+.gv-game-hero__body { flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.gv-game-hero .gv-chip { background: rgba(16, 16, 20, 0.18); color: inherit; }
+.gv-game-hero.has-image .gv-chip { background: rgba(255, 255, 255, 0.14); }
+.gv-game-hero a.gv-chip:hover { color: inherit; background: rgba(16, 16, 20, 0.3); }
+.gv-game__title { font-size: clamp(36px, 4vw, 76px); font-weight: 800; letter-spacing: -0.04em; line-height: 0.95; overflow-wrap: anywhere; }
+
+.gv-game-hero__facts { display: flex; flex-wrap: wrap; gap: 10px 26px; }
+.gv-game-hero__facts div { display: flex; flex-direction: column; }
+.gv-game-hero__facts b { font-family: var(--font-display); font-size: clamp(22px, 1.6vw, 32px); font-weight: 800; letter-spacing: -0.02em; }
+.gv-game-hero__facts span { font-size: 13px; font-weight: 700; opacity: 0.75; }
+
+.gv-game-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.gv-game-hero__actions .gv-btn { background: #101014; color: #F4F4F6; }
+.gv-game-hero__actions .gv-btn--primary { background: var(--accent); color: #101014; }
+.gv-game-hero__actions .gv-btn--ghost { background: transparent; color: inherit; box-shadow: inset 0 0 0 2px currentColor; }
+.gv-game-hero__actions .gv-select { width: auto; min-width: 200px; border-radius: var(--r-pill); background-color: rgba(16, 16, 20, 0.85); color: #F4F4F6; font-weight: 800; }
+
+.gv-game { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-start; }
+.gv-game__main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.gv-game__side { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+@media (min-width: 1100px) { .gv-game__side { max-width: clamp(360px, 26vw, 480px); } }
+
+.gv-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .gv-meta > div { background: var(--surface-2); border-radius: var(--r-md); padding: 14px 16px; min-width: 0; }
 .gv-meta span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
 .gv-meta b { font-size: 15px; overflow-wrap: anywhere; }
 .gv-meta a { color: var(--accent-text); }
+
+/* «Хто грає»: смужка-розподіл + легенда */
+.gv-stack-bar { display: flex; height: 14px; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); margin-bottom: 14px; }
+.gv-stack-bar span { display: block; height: 100%; }
+.gv-legend { display: flex; flex-direction: column; gap: 8px; }
+.gv-legend div { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; }
+.gv-legend i { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+.gv-legend b { margin-left: auto; font-family: var(--font-display); font-size: 14px; }
+.gv-legend em { font-style: normal; color: var(--muted); font-size: 12px; min-width: 38px; text-align: right; }
+
+/* Гістограма оцінок */
+.gv-histogram { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; align-items: end; height: 120px; }
+.gv-histogram div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; }
+.gv-histogram i { display: block; width: 100%; min-height: 4px; border-radius: 8px 8px 4px 4px; background: var(--surface-3); }
+.gv-histogram .has-votes i { background: var(--accent); }
+.gv-histogram span { font-size: 12px; font-weight: 800; color: var(--muted); }
 
 .gv-score-big { display: flex; align-items: baseline; gap: 6px; }
 .gv-score-big b { font-family: var(--font-display); font-size: clamp(40px, 3vw, 60px); font-weight: 800; letter-spacing: -0.03em; }

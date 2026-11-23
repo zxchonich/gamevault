@@ -3,13 +3,32 @@
 from django.db import models
 
 from .access import friend_ids
-from .models import GameGenre, Genre, LibraryEntry, Review
+from .models import ExternalLibraryItem, Game, GameGenre, Genre, LibraryEntry, Review, SteamApp, User
 
 STATUSES = [value for value, _ in LibraryEntry.STATUS_CHOICES]
 
 # Підписи статусів: про себе ("Планую") і про іншого користувача ("Планує").
 STATUS_LABELS = dict(LibraryEntry.STATUS_CHOICES)
 STATUS_LABELS_OTHER = {**STATUS_LABELS, "planned": "Планує", "playing": "Грає"}
+
+# Кольори плашок для ігор без постера: (фон, текст). Колір стабільний для гри (за id).
+COVER_PALETTE = [
+    ("#7C5CFF", "#FFFFFF"),
+    ("#FFB547", "#17151F"),
+    ("#4CD6A0", "#17151F"),
+    ("#FF6B5A", "#17151F"),
+    ("#3DA5FF", "#17151F"),
+    ("#FF7AC6", "#17151F"),
+]
+
+# Кольори смужок статусів на сторінці гри.
+STATUS_COLORS = {
+    "playing": "#3DA5FF",
+    "completed": "#C8F031",
+    "planned": "#7C5CFF",
+    "paused": "#FFB547",
+    "dropped": "#FF6B5A",
+}
 
 LIBRARY_SORTS = {
     "title": ("game__title",),
@@ -24,6 +43,10 @@ def get_status_label(status, other=False):
 
 def status_choices(other=False):
     return [{"value": value, "label": get_status_label(value, other)} for value in STATUSES]
+
+
+def cover_colors(game):
+    return COVER_PALETTE[(game.id or 0) % len(COVER_PALETTE)]
 
 
 def status_counts(entries):
@@ -142,3 +165,82 @@ def profile_stats(user):
         stats[f"{status}_percent"] = int(count / library_count * 100) if library_count else 0
 
     return stats
+
+
+# --- Сторінка гри --------------------------------------------------------------
+
+def game_page_stats(game, viewer=None, similar_limit=6):
+    """Дані для сторінки гри: хто грає, розподіл оцінок, друзі з грою, схожі ігри, фон."""
+    entries = LibraryEntry.objects.filter(game=game)
+    counts = status_counts(entries)
+    players_total = sum(counts.values())
+    players = [
+        {
+            "status": status,
+            "label": STATUS_LABELS_OTHER[status],
+            "count": count,
+            "percent": round(count / players_total * 100) if players_total else 0,
+            "color": STATUS_COLORS[status],
+        }
+        for status, count in counts.items()
+    ]
+
+    score_counts = dict(
+        Review.objects.filter(game=game).values("score").annotate(n=models.Count("id")).values_list("score", "n")
+    )
+    max_count = max(score_counts.values(), default=0)
+    score_bars = [
+        {"score": score, "count": score_counts.get(score, 0),
+         "height": round(score_counts.get(score, 0) / max_count * 100) if max_count else 0}
+        for score in range(1, 11)
+    ]
+
+    friends_with_game = []
+    if viewer is not None:
+        ids = friend_ids(viewer)
+        hours = {}
+        if game.steam_appid and ids:
+            hours = dict(
+                ExternalLibraryItem.objects
+                .filter(user_id__in=ids, provider="steam", external_game_id=game.steam_appid)
+                .values_list("user_id", "playtime_minutes")
+            )
+        statuses = dict(entries.filter(user_id__in=ids).values_list("user_id", "status"))
+        for user in User.objects.filter(id__in=set(statuses) | set(hours)).order_by("username"):
+            friends_with_game.append({
+                "user": user,
+                "status_label": STATUS_LABELS_OTHER.get(statuses.get(user.id), "Є в Steam"),
+                "hours": round(hours[user.id] / 60) if hours.get(user.id) else None,
+            })
+
+    genre_ids = list(GameGenre.objects.filter(game=game).values_list("genre_id", flat=True))
+    similar_ids = list(
+        GameGenre.objects
+        .filter(genre_id__in=genre_ids)
+        .exclude(game_id=game.id)
+        .values("game_id")
+        .annotate(shared=models.Count("genre_id"))
+        .order_by("-shared", "game_id")
+        .values_list("game_id", flat=True)[:similar_limit]
+    )
+    similar = {g.id: g for g in Game.objects.filter(id__in=similar_ids).annotate(avg_score=models.Avg("reviews__score"))}
+    similar_games = attach_visible_genres_to_games([similar[i] for i in similar_ids if i in similar])
+
+    steam_header = None
+    if game.steam_appid:
+        steam_header = (
+            SteamApp.objects.filter(appid=game.steam_appid, found=True).values_list("header_image", flat=True).first()
+        )
+
+    hero_bg, hero_ink = cover_colors(game)
+    return {
+        "players": players,
+        "players_total": players_total,
+        "score_bars": score_bars,
+        "friends_with_game": friends_with_game,
+        "similar_games": similar_games,
+        "hero_image": game.poster.url if game.poster else steam_header,
+        "hero_bg": hero_bg,
+        "hero_ink": hero_ink,
+    }
+

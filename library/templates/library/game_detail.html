@@ -4,86 +4,91 @@
 {% block title %}{{ game.title }} | GameVault{% endblock %}
 
 {% block content %}
-<div class="gv-game">
-    <aside class="gv-game__aside">
-        {% game_cover game %}
+<section class="gv-game-hero{% if hero_image %} has-image{% endif %}" style="--hero-bg: {{ hero_bg }}; --hero-ink: {{ hero_ink }}">
+    {% if hero_image %}<div class="gv-game-hero__backdrop" style="background-image: url('{{ hero_image }}')" aria-hidden="true"></div>{% endif %}
 
-        {% if library_entry %}
-        <form method="post" action="{% url 'library:update_library_status' library_entry.id %}" class="gv-field" data-autosubmit>
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.path }}">
-            <label class="gv-field">
-                <span>Статус у бібліотеці</span>
-                <select class="gv-select" name="status">
-                    {% for value, label in library_entry.STATUS_CHOICES %}
-                    <option value="{{ value }}" {% if library_entry.status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <button class="gv-btn gv-js-hide" type="submit">Зберегти статус</button>
-        </form>
-        {% elif current_library_user %}
-        <form method="post" action="{% url 'library:add_to_library' game.id %}">
-            {% csrf_token %}
-            <button type="submit" class="gv-btn gv-btn--primary gv-btn--lg">+ Додати в бібліотеку</button>
-        </form>
-        {% else %}
-        <a class="gv-btn gv-btn--primary gv-btn--lg" href="{% url 'library:login' %}">Увійдіть, щоб додати</a>
-        {% endif %}
+    <div class="gv-game-hero__cover">{% game_cover game %}</div>
 
-        {% if steam_item %}
-        <a class="gv-btn gv-btn--inverse" href="{{ steam_item.launch_url }}">▶ Запустити в Steam</a>
-        {% elif game.steam_appid %}
-        <a class="gv-btn gv-btn--ghost" href="https://store.steampowered.com/app/{{ game.steam_appid }}/" target="_blank" rel="noopener">Сторінка в Steam ↗</a>
-        {% endif %}
-
-        {% if current_library_user.role.name == 'admin' %}
-        <div style="display: flex; gap: 6px">
-            <a class="gv-btn gv-btn--sm" style="flex: 1" href="{% url 'library:admin_game_edit' game.id %}">Редагувати</a>
-            <form method="post" action="{% url 'library:admin_game_delete' game.id %}" style="flex: 1; display: flex">
-                {% csrf_token %}
-                <button class="gv-btn gv-btn--sm gv-btn--danger" style="flex: 1" type="submit" onclick="return confirm('Видалити гру з каталогу?');">Видалити</button>
-            </form>
+    <div class="gv-game-hero__body">
+        <div class="gv-chips">
+            {% for genre in game_genres %}
+            <a class="gv-chip" href="{% url 'library:game_list' %}?genres={{ genre.id }}">{{ genre.name }}</a>
+            {% endfor %}
         </div>
-        {% endif %}
-    </aside>
 
+        <h1 class="gv-game__title">{{ game.title }}</h1>
+
+        <div class="gv-game-hero__facts">
+            <div><b>{% if reviews_count %}★ {{ average_score|floatformat:1 }}{% else %}—{% endif %}</b><span>{{ reviews_count }} оцінок</span></div>
+            <div><b>{{ players_total }}</b><span>у бібліотеках</span></div>
+            {% if game.release_date %}<div><b>{{ game.release_date|date:"Y" }}</b><span>рік виходу</span></div>{% endif %}
+            {% if steam_item %}<div><b>{{ steam_item.playtime_hours }} год</b><span>ваш час у Steam</span></div>{% endif %}
+        </div>
+
+        <div class="gv-game-hero__actions">
+            {% if library_entry %}
+            <form method="post" action="{% url 'library:update_library_status' library_entry.id %}" data-autosubmit style="display: flex; gap: 8px">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <label>
+                    <span class="visually-hidden">Статус у бібліотеці</span>
+                    <select class="gv-select" name="status">
+                        {% for value, label in library_entry.STATUS_CHOICES %}
+                        <option value="{{ value }}" {% if library_entry.status == value %}selected{% endif %}>У бібліотеці · {{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button class="gv-btn gv-js-hide" type="submit">Зберегти</button>
+            </form>
+            {% elif current_library_user %}
+            <form method="post" action="{% url 'library:add_to_library' game.id %}">
+                {% csrf_token %}
+                <button type="submit" class="gv-btn gv-btn--primary gv-btn--lg">+ Додати в бібліотеку</button>
+            </form>
+            {% else %}
+            <a class="gv-btn gv-btn--primary gv-btn--lg" href="{% url 'library:login' %}">Увійдіть, щоб додати</a>
+            {% endif %}
+
+            {% if steam_item %}
+            <a class="gv-btn gv-btn--lg" href="{{ steam_item.launch_url }}">▶ Запустити</a>
+            {% elif game.steam_appid %}
+            <a class="gv-btn gv-btn--lg gv-btn--ghost" href="https://store.steampowered.com/app/{{ game.steam_appid }}/" target="_blank" rel="noopener">Steam ↗</a>
+            {% endif %}
+
+            {% if user_review %}<a class="gv-btn gv-btn--lg gv-btn--ghost" href="#my-review">Ваша оцінка: {{ user_review.score }}/10</a>{% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="gv-game">
     <div class="gv-game__main">
-        <section class="gv-card" style="display: flex; flex-direction: column; gap: 18px">
-            <div class="gv-chips">
-                {% for genre in game_genres %}
-                <a class="gv-chip" href="{% url 'library:game_list' %}?genres={{ genre.id }}">{{ genre.name }}</a>
-                {% empty %}
-                <span class="gv-chip">Жанри не вказані</span>
-                {% endfor %}
-            </div>
-
-            <h1 class="gv-game__title">{{ game.title }}</h1>
-
-            <div class="gv-prose">
+        <section class="gv-card">
+            <div class="gv-section-head"><h2>Про гру</h2></div>
+            <div class="gv-prose" style="margin-bottom: 18px">
                 <p>{% if game.description %}{{ game.description|linebreaksbr }}{% else %}<span class="muted">Опис гри поки що відсутній.</span>{% endif %}</p>
             </div>
-
             <div class="gv-meta">
-                <div>
-                    <span>Середня оцінка</span>
-                    <div class="gv-score-big"><b>{% if reviews_count %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</b><span>/10 · {{ reviews_count }} рец.</span></div>
-                </div>
                 <div><span>Розробник</span><b>{{ game.developer|default:"Не вказано" }}</b></div>
                 <div><span>Дата виходу</span><b>{% if game.release_date %}{{ game.release_date|date:"d.m.Y" }}{% else %}Не вказано{% endif %}</b></div>
-                <div><span>Ваш статус</span><b>{% if library_entry %}{{ library_entry.status|status_label }}{% else %}Не додано{% endif %}</b></div>
-                {% if steam_item %}
-                <div><span>Ваш час у Steam</span><b>{{ steam_item.playtime_hours }} год у грі</b></div>
-                {% endif %}
+                <div><span>Жанри</span><b>{% for genre in game_genres %}{{ genre.name }}{% if not forloop.last %}, {% endif %}{% empty %}Не вказано{% endfor %}</b></div>
+                {% if game.steam_appid %}<div><span>Steam</span><b><a href="https://store.steampowered.com/app/{{ game.steam_appid }}/" target="_blank" rel="noopener">AppID {{ game.steam_appid }} ↗</a></b></div>{% endif %}
             </div>
+            {% if current_library_user.role.name == 'admin' %}
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px">
+                <a class="gv-btn gv-btn--sm" href="{% url 'library:admin_game_edit' game.id %}">Редагувати гру</a>
+                <form method="post" action="{% url 'library:admin_game_delete' game.id %}">
+                    {% csrf_token %}
+                    <button class="gv-btn gv-btn--sm gv-btn--danger" type="submit" onclick="return confirm('Видалити гру з каталогу?');">Видалити гру</button>
+                </form>
+            </div>
+            {% endif %}
         </section>
 
-        <section class="gv-card" aria-labelledby="my-review">
+        <section class="gv-card" aria-labelledby="my-review" id="my-review">
             <div class="gv-section-head">
-                <h2 id="my-review">{% if user_review %}Ваша рецензія{% else %}Оцініть гру{% endif %}</h2>
+                <h2>{% if user_review %}Ваша рецензія{% else %}Оцініть гру{% endif %}</h2>
                 {% if user_review %}<span class="gv-chip gv-chip--accent">{{ user_review.score }}/10</span>{% endif %}
             </div>
-
             {% if current_library_user %}
             <form method="post" action="{% url 'library:add_review' game.id %}" style="display: flex; flex-direction: column; gap: 16px; max-width: var(--measure)">
                 {% csrf_token %}
@@ -102,9 +107,7 @@
                     <span>Текст рецензії (необов'язково)</span>
                     <textarea class="gv-textarea" name="text" rows="4" placeholder="Що сподобалось, а що ні?">{% if user_review %}{{ user_review.text }}{% endif %}</textarea>
                 </label>
-                <div>
-                    <button class="gv-btn gv-btn--primary" type="submit">{% if user_review %}Оновити рецензію{% else %}Зберегти рецензію{% endif %}</button>
-                </div>
+                <div><button class="gv-btn gv-btn--primary" type="submit">{% if user_review %}Оновити рецензію{% else %}Зберегти рецензію{% endif %}</button></div>
             </form>
             {% else %}
             <p class="muted"><a href="{% url 'library:login' %}" style="color: var(--accent-text); font-weight: 800">Увійдіть</a>, щоб оцінити гру.</p>
@@ -142,5 +145,72 @@
             </div>
         </section>
     </div>
+
+    <aside class="gv-game__side">
+        <section class="gv-card gv-card--tight" aria-labelledby="players">
+            <div class="gv-section-head"><h2 id="players">Хто грає</h2><span class="muted" style="font-weight: 700">{{ players_total }}</span></div>
+            {% if players_total %}
+            <div class="gv-stack-bar" aria-hidden="true">
+                {% for p in players %}{% if p.count %}<span style="width: {{ p.percent }}%; background: {{ p.color }}"></span>{% endif %}{% endfor %}
+            </div>
+            <div class="gv-legend">
+                {% for p in players %}
+                <div><i style="background: {{ p.color }}"></i>{{ p.label }}<b>{{ p.count }}</b><em>{{ p.percent }}%</em></div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted" style="font-weight: 600">Поки ніхто не додав цю гру до бібліотеки.</p>
+            {% endif %}
+        </section>
+
+        <section class="gv-card gv-card--tight" aria-labelledby="scores">
+            <div class="gv-section-head"><h2 id="scores">Оцінки</h2>
+                <div class="gv-score-big"><b>{% if reviews_count %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</b><span>/10</span></div>
+            </div>
+            <div class="gv-histogram" role="img" aria-label="Розподіл оцінок від 1 до 10">
+                {% for bar in score_bars %}
+                <div class="{% if bar.count %}has-votes{% endif %}" title="{{ bar.score }}/10: {{ bar.count }}"><i style="height: {{ bar.height }}%"></i><span>{{ bar.score }}</span></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if friends_with_game %}
+        <section class="gv-card gv-card--tight" aria-labelledby="friends-game">
+            <div class="gv-section-head"><h2 id="friends-game">Друзі з цією грою</h2></div>
+            <div class="gv-list">
+                {% for f in friends_with_game %}
+                <a class="gv-list-item" href="{% url 'library:user_profile' f.user.id %}">
+                    {% user_avatar f.user "sm" %}
+                    <span class="gv-list-item__body">
+                        <span class="gv-list-item__title">{{ f.user.username }}</span>
+                        <span class="gv-list-item__sub">{{ f.status_label }}{% if f.hours %} · {{ f.hours }} год у Steam{% endif %}</span>
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </aside>
 </div>
+
+{% if similar_games %}
+<section class="gv-card" aria-labelledby="similar">
+    <div class="gv-section-head">
+        <h2 id="similar">Схожі ігри</h2>
+        <p style="margin: 0">За спільними жанрами</p>
+    </div>
+    <div class="gv-game-grid">
+        {% for similar in similar_games %}
+        <a class="gv-game-tile" href="{% url 'library:game_detail' similar.id %}">
+            {% game_cover similar %}
+            <span class="gv-game-tile__meta">
+                <span class="gv-game-tile__title">{{ similar.title }}</span>
+                <span class="gv-game-tile__rating">{% if similar.avg_score %}★ {{ similar.avg_score|floatformat:1 }}{% endif %}</span>
+            </span>
+            <span class="gv-chips">{% for genre in similar.visible_genres %}<span class="gv-chip gv-chip--sm">{{ genre.name }}</span>{% endfor %}</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}

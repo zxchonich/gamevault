@@ -152,3 +152,41 @@ class PagesSmokeTests(GameVaultTestCase):
         for name in ["library:my_library", "library:profile", "library:steam_library", "library:friends"]:
             with self.subTest(page=name):
                 self.assertRedirects(self.client.get(reverse(name)), reverse("library:login"))
+
+
+class GamePageStatsTests(GameVaultTestCase):
+    def test_players_scores_friends_and_similar_games(self):
+        from library.selectors import game_page_stats
+
+        viewer, bob, carol = self.make_user("viewer"), self.make_user("bob"), self.make_user("carol")
+        self.make_friends(viewer, bob)
+        rogue, action, puzzle = (Genre.objects.create(name=n) for n in ("Roguelike", "Action", "Puzzle"))
+        hades = self.make_game("Hades", steam_appid="1145360")
+        dead_cells, doom, tetris = self.make_game("Dead Cells"), self.make_game("Doom"), self.make_game("Tetris")
+        for game, genres in ((hades, [rogue, action]), (dead_cells, [rogue, action]), (doom, [action]), (tetris, [puzzle])):
+            for genre in genres:
+                GameGenre.objects.create(game=game, genre=genre)
+
+        self.make_entry(bob, hades, status="completed")
+        self.make_entry(carol, hades, status="playing")
+        Review.objects.create(user=bob, game=hades, score=9, created_at=timezone.now())
+        Review.objects.create(user=carol, game=hades, score=9, created_at=timezone.now())
+        self.make_steam_item(self.make_steam_account(bob), 1145360, "Hades", playtime=600)
+
+        stats = game_page_stats(hades, viewer)
+
+        self.assertEqual(stats["players_total"], 2)
+        by_status = {p["status"]: p for p in stats["players"]}
+        self.assertEqual((by_status["completed"]["count"], by_status["completed"]["percent"]), (1, 50))
+        self.assertEqual([b["height"] for b in stats["score_bars"] if b["count"]], [100])
+        self.assertEqual(stats["friends_with_game"][0]["user"], bob)
+        self.assertEqual(stats["friends_with_game"][0]["hours"], 10)
+        self.assertEqual([g.title for g in stats["similar_games"]], ["Dead Cells", "Doom"])
+
+    def test_game_page_renders_for_guest(self):
+        game = self.make_game("Hades")
+
+        response = self.client.get(reverse("library:game_detail", args=[game.id]))
+
+        self.assertContains(response, "Хто грає")
+        self.assertEqual(response.context["friends_with_game"], [])
