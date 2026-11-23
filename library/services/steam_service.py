@@ -90,6 +90,20 @@ def validate_steam_openid_response(request):
     if request.GET.get("openid.mode") != "id_res":
         return False
 
+    # Підпис Steam лише засвідчує, що відповідь видав Steam. Додатково перевіряємо, що вона
+    # видана саме для нашого callback (інакше чужу підписану відповідь можна "переслати" нам)
+    # і що підписані саме ті поля, яким ми довіряємо.
+    callback_url = request.build_absolute_uri(reverse("library:steam_callback"))
+    return_to = request.GET.get("openid.return_to", "")
+    signed = set(request.GET.get("openid.signed", "").split(","))
+    if (
+        request.GET.get("openid.op_endpoint") != STEAM_OPENID_URL
+        or return_to.split("?", 1)[0] != callback_url
+        or request.GET.get("openid.claimed_id") != request.GET.get("openid.identity")
+        or not {"op_endpoint", "claimed_id", "identity", "return_to", "response_nonce"} <= signed
+    ):
+        return False
+
     params = request.GET.copy()
     params["openid.mode"] = "check_authentication"
 
@@ -337,13 +351,23 @@ def _download_image(url):
     return content
 
 
+# Звідки дозволено завантажувати зображення (адреса header_image приходить з форми).
+STEAM_IMAGE_HOST_SUFFIXES = (".steamstatic.com", ".steampowered.com", ".akamaihd.net")
+
+
+def is_steam_image_url(url):
+    parsed = urllib.parse.urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    return parsed.scheme == "https" and any(host.endswith(suffix) for suffix in STEAM_IMAGE_HOST_SUFFIXES)
+
+
 def download_steam_poster(game, header_image_url=""):
     """Завантажує постер гри зі Steam у game.poster (вертикальний, інакше header).
     Повертає True, якщо постер збережено. Сам game не зберігає."""
     appid = game.steam_appid
 
     candidates = [STEAM_CDN_APP_URL.format(appid=appid, file="library_600x900.jpg")]
-    if header_image_url:
+    if header_image_url and is_steam_image_url(header_image_url):
         candidates.append(header_image_url)
 
     for url in candidates:

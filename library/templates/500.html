@@ -1,0 +1,43 @@
+{% load static %}<!DOCTYPE html>
+{% comment %}
+Сторінка 500 рендериться без контексту й без запитів до БД (база могла й впасти),
+тому не наслідує base.html: лише статичні стилі й посилання.
+{% endcomment %}
+<html lang="uk" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Помилка сервера | GameVault</title>
+    <script>
+        (function () {
+            var theme = null;
+            try { theme = localStorage.getItem('gv-theme'); } catch (e) {}
+            if (theme !== 'light' && theme !== 'dark') {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Unbounded:wght@700;800&display=swap">
+    <link rel="stylesheet" href="{% static 'library/css/gv.css' %}">
+</head>
+<body>
+<div class="gv-shell">
+    <header class="gv-header">
+        <a class="gv-logo" href="/"><span class="gv-logo__mark" aria-hidden="true">G</span>GameVault</a>
+    </header>
+    <main class="gv-main gv-container">
+        <section class="gv-card gv-denied">
+            <div class="gv-denied__icon" style="font-size: clamp(26px, 2.2vw, 38px)" aria-hidden="true">500</div>
+            <div class="gv-denied__body">
+                <h1>Щось пішло не так</h1>
+                <p>На сервері сталася помилка. Спробуйте оновити сторінку за хвилину.</p>
+                <div class="gv-page-head__actions">
+                    <a class="gv-btn gv-btn--primary" href="/">На головну</a>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

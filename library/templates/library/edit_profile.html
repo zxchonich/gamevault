@@ -48,9 +48,16 @@
         <section class="gv-card gv-form" aria-labelledby="password">
             <div class="gv-section-head">
                 <h2 id="password">Пароль</h2>
-                <p style="margin: 0">Залиште порожнім, якщо не змінюєте</p>
+                <p style="margin: 0">Щонайменше 8 символів · залиште порожнім, якщо не змінюєте</p>
             </div>
             <div class="gv-form__grid">
+                <label class="gv-field">
+                    <span>Поточний пароль</span>
+                    <span class="gv-password">
+                        <input class="gv-input" type="password" name="current_password" autocomplete="current-password" placeholder="Потрібен для зміни">
+                        <button type="button" aria-pressed="false">Показати</button>
+                    </span>
+                </label>
                 <label class="gv-field">
                     <span>Новий пароль</span>
                     <span class="gv-password">

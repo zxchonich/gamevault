@@ -33,6 +33,14 @@ class GameVaultTestCase(TestCase):
             patcher.start()
             cls.addClassCleanup(patcher.stop)
 
+    def run(self, result=None):
+        # Лічильники невдалих входів (кеш) не переносяться між тестами; run(), а не setUp(),
+        # бо підкласи перевизначають setUp без super().
+        from django.core.cache import cache
+
+        cache.clear()
+        return super().run(result)
+
     def make_user(self, username, admin=False, private=False, password=DEFAULT_PASSWORD):
         return User.objects.create(
             role=Role.objects.get(id=ADMIN_ROLE_ID if admin else USER_ROLE_ID),
@@ -77,8 +85,11 @@ class GameVaultTestCase(TestCase):
 
     def login(self, user, client=None):
         client = client or self.client
+        from library.access import SESSION_AUTH_KEY, session_auth_hash
+
         session = client.session
         session["library_user_id"] = user.id
+        session[SESSION_AUTH_KEY] = session_auth_hash(user)
         session.save()
         return client
 

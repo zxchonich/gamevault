@@ -2,7 +2,7 @@ from django.urls import reverse
 
 from library.models import Game, GameGenre, Genre, User
 
-from .base import GameVaultTestCase
+from .base import DEFAULT_PASSWORD, GameVaultTestCase
 
 
 class FormValidationTests(GameVaultTestCase):
@@ -32,8 +32,17 @@ class FormValidationTests(GameVaultTestCase):
             ({"username": "", "email": "a@example.com"}, "Логін та email не можуть бути порожніми."),
             ({"username": "bob", "email": "a@example.com"}, "Користувач із таким логіном уже існує."),
             ({"username": "alice", "email": "bob@example.com"}, "Користувач із таким email уже існує."),
-            ({"username": "alice", "email": "alice@example.com", "password": "x", "password_confirm": "y"},
+            ({"username": "alice", "email": "alice@example.com", "password": "new-pass-456", "password_confirm": "new-pass-456"},
+             "Щоб змінити пароль, правильно вкажіть поточний."),
+            ({"username": "alice", "email": "alice@example.com", "current_password": "wrong",
+              "password": "new-pass-456", "password_confirm": "new-pass-456"},
+             "Щоб змінити пароль, правильно вкажіть поточний."),
+            ({"username": "alice", "email": "alice@example.com", "current_password": DEFAULT_PASSWORD,
+              "password": "new-pass-456", "password_confirm": "other-pass-789"},
              "Паролі не збігаються."),
+            ({"username": "alice", "email": "alice@example.com", "current_password": DEFAULT_PASSWORD,
+              "password": "short", "password_confirm": "short"},
+             "Пароль має містити щонайменше 8 символів."),
         ]
         for data, error in cases:
             with self.subTest(error=error):

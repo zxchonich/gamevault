@@ -10,6 +10,7 @@ from ..access import admin_required, is_admin_user, library_login_required, redi
 from ..forms import GameForm, GenreForm
 from ..models import DismissedRecommendation, Game, GameGenre, Genre, LibraryEntry, Review
 from ..selectors import set_game_genres
+from ..storage import delete_unused_file
 from ..services import activity
 from ..services.steam_service import (
     SteamError,
@@ -87,6 +88,7 @@ def _save_game(request, game, form):
     game.release_date = data["release_date"]
     game.steam_appid = data["steam_appid"]
 
+    old_poster = game.poster.name if game.poster else ""
     poster = request.FILES.get("poster")
     if poster:
         game.poster = poster
@@ -95,6 +97,8 @@ def _save_game(request, game, form):
             messages.warning(request, "Не вдалося завантажити постер зі Steam.")
 
     game.save()
+    if old_poster and old_poster != (game.poster.name if game.poster else ""):
+        delete_unused_file(Game, "poster", old_poster)
     set_game_genres(game, request.POST.getlist("genres"))
 
     if game.steam_appid and game.steam_appid != old_appid:
@@ -102,11 +106,31 @@ def _save_game(request, game, form):
     return 0
 
 
+MAX_POSTER_SIZE = 10 * 1024 * 1024
+
+
+def _poster_error(poster):
+    """Текст помилки для завантаженого постера або None."""
+    if not poster:
+        return None
+    if poster.size > MAX_POSTER_SIZE:
+        return "Постер завеликий — до 10 МБ."
+    from django import forms
+
+    try:
+        forms.ImageField().clean(poster)
+    except forms.ValidationError:
+        return "Постер має бути зображенням (JPG, PNG, WebP)."
+    poster.seek(0)
+    return None
+
+
 def _game_form_view(request, game, titles, success_message):
     if request.method == "POST":
         form = GameForm(request.POST, game=game)
-        if not form.is_valid():
-            messages.error(request, form.first_error())
+        poster_error = _poster_error(request.FILES.get("poster"))
+        if poster_error or not form.is_valid():
+            messages.error(request, poster_error or form.first_error())
             return _render_game_form(request, game, form.form_data(), form.selected_genre_ids(), titles)
 
         game = game or Game(created_at=timezone.now())
@@ -141,7 +165,9 @@ def admin_game_delete(request, game_id):
     LibraryEntry.objects.filter(game=game).delete()
     Review.objects.filter(game=game).delete()
     DismissedRecommendation.objects.filter(game=game).delete()
+    poster = game.poster.name if game.poster else ""
     game.delete()
+    delete_unused_file(Game, "poster", poster)
 
     messages.success(request, "Гру видалено з каталогу.")
     return redirect("library:game_list")

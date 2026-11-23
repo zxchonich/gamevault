@@ -1,0 +1,17 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Сторінку не знайдено | GameVault{% endblock %}
+
+{% block content %}
+<section class="gv-card gv-denied">
+    <div class="gv-denied__icon" style="background: var(--info-bg); color: var(--violet); font-size: clamp(26px, 2.2vw, 38px)" aria-hidden="true">404</div>
+    <div class="gv-denied__body">
+        <h1>Сторінку не знайдено</h1>
+        <p>Можливо, гру прибрали з каталогу, користувач видалив акаунт або в адресі помилка.</p>
+        <div class="gv-page-head__actions">
+            <a class="gv-btn gv-btn--primary" href="{% url 'library:home' %}">На головну</a>
+            <a class="gv-btn gv-btn--ghost" href="{% url 'library:game_list' %}">До каталогу</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

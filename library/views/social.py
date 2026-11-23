@@ -7,10 +7,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from ..access import can_view_profile, connection_between, friend_ids, library_login_required
+from ..access import (
+    can_view_profile,
+    connection_between,
+    friend_ids,
+    library_login_required,
+    update_session_after_password_change,
+)
 from ..forms import ProfileForm
 from ..models import LibraryEntry, SocialConnection, User
 from ..selectors import profile_backdrop, profile_stats
+from ..storage import delete_unused_file
 from ..services import activity
 from ..services.recommendations import top_genres
 from ..services.steam_service import get_steam_summary
@@ -232,9 +239,15 @@ def edit_profile(request):
             user.show_activity = data["show_activity"]
             if data["password"]:
                 user.password_hash = make_password(data["password"])
+            old_avatar = user.avatar.name if user.avatar else ""
             if data["avatar"]:
                 user.avatar = data["avatar"]
             user.save()
+
+            if data["password"]:
+                update_session_after_password_change(request, user)
+            if data["avatar"] and old_avatar and old_avatar != user.avatar.name:
+                delete_unused_file(User, "avatar", old_avatar)
 
             messages.success(request, "Профіль успішно оновлено.")
             return redirect("library:profile")

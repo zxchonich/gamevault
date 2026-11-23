@@ -11,11 +11,18 @@ from functools import wraps
 
 from django.db import models
 from django.shortcuts import redirect, render
+from django.utils.crypto import constant_time_compare, salted_hmac
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import SocialConnection, User
 
 SESSION_USER_KEY = "library_user_id"
+SESSION_AUTH_KEY = "library_auth_hash"
+
+
+def session_auth_hash(user):
+    """Відбиток хешу пароля: після зміни пароля всі старі сесії стають недійсними."""
+    return salted_hmac("library.access.session_auth_hash", user.password_hash or "").hexdigest()
 
 
 def get_current_user(request):
@@ -24,13 +31,32 @@ def get_current_user(request):
     if not user_id:
         return None
 
-    return User.objects.select_related("role").filter(id=user_id).first()
+    user = User.objects.select_related("role").filter(id=user_id).first()
+    if user is None:
+        return None
+
+    stored = request.session.get(SESSION_AUTH_KEY)
+    if stored is None:
+        # Сесії, створені до появи відбитка, — дописуємо його, а не розлогінюємо.
+        request.session[SESSION_AUTH_KEY] = session_auth_hash(user)
+    elif not constant_time_compare(stored, session_auth_hash(user)):
+        request.session.flush()
+        return None
+
+    return user
 
 
 def log_in(request, user):
     # Новий ключ сесії після входу (захист від фіксації сесії).
     request.session.cycle_key()
     request.session[SESSION_USER_KEY] = user.id
+    request.session[SESSION_AUTH_KEY] = session_auth_hash(user)
+
+
+def update_session_after_password_change(request, user):
+    """Поточна сесія лишається активною (новий ключ і відбиток), інші — розлогінюються."""
+    request.session.cycle_key()
+    request.session[SESSION_AUTH_KEY] = session_auth_hash(user)
 
 
 def is_admin_user(user):

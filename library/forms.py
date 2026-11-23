@@ -24,6 +24,28 @@ class LibraryForm(forms.Form):
         return None
 
 
+MIN_PASSWORD_LENGTH = 8
+MAX_AVATAR_SIZE = 5 * 1024 * 1024
+
+
+def password_problem(password, username=""):
+    """Текст проблеми з паролем або None (свої повідомлення українською замість валідаторів Django)."""
+    from django.contrib.auth.password_validation import CommonPasswordValidator
+    from django.core.exceptions import ValidationError
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return f"Пароль має містити щонайменше {MIN_PASSWORD_LENGTH} символів."
+    if password.isdigit():
+        return "Пароль не може складатися лише з цифр."
+    if username and username.lower() in password.lower():
+        return "Пароль не повинен містити логін."
+    try:
+        CommonPasswordValidator().validate(password)
+    except ValidationError:
+        return "Цей пароль занадто поширений — придумайте складніший."
+    return None
+
+
 class LoginForm(LibraryForm):
     username = forms.CharField(max_length=50)
     password = forms.CharField(max_length=128)
@@ -45,6 +67,9 @@ class RegisterForm(LibraryForm):
 
         if data["password"] != data.get("password_confirm"):
             raise forms.ValidationError("Паролі не збігаються.")
+        problem = password_problem(data["password"], data["username"])
+        if problem:
+            raise forms.ValidationError(problem)
         if User.objects.filter(username=data["username"]).exists():
             raise forms.ValidationError("Користувач із таким логіном уже існує.")
         if User.objects.filter(email=data["email"]).exists():
@@ -60,6 +85,7 @@ class ProfileForm(LibraryForm):
         max_length=100,
         error_messages={"required": EMPTY, "invalid": "Вкажіть коректну електронну адресу."},
     )
+    current_password = forms.CharField(max_length=128, required=False)
     password = forms.CharField(max_length=128, required=False)
     password_confirm = forms.CharField(max_length=128, required=False)
     avatar = forms.ImageField(required=False, error_messages={"invalid_image": "Аватар має бути зображенням."})
@@ -80,8 +106,19 @@ class ProfileForm(LibraryForm):
             raise forms.ValidationError("Користувач із таким логіном уже існує.")
         if others.filter(email=data["email"]).exists():
             raise forms.ValidationError("Користувач із таким email уже існує.")
-        if data["password"] and data["password"] != data["password_confirm"]:
-            raise forms.ValidationError("Паролі не збігаються.")
+        if data["password"]:
+            from django.contrib.auth.hashers import check_password
+
+            if not check_password(data["current_password"], self.user.password_hash):
+                raise forms.ValidationError("Щоб змінити пароль, правильно вкажіть поточний.")
+            if data["password"] != data["password_confirm"]:
+                raise forms.ValidationError("Паролі не збігаються.")
+            problem = password_problem(data["password"], data["username"])
+            if problem:
+                raise forms.ValidationError(problem)
+        avatar = data.get("avatar")
+        if avatar and avatar.size > MAX_AVATAR_SIZE:
+            raise forms.ValidationError("Аватар завеликий — до 5 МБ.")
         return data
 
 

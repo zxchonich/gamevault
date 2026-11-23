@@ -57,14 +57,42 @@ class SteamServiceUnitTests(SimpleTestCase):
                 request = self.rf.get("/", {"openid.claimed_id": claimed_id})
                 self.assertEqual(extract_steam_id_from_openid(request), expected)
 
+    def openid_request(self, **overrides):
+        identity = "https://steamcommunity.com/openid/id/76561197960287930"
+        params = {
+            "openid.mode": "id_res",
+            "openid.op_endpoint": "https://steamcommunity.com/openid/login",
+            "openid.claimed_id": identity,
+            "openid.identity": identity,
+            "openid.return_to": "http://testserver" + reverse("library:steam_callback"),
+            "openid.response_nonce": "2026-11-23T10:00:00Zabc",
+            "openid.signed": "signed,op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle",
+            "openid.sig": "sig",
+        }
+        params.update(overrides)
+        return self.rf.get("/", params)
+
+    def test_openid_rejects_foreign_or_unsigned_responses(self):
+        valid = fake_response(text="ns:http://specs.openid.net/auth/2.0\nis_valid:true\n")
+        with mock.patch("library.services.steam_service.requests.post", return_value=valid):
+            cases = {
+                "чужий return_to": {"openid.return_to": "https://evil.example/steam/callback/"},
+                "чужий провайдер": {"openid.op_endpoint": "https://evil.example/openid/login"},
+                "identity не збігається": {"openid.identity": "https://steamcommunity.com/openid/id/76561197960287931"},
+                "return_to не підписаний": {"openid.signed": "signed,op_endpoint,claimed_id,identity,response_nonce"},
+            }
+            for name, override in cases.items():
+                with self.subTest(name):
+                    self.assertFalse(validate_steam_openid_response(self.openid_request(**override)))
+
     def test_validate_openid(self):
         valid = fake_response(text="ns:http://specs.openid.net/auth/2.0\nis_valid:true\n")
         with mock.patch.object(steam_service.requests, "post", return_value=valid):
-            self.assertTrue(validate_steam_openid_response(self.rf.get("/", {"openid.mode": "id_res"})))
-            self.assertFalse(validate_steam_openid_response(self.rf.get("/", {"openid.mode": "cancel"})))
+            self.assertTrue(validate_steam_openid_response(self.openid_request()))
+            self.assertFalse(validate_steam_openid_response(self.openid_request(**{"openid.mode": "cancel"})))
 
         with mock.patch.object(steam_service.requests, "post", side_effect=requests.Timeout):
-            self.assertFalse(validate_steam_openid_response(self.rf.get("/", {"openid.mode": "id_res"})))
+            self.assertFalse(validate_steam_openid_response(self.openid_request()))
 
     @mock.patch.dict(os.environ, {"STEAM_API_KEY": ""})
     def test_owned_games_without_api_key(self):
