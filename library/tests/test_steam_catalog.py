@@ -52,7 +52,7 @@ class CatalogImportTests(GameVaultTestCase):
     def test_new_game_is_created_with_steam_data_genres_and_added_to_all_owners(self):
         Genre.objects.create(name="Simulator")
         steam_app(413150, "Stardew Valley", genres="Indie, Simulation, RPG", developer="ConcernedApe")
-        self.own(self.alice_steam, 413150, "Stardew Valley", playtime=600)
+        self.make_steam_item(self.alice_steam, 413150, "Stardew Valley", playtime=600, playtime_2weeks=60)
         self.own(self.bob_steam, 413150, "Stardew Valley")
 
         result = import_steam_games(["413150"])
@@ -150,6 +150,20 @@ class CatalogImportTests(GameVaultTestCase):
         self.assertEqual((game.description, game.developer, str(game.release_date)), ("Puzzle game", "Valve", "2011-04-18"))
         self.assertEqual((result["catalog_added"], result["added_to_library_count"]), (1, 1))
         self.assertTrue(LibraryEntry.objects.filter(user=self.alice, game=game).exists())
+
+
+class SteamStatusTests(GameVaultTestCase):
+    def test_status_from_steam_activity(self):
+        from datetime import timedelta
+
+        from library.services.steam_service import steam_status
+
+        now = timezone.now()
+        self.assertEqual(steam_status(0, now=now), "planned")
+        self.assertEqual(steam_status(600, 30, None, now), "playing")
+        self.assertEqual(steam_status(600, 0, now - timedelta(days=10), now), "playing")
+        self.assertEqual(steam_status(600, 0, now - timedelta(days=200), now), "paused")
+        self.assertEqual(steam_status(600, 0, None, now), "paused")
 
 
 class SteamLibraryPageTests(GameVaultTestCase):

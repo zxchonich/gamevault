@@ -234,9 +234,14 @@ def sync_steam_library(user, steam_account):
         # Існуючі записи (і їхні статуси) не змінюються.
         added_to_library_count = 0
         catalog_games = Game.objects.filter(steam_appid__in=playtime_by_appid.keys())
+        item_data = {
+            row[0]: row[1:]
+            for row in ExternalLibraryItem.objects.filter(user=user, provider="steam")
+            .values_list("external_game_id", *STEAM_ITEM_FIELDS)
+        }
 
         for catalog_game in catalog_games:
-            if _add_to_library(user.id, catalog_game, playtime_by_appid[catalog_game.steam_appid], now):
+            if _add_to_library(user.id, catalog_game, item_data[catalog_game.steam_appid], now):
                 added_to_library_count += 1
 
     steam_account.last_synced_at = now
@@ -285,17 +290,38 @@ def normalize_title(title):
     return " ".join(title.split())
 
 
-def _add_to_library(user_id, game, playtime_minutes, added_at):
-    """Додає гру до бібліотеки GameVault, якщо її там ще немає. Повертає True, якщо додано."""
+# Гра зі Steam, у яку грали за останні STEAM_PLAYING_DAYS днів, отримує статус «Граю»;
+# у яку грали раніше — «Відкладено»; без годин — «Планую».
+STEAM_PLAYING_DAYS = 30
+
+
+def steam_status(playtime_minutes, playtime_2weeks_minutes=0, last_played_at=None, now=None):
+    if not playtime_minutes:
+        return "planned"
+    now = now or timezone.now()
+    recent = playtime_2weeks_minutes or (
+        last_played_at and last_played_at >= now - datetime.timedelta(days=STEAM_PLAYING_DAYS)
+    )
+    return "playing" if recent else "paused"
+
+
+def _add_to_library(user_id, game, item, added_at):
+    """Додає гру до бібліотеки GameVault, якщо її там ще немає (статус — за даними Steam, див.
+    steam_status; статуси наявних записів не змінюються). item — (playtime, playtime_2weeks, last_played_at).
+    Повертає True, якщо додано."""
+    playtime, playtime_2weeks, last_played_at = item
     _, created = LibraryEntry.objects.get_or_create(
         user_id=user_id,
         game=game,
         defaults={
-            "status": "playing" if playtime_minutes > 0 else "planned",
+            "status": steam_status(playtime, playtime_2weeks, last_played_at, added_at),
             "added_at": added_at,
         }
     )
     return created
+
+
+STEAM_ITEM_FIELDS = ("playtime_minutes", "playtime_2weeks_minutes", "last_played_at")
 
 
 def link_game_to_steam_owners(game):
@@ -308,12 +334,12 @@ def link_game_to_steam_owners(game):
     owners = (
         ExternalLibraryItem.objects
         .filter(provider="steam", external_game_id=game.steam_appid)
-        .values_list("user_id", "playtime_minutes")
+        .values_list("user_id", *STEAM_ITEM_FIELDS)
     )
 
     with transaction.atomic():
-        for user_id, playtime in owners:
-            if _add_to_library(user_id, game, playtime, now):
+        for user_id, *item in owners:
+            if _add_to_library(user_id, game, item, now):
                 added += 1
 
     return added

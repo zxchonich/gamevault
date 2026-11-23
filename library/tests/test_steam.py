@@ -171,7 +171,7 @@ class SteamSyncTests(GameVaultTestCase):
     def test_link_game_to_steam_owners(self):
         bob = self.make_user("bob")
         bob_account = self.make_steam_account(bob, steam_id="76561197960287931")
-        self.make_steam_item(self.account, 413150, "Stardew Valley", playtime=30)
+        self.make_steam_item(self.account, 413150, "Stardew Valley", playtime=30, playtime_2weeks=30)
         self.make_steam_item(bob_account, 413150, "Stardew Valley")
         game = self.make_game("Stardew Valley", steam_appid="413150")
 
@@ -303,7 +303,7 @@ class SteamAdminTests(GameVaultTestCase):
         self.admin = self.make_user("root", admin=True)
         self.alice = self.make_user("alice")
         self.account = self.make_steam_account(self.alice)
-        self.make_steam_item(self.account, 578080, "PUBG: BATTLEGROUNDS", playtime=120)
+        self.make_steam_item(self.account, 578080, "PUBG: BATTLEGROUNDS", playtime=120, playtime_2weeks=30)
         self.login(self.admin)
 
     @mock.patch("library.views.moderation.download_steam_poster", return_value=True)

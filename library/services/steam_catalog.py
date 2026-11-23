@@ -21,7 +21,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from library.models import ExternalLibraryItem, Game, GameGenre, GameRequest, Genre, SteamApp
-from library.services.steam_service import STEAM_GENRE_ALIASES, _add_to_library, normalize_title
+from library.services.steam_service import STEAM_GENRE_ALIASES, STEAM_ITEM_FIELDS, _add_to_library, normalize_title
 
 logger = logging.getLogger(__name__)
 
@@ -158,10 +158,10 @@ def _import_one(appid, app, title, unlinked, now, result):
         result["created"] += 1
 
     owners = ExternalLibraryItem.objects.filter(provider="steam", external_game_id=appid).values_list(
-        "user_id", "playtime_minutes"
+        "user_id", *STEAM_ITEM_FIELDS
     )
-    for user_id, playtime in owners:
-        if _add_to_library(user_id, game, playtime, now):
+    for user_id, *item in owners:
+        if _add_to_library(user_id, game, item, now):
             result["added_to_libraries"][user_id] = result["added_to_libraries"].get(user_id, 0) + 1
 
     _approve_waiting_requests(game, app)
