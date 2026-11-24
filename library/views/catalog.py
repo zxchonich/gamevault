@@ -11,6 +11,7 @@ from ..selectors import (
     attach_visible_genres_to_games,
     game_page_stats,
     get_status_label,
+    selected_genre_ids,
 )
 from ..services import activity, notifications, steam_achievements, steam_presence
 from ..services.recommendations import build_recommendations
@@ -92,7 +93,7 @@ def home(request):
 
 def game_list(request):
     query = request.GET.get("q", "")
-    selected_genres = request.GET.getlist("genres")
+    selected_genres = selected_genre_ids(request)
     sort = request.GET.get("sort", "title")
 
     games = _games_with_rating()

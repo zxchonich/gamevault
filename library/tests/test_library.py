@@ -190,3 +190,21 @@ class GamePageStatsTests(GameVaultTestCase):
 
         self.assertContains(response, "Хто грає")
         self.assertEqual(response.context["friends_with_game"], [])
+
+
+class FilterParamsTests(GameVaultTestCase):
+    def test_non_numeric_genres_are_ignored(self):
+        user = self.make_user("alice")
+        genre = Genre.objects.create(name="RPG")
+        game = self.make_game("Hades")
+        GameGenre.objects.create(game=game, genre=genre)
+        self.make_entry(user, game)
+        other = self.make_user("bob")
+        self.make_entry(other, game)
+        self.login(user)
+
+        for url in (reverse("library:game_list"), reverse("library:my_library"),
+                    reverse("library:user_library", args=[other.id])):
+            response = self.client.get(url, {"genres": ["abc", str(genre.id), str(genre.id)]})
+            self.assertEqual(response.status_code, 200, url)
+            self.assertEqual(response.context["selected_genres"], [str(genre.id)])

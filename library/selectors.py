@@ -107,11 +107,16 @@ def set_game_genres(game, genre_ids):
 LIBRARY_PAGE_SIZE = 24
 
 
+def selected_genre_ids(request):
+    """?genres=… з адреси: лише числові id без повторів (рядками — так їх порівнюють шаблони)."""
+    return list(dict.fromkeys(g for g in request.GET.getlist("genres") if g.isdigit()))
+
+
 def library_context(request, owner, other=False):
     """Фільтри, сортування й лічильники бібліотеки owner (для моєї та чужої бібліотеки)."""
     query = request.GET.get("q", "").strip()
     selected_status = request.GET.get("status", "")
-    selected_genres = request.GET.getlist("genres")
+    selected_genres = selected_genre_ids(request)
     sort = request.GET.get("sort", "newest")
 
     all_entries = LibraryEntry.objects.filter(user=owner).select_related("game")

@@ -127,7 +127,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Час на сторінках і межі днів («Сьогодні», злиття подій за день) — за Києвом; у БД дати зберігаються в UTC.
+# Таблиць часових поясів у MySQL немає, тому __date/__year та Trunc* у запитах не використовуйте.
+TIME_ZONE = 'Europe/Kyiv'
 
 USE_I18N = True
 
