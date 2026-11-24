@@ -25,7 +25,7 @@
     <div class="gv-site-ach-grid">
         {% for v in items %}
         <article class="gv-site-ach{% if not v.unlocked %} is-locked{% endif %}">
-            {% site_badge v.key v.tier "lg" v.hidden %}
+            {% site_badge v.key v.tier "lg" v.hidden style=profile_user.badge_style %}
             <div class="gv-site-ach__body">
                 {% if v.hidden %}
                 <div class="gv-site-ach__title">???</div>

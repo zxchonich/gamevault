@@ -35,6 +35,7 @@ class User(models.Model):
     # Досягнення GameVault (services/site_achievements.py): вибрані для вітрини ключі через кому (NULL — авто)
     # і коли досягнення вперше перераховано (поки NULL — перший підрахунок тихий, без сповіщень).
     achievement_showcase = models.CharField(max_length=300, blank=True, null=True)
+    badge_style = models.CharField(max_length=16, blank=True, null=True)
     achievements_synced_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField()
 

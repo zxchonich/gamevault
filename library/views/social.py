@@ -22,7 +22,7 @@ from ..forms import ProfileForm
 from ..models import LibraryEntry, Notification, SocialConnection, User, UserBlock
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
-from ..services import activity, notifications, site_achievements, steam_achievements, steam_presence
+from ..services import activity, badge_styles, notifications, site_achievements, steam_achievements, steam_presence
 from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
 from ..services.social_auth import can_remove_login_method
@@ -259,6 +259,8 @@ def _profile_extras(user, own=False):
     if own:
         site_achievements.check_quietly(user)  # страховка: досягнення, що залежать від часу («Старожил»)
     site_views = site_achievements.build_views(user)
+    showcase = site_achievements.showcase(user, site_views)
+    unlocked = [v for v in site_views if v.unlocked] if own else []
     return {
         **profile_stats(user),
         "steam_summary": steam_summary,
@@ -266,10 +268,13 @@ def _profile_extras(user, own=False):
         "top_genres": top_genres(user),
         "recent_achievements": steam_achievements.recent_achievements(user, limit=10),
         "achievements_count": steam_achievements.achievements_count(user),
-        "site_showcase": site_achievements.showcase(user, site_views),
+        "site_showcase": showcase,
         "site_summary": site_achievements.summary(site_views),
-        "site_unlocked": [v for v in site_views if v.unlocked] if own else [],
+        "site_unlocked": unlocked,
         "showcase_custom": user.achievement_showcase is not None,
+        "badge_style": badge_styles.normalize(user.badge_style),
+        "badge_style_choices": badge_styles.choices() if own else [],
+        "badge_style_preview": (showcase or unlocked)[:3],
     }
 
 

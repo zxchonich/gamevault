@@ -17,8 +17,8 @@ site_summary, site_unlocked (усі отримані — для вибору), s
     <div class="gv-showcase" data-showcase-view>
         {% for v in site_showcase %}
         <a class="gv-showcase__item" href="{% if is_own_profile %}{% url 'library:my_achievements' %}{% else %}{% url 'library:user_achievements' profile_user.id %}{% endif %}" title="{{ v.description }}">
-            {% site_badge v.key v.tier "lg" %}
-            <span>{{ v.achievement.title }}</span>
+            {% site_badge v.key v.tier "lg" style=profile_user.badge_style %}
+            <span class="gv-showcase__title">{{ v.achievement.title }}</span>
             <em>{% if v.tier_name %}{{ v.tier_name }} · {% endif %}{{ v.rarity }}% гравців</em>
         </a>
         {% empty %}
@@ -30,13 +30,23 @@ site_summary, site_unlocked (усі отримані — для вибору), s
     <form id="showcase-edit" class="gv-showcase-edit" method="post" action="{% url 'library:save_showcase' %}" hidden data-showcase-form data-max="5">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
-        <p class="gv-field__hint" style="margin: 0">Перетягніть значки, щоб змінити порядок. Натисніть на значок нижче, щоб додати його або прибрати (до 5).</p>
-        <ol class="gv-showcase-slots" data-showcase-slots data-empty="Оберіть значки нижче">{% for v in site_showcase %}<li data-key="{{ v.key }}" tabindex="0" aria-label="{{ v.achievement.title }} — стрілками вліво/вправо змінити порядок">{% icon "grip" 14 %}{% site_badge v.key v.tier "sm" %}<span>{{ v.achievement.title }}</span><input type="hidden" name="keys" value="{{ v.key }}"></li>{% endfor %}</ol>
+        <p class="gv-field__hint" style="margin: 0">Перетягніть значки, щоб змінити порядок. Натисніть на значок нижче, щоб додати його або прибрати (до 5). Стиль значків бачать усі, хто відкриває ваш профіль.</p>
+        <ol class="gv-showcase-slots" data-showcase-slots data-empty="Оберіть значки нижче">{% for v in site_showcase %}<li data-key="{{ v.key }}" tabindex="0" aria-label="{{ v.achievement.title }} — стрілками вліво/вправо змінити порядок">{% icon "grip" 14 %}{% site_badge v.key v.tier "sm" style=profile_user.badge_style %}<span>{{ v.achievement.title }}</span><input type="hidden" name="keys" value="{{ v.key }}"></li>{% endfor %}</ol>
         <div class="gv-showcase-pool">
             {% for v in site_unlocked %}
-            <button type="button" data-showcase-pick="{{ v.key }}" data-title="{{ v.achievement.title }}" aria-pressed="false">{% site_badge v.key v.tier "sm" %}{{ v.achievement.title }}{% if v.tier_name %} · {{ v.tier_name }}{% endif %}</button>
+            <button type="button" data-showcase-pick="{{ v.key }}" data-title="{{ v.achievement.title }}" aria-pressed="false">{% site_badge v.key v.tier "sm" style=profile_user.badge_style %}{{ v.achievement.title }}{% if v.tier_name %} · {{ v.tier_name }}{% endif %}</button>
             {% endfor %}
         </div>
+        <fieldset class="gv-badge-styles">
+            <legend>Стиль значків</legend>
+            {% for choice in badge_style_choices %}
+            <label class="gv-badge-style">
+                <input type="radio" name="badge_style" value="{{ choice.key }}"{% if choice.key == badge_style %} checked{% endif %}>
+                <span class="gv-badge-style__preview" aria-hidden="true">{% for v in badge_style_preview %}{% site_badge v.key v.tier "" style=choice.key %}{% endfor %}</span>
+                <span class="gv-badge-style__name">{{ choice.label }}{% if choice.default %} <em>за замовчуванням</em>{% endif %}</span>
+            </label>
+            {% endfor %}
+        </fieldset>
         <template data-showcase-grip>{% icon "grip" 14 %}</template>
         <div class="gv-actions">
             <button class="gv-btn gv-btn--primary" type="submit">Зберегти</button>

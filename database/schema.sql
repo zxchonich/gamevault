@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-011.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-012.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -76,6 +76,7 @@ CREATE TABLE `users` (
   `show_playing_now` tinyint(1) NOT NULL DEFAULT '1',
   `notify_friend_playing` tinyint(1) NOT NULL DEFAULT '1',
   `achievement_showcase` varchar(300) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `badge_style` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Стиль значків досягнень (hex/emblem/cartridge/shield); NULL — за замовчуванням',
   `achievements_synced_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_username` (`username`),

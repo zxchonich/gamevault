@@ -8,7 +8,7 @@
 <a class="gv-notice{% if unread %} is-unread{% endif %}{% if compact %} gv-notice--compact{% endif %}" href="{{ target }}">
     <span class="gv-notice__icon gv-notice__icon--{{ item.kind }}" aria-hidden="true">
         {% if item.actor and item.kind == 'friend_request' or item.actor and item.kind == 'friend_accepted' or item.actor and item.kind == 'friend_playing' %}{% user_avatar item.actor "sm" %}
-        {% elif item.kind == 'site_achievement' %}{% site_badge item.achievement_key item.tier "sm" %}
+        {% elif item.kind == 'site_achievement' %}{% site_badge item.achievement_key item.tier "sm" style=current_library_user.badge_style %}
         {% elif item.kind == 'game_approved' %}{% icon "check" 18 %}
         {% else %}{% icon "x" 18 %}{% endif %}
     </span>

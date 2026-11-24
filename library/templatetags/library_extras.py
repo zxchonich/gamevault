@@ -225,26 +225,35 @@ def minutes_label(minutes):
 
 
 @register.inclusion_tag("library/components/site_badge.html")
-def site_badge(key, tier=0, size="", hidden=False):
-    """{% site_badge "finisher" 2 "lg" %} — круглий значок досягнення GameVault з кільцем рівня.
+def site_badge(key, tier=0, size="", hidden=False, style=None):
+    """{% site_badge "finisher" 2 "lg" style=profile_user.badge_style %} — значок досягнення GameVault.
 
-    tier 0 — ще не отримано (сірий); hidden — секретне (знак питання замість іконки)."""
+    tier 0 — ще не отримано (сірий); hidden — секретне (знак питання замість іконки);
+    style — стиль власника значка (services/badge_styles.py), None — за замовчуванням."""
+    from django.utils.safestring import mark_safe
+
+    from library.services import badge_styles
     from library.services.site_achievements import BY_KEY, TIER_NAMES
 
     achievement = BY_KEY.get(key)
     if achievement is None:
         return {"badge": None}
+    style = badge_styles.normalize(style)
+    locked = tier == 0
+    svg = badge_styles.render(
+        style, achievement.icon, tier=tier, single=achievement.single,
+        locked=locked, hidden=hidden, compact=size == "sm",
+    )
     return {
         "badge": achievement,
-        "tier": tier,
+        "style": style,
         "tier_class": "single" if achievement.single else f"t{min(max(tier, 1), 3)}",
         "tier_name": "" if achievement.single else TIER_NAMES.get(tier, ""),
         "size": size,
-        "locked": tier == 0,
+        "locked": locked,
         "hidden": hidden,
-        "svg": icon(achievement.icon, {"sm": 16, "lg": 34}.get(size, 24)),
+        "svg": mark_safe(svg),
     }
-
 
 
 @register.filter

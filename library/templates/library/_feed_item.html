@@ -69,7 +69,7 @@ compact=True — для бокових панелей (без уривка ре�
         {% if item.event_type == 'review' and item.score %}<span class="gv-event__score">{{ item.score }}</span>{% endif %}
     </a>
     {% elif item.event_type == 'site_achievement' %}
-    <span class="gv-event__thumb" aria-hidden="true">{% site_badge item.achievement_key item.item_count %}</span>
+    <span class="gv-event__thumb" aria-hidden="true">{% site_badge item.achievement_key item.item_count style=item.user.badge_style %}</span>
     {% elif item.external_cover %}
     <a class="gv-event__thumb gv-event__thumb--wide" href="{{ item.store_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
         <img src="{{ item.external_cover }}" alt="" loading="lazy" onerror="this.parentNode.remove()">

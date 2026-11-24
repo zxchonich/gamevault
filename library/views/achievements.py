@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 
 from ..access import can_view_profile, connection_between, library_login_required, redirect_to_next
 from ..models import Notification, User
-from ..services import notifications, site_achievements
+from ..services import badge_styles, notifications, site_achievements
 from .social import private_profile_response
 
 
@@ -43,6 +43,8 @@ def user_achievements(request, user_id):
 @library_login_required
 def save_showcase(request):
     user = request.library_user
+    if "badge_style" in request.POST:
+        badge_styles.save(user, request.POST.get("badge_style"))
     if request.POST.get("auto"):
         site_achievements.save_showcase(user, None)
         messages.success(request, "Вітрина досягнень — знову автоматична.")

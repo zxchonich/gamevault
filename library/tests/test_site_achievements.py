@@ -21,7 +21,7 @@ from library.models import (
     UserAchievement,
     UserSiteAchievement,
 )
-from library.services import activity, site_achievements
+from library.services import activity, badge_styles, site_achievements
 from library.services.site_achievements import BY_KEY, _longest_streak, _played_at_night, compute_metrics
 
 from .base import GameVaultTestCase
@@ -207,6 +207,46 @@ class PageTests(SiteAchievementTestCase):
 
         self.client.post(reverse("library:save_showcase"), {"auto": "1"})
         self.assertIsNone(User.objects.get(id=self.alice.id).achievement_showcase)
+
+    def test_badge_style_saving_and_owner_style_for_viewers(self):
+        self.login(self.alice)
+        profile = self.client.get(reverse("library:profile"))
+        self.assertEqual(profile.context["badge_style"], badge_styles.DEFAULT_STYLE)
+        self.assertContains(profile, 'gv-badge--emblem')
+        self.assertContains(profile, 'name="badge_style" value="shield"')
+
+        self.client.post(reverse("library:save_showcase"), {"keys": ["collector"], "badge_style": "shield"})
+        self.assertEqual(User.objects.get(id=self.alice.id).badge_style, "shield")
+
+        # Чужий профіль і сторінка досягнень — у стилі власника, без вибору стилю.
+        bob = self.make_user("bob")
+        self.login(bob)
+        response = self.client.get(reverse("library:user_profile", args=[self.alice.id]))
+        self.assertContains(response, "gv-badge--shield")
+        self.assertNotContains(response, 'name="badge_style"')
+        page = self.client.get(reverse("library:user_achievements", args=[self.alice.id]))
+        self.assertContains(page, "gv-badge--shield")
+
+    def test_badge_style_invalid_or_default_is_stored_as_null(self):
+        self.login(self.alice)
+        self.client.post(reverse("library:save_showcase"), {"badge_style": "hex"})
+        self.assertEqual(User.objects.get(id=self.alice.id).badge_style, "hex")
+        self.client.post(reverse("library:save_showcase"), {"badge_style": "<script>"})
+        self.assertIsNone(User.objects.get(id=self.alice.id).badge_style)
+        self.client.post(reverse("library:save_showcase"), {"badge_style": "hex"})
+        self.client.post(reverse("library:save_showcase"), {"badge_style": badge_styles.DEFAULT_STYLE})
+        self.assertIsNone(User.objects.get(id=self.alice.id).badge_style)
+
+    def test_every_style_renders_every_achievement(self):
+        for style in badge_styles.STYLES:
+            for achievement in site_achievements.ACHIEVEMENTS:
+                self.assertIn(achievement.icon, badge_styles.ICONS)
+                for tier in (0, 1, 3):
+                    for compact in (False, True):
+                        svg = badge_styles.render(style, achievement.icon, tier=tier, single=achievement.single,
+                                                  locked=tier == 0, hidden=tier == 0 and achievement.secret,
+                                                  compact=compact)
+                        self.assertTrue(svg.startswith("<svg viewBox="), (style, achievement.key))
 
     def test_other_profile_shows_showcase_without_editor(self):
         bob = self.make_user("bob")

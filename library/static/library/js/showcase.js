@@ -1,5 +1,5 @@
 // Редагування вітрини досягнень у профілі (components/showcase.html).
-// Слоти: перетягування мишею/пальцем (pointer events) і стрілками з клавіатури; пул: клік додає/прибирає значок.
+// Стиль значків — звичайні radio в тій самій формі. Слоти: перетягування мишею/пальцем (pointer events) і стрілками з клавіатури; пул: клік додає/прибирає значок.
 (function () {
     const form = document.querySelector("[data-showcase-form]");
     if (!form) return;
@@ -29,7 +29,10 @@
         form.hidden = !state;
         view.hidden = state;
         toggle.setAttribute("aria-expanded", state ? "true" : "false");
-        if (!state) slots.innerHTML = initial;
+        if (!state) {
+            slots.innerHTML = initial;
+            form.reset(); // повертає й вибраний стиль значків
+        }
         syncPool();
     }
 
