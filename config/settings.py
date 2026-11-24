@@ -182,3 +182,6 @@ STEAM_PRESENCE_INTERVAL = int(os.getenv('STEAM_PRESENCE_INTERVAL', '60'))
 
 # Досягнення GameVault: перевірка після дій (library/services/site_achievements.py). У тестах вимкнено.
 SITE_ACHIEVEMENTS = True
+
+# Волти за перший візит дня (library/services/volts.py, через middleware); у тестах вимкнено.
+VOLTS_DAILY = True

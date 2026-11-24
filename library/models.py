@@ -36,6 +36,10 @@ class User(models.Model):
     # і коли досягнення вперше перераховано (поки NULL — перший підрахунок тихий, без сповіщень).
     achievement_showcase = models.CharField(max_length=300, blank=True, null=True)
     badge_style = models.CharField(max_length=16, blank=True, null=True)
+    # Волти й магазин (services/volts.py, services/shop.py): баланс і одягнені предмети (ключі з shop.ITEMS).
+    volts = models.IntegerField(default=0)
+    avatar_frame = models.CharField(max_length=40, blank=True, null=True)
+    profile_title = models.CharField(max_length=40, blank=True, null=True)
     achievements_synced_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField()
 
@@ -405,6 +409,7 @@ class ActivityEvent(models.Model):
     PLAY_SESSION = "play_session"   # «грає в …» (сесії однієї гри за день зливаються); status="first" — перший запуск
     ACHIEVEMENTS = "achievements"   # «отримує N досягнень у …» (item_count)
     SITE_ACHIEVEMENT = "site_achievement"  # досягнення GameVault: achievement_key, рівень — item_count
+    GIFT = "gift"                   # «дарує target_user предмет item_key»
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
@@ -418,6 +423,7 @@ class ActivityEvent(models.Model):
     appid = models.CharField(max_length=20, blank=True, null=True)        # Steam-гра (може бути поза каталогом)
     game_name = models.CharField(max_length=255, blank=True, null=True)
     achievement_key = models.CharField(max_length=40, blank=True, null=True)
+    item_key = models.CharField(max_length=40, blank=True, null=True)
     target_user = models.ForeignKey(
         User, on_delete=models.CASCADE, db_column="target_user_id", null=True, blank=True,
         related_name="activity_events_as_target",
@@ -445,6 +451,7 @@ class Notification(models.Model):
     GAME_REJECTED = "game_rejected"
     FRIEND_PLAYING = "friend_playing"  # друг запустив гру з бібліотеки користувача
     SITE_ACHIEVEMENT = "site_achievement"  # нове досягнення GameVault (achievement_key, tier)
+    GIFT = "gift"  # друг (actor) дарує предмет магазину (item_key)
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="notifications")
@@ -461,6 +468,7 @@ class Notification(models.Model):
     game = models.ForeignKey(Game, on_delete=models.SET_NULL, db_column="game_id", null=True, blank=True, related_name="+")
     achievement_key = models.CharField(max_length=40, blank=True, null=True)
     tier = models.SmallIntegerField(blank=True, null=True)
+    item_key = models.CharField(max_length=40, blank=True, null=True)
     created_at = models.DateTimeField()
     read_at = models.DateTimeField(null=True, blank=True)
 
@@ -599,3 +607,37 @@ class UserSiteAchievement(models.Model):
         managed = False
         db_table = "user_site_achievements"
         unique_together = (("user", "achievement_key", "tier"),)
+
+
+class VoltTransaction(models.Model):
+    """Запис журналу волтів (services/volts.py): + нарахування, − витрата. ref_key унікальний для користувача."""
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="volt_transactions")
+    amount = models.IntegerField()
+    reason = models.CharField(max_length=30)
+    ref_key = models.CharField(max_length=120)
+    note = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "volt_transactions"
+        unique_together = (("user", "ref_key"),)
+
+
+class UserItem(models.Model):
+    """Предмет магазину в користувача (services/shop.py): куплений або подарований (gifted_by)."""
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="items")
+    item_key = models.CharField(max_length=40)
+    gifted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, db_column="gifted_by_id", null=True, blank=True, related_name="+"
+    )
+    acquired_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "user_items"
+        unique_together = (("user", "item_key"),)

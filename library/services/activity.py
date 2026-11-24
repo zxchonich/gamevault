@@ -193,6 +193,7 @@ class FeedItem:
     item_count: int = None
     review_text: str = ""
     achievement_key: str = None
+    item_key: str = None
     appid: str = None
     game_name: str = ""
     duration_minutes: int = None
@@ -267,6 +268,7 @@ def group_events(events):
             item_count=event.item_count,
             appid=event.appid,
             achievement_key=event.achievement_key,
+            item_key=event.item_key,
             game_name=event.game_name or "",
             duration_minutes=event.duration_minutes,
         ))

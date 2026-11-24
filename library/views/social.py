@@ -22,7 +22,7 @@ from ..forms import ProfileForm
 from ..models import LibraryEntry, Notification, SocialConnection, User, UserBlock
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
-from ..services import activity, badge_styles, notifications, site_achievements, steam_achievements, steam_presence
+from ..services import activity, badge_styles, notifications, shop, site_achievements, steam_achievements, steam_presence
 from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
 from ..services.social_auth import can_remove_login_method
@@ -259,7 +259,9 @@ def _profile_extras(user, own=False):
     if own:
         site_achievements.check_quietly(user)  # страховка: досягнення, що залежать від часу («Старожил»)
     site_views = site_achievements.build_views(user)
-    showcase = site_achievements.showcase(user, site_views)
+    owned = shop.owned_keys(user)
+    showcase_size = shop.showcase_size(user, owned)
+    showcase = site_achievements.showcase(user, site_views, size=showcase_size)
     unlocked = [v for v in site_views if v.unlocked] if own else []
     return {
         **profile_stats(user),
@@ -273,7 +275,12 @@ def _profile_extras(user, own=False):
         "site_unlocked": unlocked,
         "showcase_custom": user.achievement_showcase is not None,
         "badge_style": badge_styles.normalize(user.badge_style),
-        "badge_style_choices": badge_styles.choices() if own else [],
+        "badge_style_choices": [
+            {**c, "locked": not shop.can_use_style(c["key"], owned),
+             "price": shop.STYLE_ITEMS[c["key"]].price if c["key"] in shop.STYLE_ITEMS else 0}
+            for c in badge_styles.choices()
+        ] if own else [],
+        "showcase_size": showcase_size,
         "badge_style_preview": (showcase or unlocked)[:3],
     }
 

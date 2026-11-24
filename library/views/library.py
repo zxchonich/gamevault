@@ -9,7 +9,7 @@ from ..access import block_state, can_view_profile, connection_between, library_
 from ..forms import ReviewForm, StatusForm
 from ..models import Game, LibraryEntry, Review, User
 from ..selectors import library_context
-from ..services import activity
+from ..services import activity, volts
 from ..services.steam_service import steam_items_by_appid
 from .social import private_profile_response
 
@@ -121,14 +121,15 @@ def add_review(request, game_id):
     if created or review.score != score:
         activity.record_review(user, game, score)
 
+    earned = volts.quietly(volts.review_reward, user, game, text)
     if created:
-        messages.success(request, "Рецензію додано.")
+        messages.success(request, "Рецензію додано." + (f" +{earned} волтів." if earned else ""))
     else:
         review.score = score
         review.text = text
         review.updated_at = timezone.now()
         review.save()
-        messages.success(request, "Рецензію оновлено.")
+        messages.success(request, "Рецензію оновлено." + (f" +{earned} волтів." if earned else ""))
 
     return redirect("library:game_detail", game_id=game.id)
 

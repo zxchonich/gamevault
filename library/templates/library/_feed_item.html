@@ -6,7 +6,7 @@ compact=True — для бокових панелей (без уривка ре�
 <article class="gv-event gv-event--{{ item.event_type }}{% if item.event_type == 'status_change' and item.status == 'completed' %} is-celebrate{% endif %}">
     <div class="gv-event__who">
         {% user_avatar item.user "sm" %}
-        {% if item.event_type == 'friendship' and item.target_user %}{% user_avatar item.target_user "sm" %}{% endif %}
+        {% if item.event_type == 'friendship' and item.target_user or item.event_type == 'gift' and item.target_user %}{% user_avatar item.target_user "sm" %}{% endif %}
     </div>
 
     <div class="gv-event__body">
@@ -28,6 +28,8 @@ compact=True — для бокових панелей (без уривка ре�
             додає зі Steam ігор до бібліотеки: <b>{{ item.item_count }}</b>
             {% elif item.event_type == 'friendship' %}
             і <a class="feed-user" href="{% if item.target_user.id == current_library_user.id %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' item.target_user.id %}{% endif %}">{{ item.target_user.username }}</a> тепер друзі
+            {% elif item.event_type == 'gift' %}
+            дарує <a class="feed-user" href="{% if item.target_user.id == current_library_user.id %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' item.target_user.id %}{% endif %}">{{ item.target_user.username }}</a> {{ item.item_key|gift_label }}
             {% elif item.event_type == 'game_approved' %}
             пропонує гру, і її додано в каталог:
             {% elif item.event_type == 'play_session' %}

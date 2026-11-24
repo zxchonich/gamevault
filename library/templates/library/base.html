@@ -49,6 +49,7 @@
             </button>
 
             {% if current_library_user %}
+            <a class="gv-volts" href="{% url 'library:shop' %}" title="Волти — магазин" aria-label="Волти: {{ current_library_user.volts }}. Магазин">{% icon "volt" 16 %}<b>{{ current_library_user.volts }}</b></a>
             <details class="gv-menu gv-bell">
                 <summary class="gv-btn gv-btn--icon" aria-label="Сповіщення{% if header_unread_count %}: нових {{ header_unread_count }}{% endif %}" title="Сповіщення">
                     {% icon "bell" 20 %}
@@ -89,6 +90,8 @@
                     <a href="{% url 'library:steam_library' %}">Steam-бібліотека</a>
                     <a href="{% url 'library:my_reviews' %}">Мої рецензії</a>
                     <a href="{% url 'library:my_achievements' %}">Досягнення</a>
+                    <a href="{% url 'library:shop' %}">Магазин</a>
+                    <a href="{% url 'library:wallet' %}">Волти · {{ current_library_user.volts }}</a>
                     <a href="{% url 'library:my_requests' %}">Мої заявки</a>
                     <a href="{% url 'library:edit_profile' %}">Налаштування</a>
                     {% if current_library_user.role.name == 'admin' %}

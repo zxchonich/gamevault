@@ -36,7 +36,7 @@ from library.models import (
 
 TIER_NAMES = {1: "бронза", 2: "срібло", 3: "золото"}
 TIER_GENITIVE = {1: "бронзи", 2: "срібла", 3: "золота"}  # «7/10 до срібла»
-SHOWCASE_SIZE = 5
+SHOWCASE_SIZE = 5  # базовий розмір; більше — за місця з магазину (showcase_size)
 RARE_STEAM_PERCENT = 5
 
 CATEGORIES = [
@@ -252,6 +252,9 @@ def check(user, now=None):
     if silent:
         User.objects.filter(id=user.id).update(achievements_synced_at=now)
         user.achievements_synced_at = now
+    # Волти за рівні (і за отримані раніше, якщо ще не нараховано) — навіть коли перший підрахунок тихий.
+    from . import volts
+    volts.sync_site_rewards(user, now=now)
     return new
 
 
@@ -400,27 +403,34 @@ def showcase_keys(user):
     return [k for k in (user.achievement_showcase or "").split(",") if k in BY_KEY]
 
 
-def showcase(user, views):
+def showcase_size(user):
+    """5 місць + куплені в магазині (shop.showcase_size)."""
+    from .shop import showcase_size as size_for
+    return size_for(user)
+
+
+def showcase(user, views, size=None):
     """Значки для вітрини: вибрані користувачем або автоматично (найвищі рівні, найрідкісніші, нові)."""
+    size = size or showcase_size(user)
     unlocked = {v.key: v for v in views if v.unlocked}
     chosen = [unlocked[k] for k in showcase_keys(user) if k in unlocked]
     if user.achievement_showcase is not None and chosen:
-        return chosen[:SHOWCASE_SIZE]
+        return chosen[:size]
     ranked = sorted(
         unlocked.values(),
         key=lambda v: (-v.tier, v.rarity if v.rarity is not None else 100,
                        -(v.unlocked_at.timestamp() if v.unlocked_at else 0)),
     )
-    return ranked[:SHOWCASE_SIZE]
+    return ranked[:size]
 
 
 def save_showcase(user, keys):
-    """Зберігає вибір вітрини (лише отримані, без повторів, до SHOWCASE_SIZE). keys=None — автоматично."""
+    """Зберігає вибір вітрини (лише отримані, без повторів, до showcase_size). keys=None — автоматично."""
     if keys is None:
         user.achievement_showcase = None
     else:
         unlocked = set(unlocked_tiers(user))
-        clean = list(dict.fromkeys(k for k in keys if k in unlocked))[:SHOWCASE_SIZE]
+        clean = list(dict.fromkeys(k for k in keys if k in unlocked))[:showcase_size(user)]
         user.achievement_showcase = ",".join(clean) if clean else None
     User.objects.filter(id=user.id).update(achievement_showcase=user.achievement_showcase)
     return user.achievement_showcase

@@ -20,7 +20,7 @@ DEFAULT_PASSWORD = "secret-pass-123"
 
 
 # Фонові задачі Steam і досягнення GameVault вмикають лише їхні тести.
-@override_settings(STEAM_AUTOSYNC=False, STEAM_PRESENCE=False, SITE_ACHIEVEMENTS=False)
+@override_settings(STEAM_AUTOSYNC=False, STEAM_PRESENCE=False, SITE_ACHIEVEMENTS=False, VOLTS_DAILY=False)
 class GameVaultTestCase(TestCase):
     """Базовий клас із фабриками даних. Ролі user/admin створює schema.sql.
 

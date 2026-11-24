@@ -19,6 +19,7 @@ from library.models import (
     SteamAchievement,
     User,
     UserAchievement,
+    UserItem,
     UserSiteAchievement,
 )
 from library.services import activity, badge_styles, site_achievements
@@ -215,6 +216,7 @@ class PageTests(SiteAchievementTestCase):
         self.assertContains(profile, 'gv-badge--emblem')
         self.assertContains(profile, 'name="badge_style" value="shield"')
 
+        UserItem.objects.create(user=self.alice, item_key="style_shield", acquired_at=timezone.now())  # платний стиль
         self.client.post(reverse("library:save_showcase"), {"keys": ["collector"], "badge_style": "shield"})
         self.assertEqual(User.objects.get(id=self.alice.id).badge_style, "shield")
 

@@ -15,6 +15,7 @@ live_session (зараз у грі), recent_achievements, achievements_count.
             {% if live_session %}<span class="gv-chip gv-chip--live"><span class="gv-live" title="З {{ live_session.started_at|date:'H:i' }}"><span class="gv-live__game">Грає в {{ live_session.game_name }} · {{ live_session.minutes|minutes_label }}</span></span></span>{% endif %}
         </div>
         <h1 class="gv-profile-head__name">{{ profile_user.username }}</h1>
+        {% if profile_user.profile_title|profile_title %}<p class="gv-user-title">{{ profile_user.profile_title|profile_title }}</p>{% endif %}
         <p class="gv-profile-head__sub">
             У GameVault з {{ profile_user.created_at|date:"d.m.Y" }}{% if is_own_profile and profile_user.email %} · {{ profile_user.email }}{% endif %}
         </p>

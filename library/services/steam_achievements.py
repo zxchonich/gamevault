@@ -151,18 +151,21 @@ def sync_user_game(user_id, steam_id, appid):
 
 def check_session(session, steam_id):
     """Після сесії: оновлює досягнення гри і записує в стрічку ті, що отримано під час сесії."""
-    from library.services import activity
+    from library.services import activity, volts
 
     if session.appid:
         sync_user_game(session.user_id, steam_id, session.appid)
-        count = UserAchievement.objects.filter(
+        apinames = list(UserAchievement.objects.filter(
             user_id=session.user_id,
             appid=session.appid,
             unlocked_at__gte=session.started_at - SESSION_MARGIN,
             unlocked_at__lte=(session.ended_at or session.last_seen_at) + SESSION_MARGIN,
-        ).count()
-        if count:
-            activity.record_achievements(session, count)
+        ).values_list("apiname", flat=True))
+        if apinames:
+            activity.record_achievements(session, len(apinames))
+            # Волти — лише за отримані під час гри (старі, дозавантажені backfill, не рахуються).
+            volts.quietly(volts.steam_achievement_rewards, session.user_id, session.appid, apinames,
+                          now=session.ended_at or session.last_seen_at)
     PlaySession.objects.filter(id=session.id).update(achievements_checked=True)
 
 

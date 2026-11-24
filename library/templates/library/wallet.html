@@ -1,0 +1,43 @@
+{% extends 'library/base.html' %}
+{% load library_extras %}
+
+{% block title %}Волти | GameVault{% endblock %}
+
+{% block content %}
+<header class="gv-page-head">
+    <div>
+        <h1>Волти</h1>
+        <p>Валюта GameVault: лише заробляється, а витрачається в магазині на оформлення профілю й подарунки друзям.</p>
+    </div>
+    <div class="gv-page-head__actions">
+        <span class="gv-volts gv-volts--lg">{% icon "volt" 20 %}<b>{{ current_library_user.volts }}</b><span>волтів</span></span>
+        <a class="gv-btn gv-btn--primary" href="{% url 'library:shop' %}">{% icon "bag" 16 %} Магазин</a>
+    </div>
+</header>
+
+<div class="gv-wallet">
+    <section class="gv-card" aria-labelledby="wallet-history">
+        <div class="gv-section-head"><h2 id="wallet-history">Історія</h2></div>
+        {% if page_obj.object_list %}
+        <ul class="gv-ledger">
+            {% for t in page_obj.object_list %}
+            <li>
+                <span class="gv-ledger__what"><b>{% for key, label in reason_labels.items %}{% if key == t.reason %}{{ label }}{% endif %}{% endfor %}</b>{% if t.note %}<span>{{ t.note }}</span>{% endif %}</span>
+                <time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|ago }}</time>
+                <span class="gv-ledger__amount{% if t.amount < 0 %} is-spent{% endif %}">{% if t.amount > 0 %}+{% endif %}{{ t.amount }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% pagination page_obj %}
+        {% else %}
+        <p class="gv-shop-note">Поки порожньо. Грайте, пишіть рецензії й отримуйте досягнення — волти нараховуються самі.</p>
+        {% endif %}
+    </section>
+    <aside class="gv-card" aria-labelledby="wallet-earn">
+        <div class="gv-section-head"><h2 id="wallet-earn">Як заробити</h2></div>
+        <dl class="gv-earn">
+            {% for what, how in earn_rules %}<div><dt>{{ what }}</dt><dd>{{ how }}</dd></div>{% endfor %}
+        </dl>
+    </aside>
+</div>
+{% endblock %}

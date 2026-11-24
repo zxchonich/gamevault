@@ -1,3 +1,3 @@
-<span class="gv-avatar{% if size %} gv-avatar--{{ size }}{% endif %}" style="--avatar-bg: {{ color }}" aria-hidden="true">
+<span class="gv-avatar{% if size %} gv-avatar--{{ size }}{% endif %}{% if frame %} gv-frame gv-frame--{{ frame }}{% endif %}" style="--avatar-bg: {{ color }}" aria-hidden="true">
     {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="">{% else %}{{ user.username|first|upper }}{% endif %}
 </span>

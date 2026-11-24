@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-012.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-013.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -77,6 +77,9 @@ CREATE TABLE `users` (
   `notify_friend_playing` tinyint(1) NOT NULL DEFAULT '1',
   `achievement_showcase` varchar(300) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `badge_style` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Стиль значків досягнень (hex/emblem/cartridge/shield); NULL — за замовчуванням',
+  `volts` int NOT NULL DEFAULT '0' COMMENT 'Баланс волтів',
+  `avatar_frame` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Одягнена рамка аватара (ключ предмета)',
+  `profile_title` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Одягнений титул під ніком (ключ предмета)',
   `achievements_synced_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_username` (`username`),
@@ -179,6 +182,7 @@ CREATE TABLE `activity_events` (
   `appid` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `game_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `achievement_key` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `item_key` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Подарований предмет магазину (event_type = gift)',
   `target_user_id` int DEFAULT NULL COMMENT 'другий користувач (для friendship)',
   `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'новий статус (status_change)',
   `score` smallint DEFAULT NULL COMMENT 'оцінка (review)',
@@ -267,6 +271,7 @@ CREATE TABLE `notifications` (
   `game_id` int DEFAULT NULL,
   `achievement_key` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `tier` tinyint DEFAULT NULL,
+  `item_key` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Подарований предмет магазину (kind = gift)',
   `created_at` datetime NOT NULL,
   `read_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -380,6 +385,37 @@ CREATE TABLE `user_site_achievements` (
   UNIQUE KEY `uq_user_site_achievement` (`user_id`,`achievement_key`,`tier`),
   KEY `idx_site_achievements_key` (`achievement_key`,`tier`),
   CONSTRAINT `fk_user_site_achievements_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `volt_transactions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `amount` int NOT NULL COMMENT 'Додатне — нарахування, відʼємне — витрата',
+  `reason` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'site_achievement, steam_achievement, session, review, daily, streak, purchase, gift',
+  `ref_key` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Унікальний для користувача ключ дії',
+  `note` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Підпис для історії (назва досягнення, гри, предмета)',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_volt_ref` (`user_id`,`ref_key`),
+  KEY `idx_volt_user_time` (`user_id`,`created_at`),
+  CONSTRAINT `fk_volt_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_items` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `item_key` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `gifted_by_id` int DEFAULT NULL COMMENT 'Хто подарував (NULL — куплено самостійно)',
+  `acquired_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_item` (`user_id`,`item_key`),
+  KEY `idx_user_items_gifted_by` (`gifted_by_id`),
+  CONSTRAINT `fk_user_items_gifted_by` FOREIGN KEY (`gifted_by_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_user_items_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

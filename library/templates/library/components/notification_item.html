@@ -4,10 +4,11 @@
 {% elif item.kind == 'game_approved' and item.game_id or item.kind == 'friend_playing' and item.game_id %}{% url 'library:game_detail' item.game_id as target %}
 {% elif item.kind == 'friend_playing' %}{% url 'library:user_profile' item.actor_id as target %}
 {% elif item.kind == 'site_achievement' %}{% url 'library:my_achievements' as target %}
+{% elif item.kind == 'gift' %}{% url 'library:shop' as target %}
 {% else %}{% url 'library:my_requests' as target %}{% endif %}
 <a class="gv-notice{% if unread %} is-unread{% endif %}{% if compact %} gv-notice--compact{% endif %}" href="{{ target }}">
     <span class="gv-notice__icon gv-notice__icon--{{ item.kind }}" aria-hidden="true">
-        {% if item.actor and item.kind == 'friend_request' or item.actor and item.kind == 'friend_accepted' or item.actor and item.kind == 'friend_playing' %}{% user_avatar item.actor "sm" %}
+        {% if item.actor and item.kind == 'friend_request' or item.actor and item.kind == 'friend_accepted' or item.actor and item.kind == 'friend_playing' or item.actor and item.kind == 'gift' %}{% user_avatar item.actor "sm" %}
         {% elif item.kind == 'site_achievement' %}{% site_badge item.achievement_key item.tier "sm" style=current_library_user.badge_style %}
         {% elif item.kind == 'game_approved' %}{% icon "check" 18 %}
         {% else %}{% icon "x" 18 %}{% endif %}
@@ -17,6 +18,7 @@
             {% if item.kind == 'friend_request' %}<b>{{ item.actor.username }}</b> хоче додати вас у друзі
             {% elif item.kind == 'friend_accepted' %}<b>{{ item.actor.username }}</b> приймає вашу заявку в друзі
             {% elif item.kind == 'site_achievement' %}Нове досягнення: <b>«{{ item.achievement_key|achievement_title }}»</b>{% if item.tier|tier_label:item.achievement_key %} — {{ item.tier|tier_label:item.achievement_key }}{% endif %}
+            {% elif item.kind == 'gift' %}<b>{{ item.actor.username|default:'Друг' }}</b> дарує вам {{ item.item_key|gift_label }} — вдягніть у магазині
             {% elif item.kind == 'friend_playing' %}<b>{{ item.actor.username }}</b> запускає <b>«{{ item.game.title|default:'гру' }}»</b> — вона є у вашій бібліотеці
             {% elif item.kind == 'game_approved' %}Заявку <b>«{{ item.game_request.title }}»</b> схвалено — гра вже в каталозі
             {% else %}Заявку <b>«{{ item.game_request.title }}»</b> відхилено{% endif %}

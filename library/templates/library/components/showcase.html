@@ -27,10 +27,10 @@ site_summary, site_unlocked (усі отримані — для вибору), s
     </div>
 
     {% if is_own_profile and site_unlocked %}
-    <form id="showcase-edit" class="gv-showcase-edit" method="post" action="{% url 'library:save_showcase' %}" hidden data-showcase-form data-max="5">
+    <form id="showcase-edit" class="gv-showcase-edit" method="post" action="{% url 'library:save_showcase' %}" hidden data-showcase-form data-max="{{ showcase_size|default:5 }}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
-        <p class="gv-field__hint" style="margin: 0">Перетягніть значки, щоб змінити порядок. Натисніть на значок нижче, щоб додати його або прибрати (до 5). Стиль значків бачать усі, хто відкриває ваш профіль.</p>
+        <p class="gv-field__hint" style="margin: 0">Перетягніть значки, щоб змінити порядок. Натисніть на значок нижче, щоб додати його або прибрати (до {{ showcase_size|default:5 }}). Стиль значків бачать усі, хто відкриває ваш профіль.</p>
         <ol class="gv-showcase-slots" data-showcase-slots data-empty="Оберіть значки нижче">{% for v in site_showcase %}<li data-key="{{ v.key }}" tabindex="0" aria-label="{{ v.achievement.title }} — стрілками вліво/вправо змінити порядок">{% icon "grip" 14 %}{% site_badge v.key v.tier "sm" style=profile_user.badge_style %}<span>{{ v.achievement.title }}</span><input type="hidden" name="keys" value="{{ v.key }}"></li>{% endfor %}</ol>
         <div class="gv-showcase-pool">
             {% for v in site_unlocked %}
@@ -40,13 +40,14 @@ site_summary, site_unlocked (усі отримані — для вибору), s
         <fieldset class="gv-badge-styles">
             <legend>Стиль значків</legend>
             {% for choice in badge_style_choices %}
-            <label class="gv-badge-style">
-                <input type="radio" name="badge_style" value="{{ choice.key }}"{% if choice.key == badge_style %} checked{% endif %}>
+            <label class="gv-badge-style{% if choice.locked %} is-locked{% endif %}">
+                <input type="radio" name="badge_style" value="{{ choice.key }}"{% if choice.key == badge_style %} checked{% endif %}{% if choice.locked %} disabled{% endif %}>
                 <span class="gv-badge-style__preview" aria-hidden="true">{% for v in badge_style_preview %}{% site_badge v.key v.tier "" style=choice.key %}{% endfor %}</span>
-                <span class="gv-badge-style__name">{{ choice.label }}{% if choice.default %} <em>за замовчуванням</em>{% endif %}</span>
+                <span class="gv-badge-style__name">{{ choice.label }}{% if choice.default %} <em>за замовчуванням</em>{% elif choice.locked %} <em>{% icon "volt" 12 %} {{ choice.price }} · у магазині</em>{% endif %}</span>
             </label>
             {% endfor %}
         </fieldset>
+        {% if badge_style_choices %}<a class="gv-link" href="{% url 'library:shop' %}" style="align-self: flex-start">Більше стилів, рамок і титулів — у магазині →</a>{% endif %}
         <template data-showcase-grip>{% icon "grip" 14 %}</template>
         <div class="gv-actions">
             <button class="gv-btn gv-btn--primary" type="submit">Зберегти</button>

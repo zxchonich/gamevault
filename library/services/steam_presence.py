@@ -28,6 +28,7 @@ from django.db import IntegrityError, close_old_connections
 from django.utils import timezone
 
 from library.access import friend_ids
+from library.services import volts
 from library.models import (
     AppState,
     ExternalAccount,
@@ -133,6 +134,7 @@ def close_session(session):
     session.ended_at = session.last_seen_at
     session.save(update_fields=["ended_at"])
     activity.record_play_session(session)
+    volts.quietly(volts.session_reward, session)
     return session
 
 

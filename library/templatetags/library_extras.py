@@ -70,6 +70,9 @@ ICONS = {
     "grip": '<circle cx="9" cy="6" r="1.2" fill="currentColor"/><circle cx="15" cy="6" r="1.2" fill="currentColor"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><circle cx="9" cy="18" r="1.2" fill="currentColor"/><circle cx="15" cy="18" r="1.2" fill="currentColor"/>',
     "edit": '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/>',
     "ban": '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+    "volt": '<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z" fill="currentColor" fill-opacity=".25"/>',
+    "gift": '<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-3-5-4-5.5-1.8C6 8 9 8 12 8c3 0 6 0 5.5-1.8C17 4 13.5 5 12 8"/>',
+    "bag": '<path d="M5 8h14l-1 12H6z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>',
     "trophy": '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M10 17h4"/>',
     "gamepad": '<rect x="2.5" y="7" width="19" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="15.5" cy="11.5" r=".9" fill="currentColor"/><circle cx="17.5" cy="13.8" r=".9" fill="currentColor"/>',
     "settings": '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
@@ -100,11 +103,13 @@ def game_cover(game, size=""):
 
 
 @register.inclusion_tag("library/components/avatar.html")
-def user_avatar(user, size=""):
-    """{% user_avatar user "sm" %} — фото або перша літера на кольоровому тлі."""
+def user_avatar(user, size="", frame=None):
+    """{% user_avatar user "sm" %} — фото або перша літера на кольоровому тлі.
+    Рамка — одягнена користувачем (user.avatar_frame); frame="frame_neon" — показати іншу (превʼю в магазині)."""
     return {
         "user": user,
         "size": size,
+        "frame": frame if frame is not None else getattr(user, "avatar_frame", None),
         "color": AVATAR_COLORS[(user.id or 0) % len(AVATAR_COLORS)],
     }
 
@@ -254,6 +259,22 @@ def site_badge(key, tier=0, size="", hidden=False, style=None):
         "hidden": hidden,
         "svg": mark_safe(svg),
     }
+
+
+@register.filter
+def profile_title(key):
+    """{{ user.profile_title|profile_title }} — текст титулу з магазину (порожньо, якщо немає)."""
+    from library.services.shop import title_text
+
+    return title_text(key)
+
+
+@register.filter
+def gift_label(key):
+    """{{ item.item_key|gift_label }} — «рамку аватара «Неон»»."""
+    from library.services.shop import gift_label as label
+
+    return label(key)
 
 
 @register.filter

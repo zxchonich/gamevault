@@ -1,0 +1,93 @@
+{% extends 'library/base.html' %}
+{% load library_extras %}
+
+{% block title %}Магазин | GameVault{% endblock %}
+
+{% block content %}
+<header class="gv-page-head">
+    <div>
+        <h1>Магазин</h1>
+        <p>Оформлення профілю за волти. Волти не купуються — їх дають досягнення, гра, рецензії та щоденні візити.</p>
+    </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-volts gv-volts--lg" href="{% url 'library:wallet' %}" title="Історія волтів">{% icon "volt" 20 %}<b>{{ current_library_user.volts }}</b><span>волтів</span></a>
+        <a class="gv-btn gv-btn--ghost" href="{% url 'library:wallet' %}">Як заробити</a>
+    </div>
+</header>
+
+{% for section in sections %}
+<section class="gv-card" aria-labelledby="shop-{{ section.kind }}">
+    <div class="gv-section-head">
+        <div>
+            <h2 id="shop-{{ section.kind }}">{{ section.label }}</h2>
+            <p class="gv-shop-note">{{ section.description }}</p>
+        </div>
+        {% if section.kind != 'slot' %}{% for v in section.items %}{% if v.equipped %}
+        <form method="post" action="{% url 'library:unequip_item' section.kind %}">
+            {% csrf_token %}
+            <button type="submit" class="gv-btn gv-btn--sm gv-btn--ghost">{% if section.kind == 'badge_style' %}Стиль за замовчуванням{% else %}Зняти{% endif %}</button>
+        </form>
+        {% endif %}{% endfor %}{% endif %}
+    </div>
+    <div class="gv-shop-grid">
+        {% for v in section.items %}
+        <article class="gv-shop-item{% if v.equipped %} is-equipped{% endif %}">
+            <div class="gv-shop-item__preview" aria-hidden="true">
+                {% if section.kind == 'badge_style' %}
+                {% site_badge "veteran" 3 "" style=v.item.value %}{% site_badge "collector" 2 "" style=v.item.value %}{% site_badge "finisher" 1 "" style=v.item.value %}
+                {% elif section.kind == 'frame' %}
+                {% user_avatar current_library_user "lg" frame=v.item.key %}
+                {% elif section.kind == 'title' %}
+                <span class="gv-shop-item__name-demo"><b>{{ current_library_user.username }}</b><span class="gv-user-title">{{ v.item.title }}</span></span>
+                {% else %}
+                <span class="gv-shop-item__slot">+1</span>
+                {% endif %}
+            </div>
+            <div class="gv-shop-item__body">
+                <div class="gv-shop-item__title">{{ v.item.title }}{% if v.equipped %} <span class="gv-chip gv-chip--accent">Вдягнуто</span>{% elif v.owned %} <span class="gv-chip">Ваше</span>{% endif %}</div>
+                {% if v.item.description %}<p class="gv-shop-item__desc">{{ v.item.description }}</p>{% endif %}
+            </div>
+            <div class="gv-shop-item__foot">
+                {% if v.owned %}
+                    {% if section.kind == 'slot' %}
+                    <span class="gv-shop-note">Діє у вітрині</span>
+                    {% elif not v.equipped %}
+                    <form method="post" action="{% url 'library:equip_item' v.item.key %}">
+                        {% csrf_token %}
+                        <button type="submit" class="gv-btn gv-btn--sm">Вдягнути</button>
+                    </form>
+                    {% endif %}
+                {% elif v.blocked_by %}
+                    <span class="gv-shop-note">Спершу «{{ v.blocked_by }}»</span>
+                {% else %}
+                    <form method="post" action="{% url 'library:buy_item' v.item.key %}">
+                        {% csrf_token %}
+                        <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary"{% if not v.affordable %} disabled title="Не вистачає волтів"{% endif %}>{% icon "volt" 14 %} {{ v.item.price }}</button>
+                    </form>
+                {% endif %}
+                {% if v.item.giftable and has_friends %}
+                <details class="gv-gift">
+                    <summary class="gv-btn gv-btn--sm gv-btn--icon" title="Подарувати другові" aria-label="Подарувати «{{ v.item.title }}» другові">{% icon "gift" 16 %}</summary>
+                    <div class="gv-gift__panel">
+                        {% if v.gift_friends %}
+                        <form class="gv-gift__form" method="post" action="{% url 'library:gift_item' v.item.key %}">
+                            {% csrf_token %}
+                            <label class="gv-field"><span class="gv-field__label">Кому</span>
+                                <select name="friend" required>{% for friend in v.gift_friends %}<option value="{{ friend.id }}">{{ friend.username }}</option>{% endfor %}</select>
+                            </label>
+                            <label class="gv-gift__check"><input type="checkbox" name="show_in_feed" value="1" checked> Показати в стрічці</label>
+                            <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary"{% if not v.affordable %} disabled title="Не вистачає волтів"{% endif %}>{% icon "gift" 14 %} Подарувати за {{ v.item.price }}</button>
+                        </form>
+                        {% else %}
+                        <p class="gv-shop-note">У всіх ваших друзів це вже є.</p>
+                        {% endif %}
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+{% endblock %}

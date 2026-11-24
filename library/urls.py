@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import accounts, achievements, catalog, catalog_admin, discover, google, library, moderation, social, steam
+from .views import accounts, achievements, catalog, catalog_admin, discover, google, library, moderation, shop, social, steam
 
 app_name = 'library'
 
@@ -51,6 +51,12 @@ urlpatterns = [
     path('achievements/', achievements.my_achievements, name='my_achievements'),
     path('achievements/showcase/', achievements.save_showcase, name='save_showcase'),
     path('users/<int:user_id>/achievements/', achievements.user_achievements, name='user_achievements'),
+    path('shop/', shop.shop_page, name='shop'),
+    path('shop/<slug:key>/buy/', shop.buy_item, name='buy_item'),
+    path('shop/<slug:key>/gift/', shop.gift_item, name='gift_item'),
+    path('shop/<slug:key>/equip/', shop.equip_item, name='equip_item'),
+    path('shop/unequip/<slug:kind>/', shop.unequip_item, name='unequip_item'),
+    path('wallet/', shop.wallet, name='wallet'),
 
     # Акаунт
     path('login/', accounts.login_view, name='login'),
