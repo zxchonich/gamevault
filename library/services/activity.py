@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from library.access import friend_ids
 from library.models import ActivityEvent, ExternalLibraryItem, Game, Review
+from library.services import steam_achievements
 from library.services.steam_service import attach_steam_apps
 
 # Повторні зміни статусу чи оцінки тієї самої гри протягом цього часу зливаються в одну подію.
@@ -31,7 +32,10 @@ FEED_FILTERS = {
     "friends": "Друзі",
     "reviews": "Оцінки",
     "completed": "Пройдене",
+    "games": "Ігри",
 }
+
+PLAY_TYPES = (ActivityEvent.PLAY_SESSION, ActivityEvent.ACHIEVEMENTS)
 
 
 # --- Запис ---------------------------------------------------------------------
@@ -89,6 +93,52 @@ def record_game_approved(requested_by, game):
     )
 
 
+def _day_event(event_type, session):
+    """Подія цього типу про ту саму гру в той самий день (сесії й досягнення за день зливаються)."""
+    day_start = timezone.localtime(session.ended_at or session.last_seen_at).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    queryset = ActivityEvent.objects.filter(user_id=session.user_id, event_type=event_type, created_at__gte=day_start)
+    if session.appid:
+        queryset = queryset.filter(appid=session.appid)
+    else:
+        queryset = queryset.filter(appid__isnull=True, game_name=session.game_name)
+    return queryset.order_by("-created_at").first()
+
+
+def record_play_session(session):
+    """Завершена сесія гри: «грає в X — 2 год» (сесії однієї гри за день додаються)."""
+    when = session.ended_at or session.last_seen_at
+    event = _day_event(ActivityEvent.PLAY_SESSION, session)
+    if event is not None:
+        event.duration_minutes = (event.duration_minutes or 0) + session.minutes
+        event.created_at = when
+        if session.first_play:
+            event.status = "first"
+        event.save(update_fields=["duration_minutes", "created_at", "status"])
+        return event
+    return ActivityEvent.objects.create(
+        user_id=session.user_id, event_type=ActivityEvent.PLAY_SESSION, game_id=session.game_id,
+        appid=session.appid, game_name=session.game_name, duration_minutes=session.minutes,
+        status="first" if session.first_play else None, created_at=when,
+    )
+
+
+def record_achievements(session, count):
+    """Досягнення, отримані під час сесії: «отримує N досягнень у X» (за день додаються)."""
+    when = session.ended_at or session.last_seen_at
+    event = _day_event(ActivityEvent.ACHIEVEMENTS, session)
+    if event is not None:
+        event.item_count = (event.item_count or 0) + count
+        event.created_at = when
+        event.save(update_fields=["item_count", "created_at"])
+        return event
+    return ActivityEvent.objects.create(
+        user_id=session.user_id, event_type=ActivityEvent.ACHIEVEMENTS, game_id=session.game_id,
+        appid=session.appid, game_name=session.game_name, item_count=count, created_at=when,
+    )
+
+
 def forget_game_activity(user, game, include_reviews=True):
     """Гру прибрано з бібліотеки — її події більше не показуємо."""
     types = [ActivityEvent.LIBRARY_ADD, ActivityEvent.STATUS_CHANGE]
@@ -116,6 +166,10 @@ class FeedItem:
     score: int = None
     item_count: int = None
     review_text: str = ""
+    appid: str = None
+    game_name: str = ""
+    duration_minutes: int = None
+    achievements: list = field(default_factory=list)
 
     @property
     def game(self):
@@ -124,6 +178,25 @@ class FeedItem:
     @property
     def extra_games_count(self):
         return max(0, len(self.games) - 3)
+
+    @property
+    def title(self):
+        """Назва гри для ігрових подій (гри може не бути в каталозі)."""
+        return self.game.title if self.game else self.game_name
+
+    @property
+    def external_cover(self):
+        if self.game is None and self.appid:
+            from library.services.steam_service import steam_cover_url
+            return steam_cover_url(self.appid)
+        return ""
+
+    @property
+    def store_url(self):
+        if self.appid:
+            from library.services.steam_service import steam_store_url
+            return steam_store_url(self.appid)
+        return ""
 
 
 def _visible_to(viewer, queryset):
@@ -165,9 +238,13 @@ def group_events(events):
             status=event.status,
             score=event.score,
             item_count=event.item_count,
+            appid=event.appid,
+            game_name=event.game_name or "",
+            duration_minutes=event.duration_minutes,
         ))
 
     _attach_review_texts(items)
+    steam_achievements.attach_to_feed_items(items)
     return items
 
 
@@ -202,6 +279,8 @@ def feed_events(viewer, kind="all"):
         queryset = queryset.filter(event_type=ActivityEvent.REVIEW)
     elif kind == "completed":
         queryset = queryset.filter(event_type=ActivityEvent.STATUS_CHANGE, status="completed")
+    elif kind == "games":
+        queryset = queryset.filter(event_type__in=PLAY_TYPES)
 
     return _visible_to(viewer, queryset)
 
@@ -220,8 +299,10 @@ def user_activity(viewer, owner, limit=10):
     return group_events(_visible_to(viewer, queryset)[:limit])
 
 
-def now_playing(viewer, limit=8):
-    """У що друзі (і сам користувач) грали в Steam останні 2 тижні."""
+def now_playing(viewer, limit=8, live=()):
+    """У що друзі (і сам користувач) грали в Steam останні 2 тижні.
+
+    live — відкриті сесії (steam_presence.live_sessions): ці ігри вже показано як «зараз у грі»."""
     people = friend_ids(viewer) | {viewer.id}
     items = (
         ExternalLibraryItem.objects
@@ -230,7 +311,8 @@ def now_playing(viewer, limit=8):
         .select_related("user")
         .order_by("-playtime_2weeks_minutes")[:limit]
     )
-    items = attach_steam_apps(items)
+    live_keys = {(s.user_id, s.appid) for s in live}
+    items = attach_steam_apps([i for i in items if (i.user_id, i.external_game_id) not in live_keys])
     games = {g.steam_appid: g for g in Game.objects.filter(steam_appid__in=[i.external_game_id for i in items])}
     for item in items:
         item.catalog_game = games.get(item.external_game_id)

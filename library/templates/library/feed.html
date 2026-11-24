@@ -7,7 +7,7 @@
 <header class="gv-page-head">
     <div>
         <h1>Стрічка</h1>
-        <p>Що ви та ваші друзі додають, проходять, оцінюють і в що грають у Steam.</p>
+        <p>Що ви та ваші друзі додають, проходять, оцінюють, у що грають у Steam і які досягнення отримують.</p>
     </div>
     <div class="gv-page-head__actions">
         <a class="gv-btn gv-btn--ghost" href="{% url 'library:edit_profile' %}">Видимість активності</a>
@@ -15,13 +15,26 @@
     </div>
 </header>
 
-{% if now_playing %}
+{% if now_playing or live_sessions %}
 <section class="gv-card" aria-labelledby="now-playing">
     <div class="gv-section-head">
         <h2 id="now-playing">Зараз грають</h2>
-        <p style="margin: 0">Steam · останні 2 тижні</p>
+        <p style="margin: 0">{% if live_sessions %}<span class="gv-live">У грі: {{ live_sessions|length }}</span> · {% endif %}Steam · останні 2 тижні</p>
     </div>
     <div class="gv-carousel">
+        {% for session in live_sessions %}
+        <a class="gv-np-card is-live" href="{% if session.game %}{% url 'library:game_detail' session.game.id %}{% elif session.appid %}https://store.steampowered.com/app/{{ session.appid }}/{% else %}{% url 'library:user_profile' session.user.id %}{% endif %}" {% if not session.game and session.appid %}target="_blank" rel="noopener"{% endif %}>
+            <span class="gv-np-card__media">
+                <span class="gv-np-card__fallback" aria-hidden="true">{{ session.game_name }}</span>
+                {% if session.cover_url %}<img src="{{ session.cover_url }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}
+                <span class="gv-np-card__hours is-live" title="У грі з {{ session.started_at|date:'H:i' }}">У грі · {{ session.minutes|minutes_label }}</span>
+            </span>
+            <span class="gv-np-card__body">
+                <span class="gv-np-card__title" title="{{ session.game_name }}">{{ session.game_name }}</span>
+                <span class="gv-np-card__who">{% user_avatar session.user "sm" %}<span class="gv-np-card__name">{% if session.user.id == current_library_user.id %}Ви{% else %}{{ session.user.username }}{% endif %}</span></span>
+            </span>
+        </a>
+        {% endfor %}
         {% for item in now_playing %}
         <a class="gv-np-card" href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}" {% if not item.catalog_game %}target="_blank" rel="noopener"{% endif %}>
             <span class="gv-np-card__media">

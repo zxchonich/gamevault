@@ -1,5 +1,16 @@
-{% comment %}Список "Зараз грають" (activity.now_playing).{% endcomment %}
+{% load library_extras %}{% comment %}Список "Зараз грають": live (steam_presence.live_sessions) і now_playing (activity.now_playing).{% endcomment %}
 <div class="steam-mini-list gv-now-playing">
+    {% for session in live %}
+    <a class="steam-mini-card"
+        href="{% if session.game %}{% url 'library:game_detail' session.game.id %}{% elif session.appid %}https://store.steampowered.com/app/{{ session.appid }}/{% else %}{% url 'library:user_profile' session.user.id %}{% endif %}"
+        {% if not session.game and session.appid %}target="_blank" rel="noopener"{% endif %}>
+        {% if session.cover_url %}<img src="{{ session.cover_url }}" alt="{{ session.game_name }}" loading="lazy" onerror="this.remove()">{% endif %}
+        <div>
+            <b>{{ session.game_name }}</b>
+            <span class="gv-live">{% if session.user.id == current_library_user.id %}Ви{% else %}{{ session.user.username }}{% endif %} · у грі {{ session.minutes|minutes_label }}</span>
+        </div>
+    </a>
+    {% endfor %}
     {% for item in now_playing %}
     <a class="steam-mini-card"
         href="{% if item.catalog_game %}{% url 'library:game_detail' item.catalog_game.id %}{% else %}{{ item.store_url }}{% endif %}"

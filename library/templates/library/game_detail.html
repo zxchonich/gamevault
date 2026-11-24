@@ -174,6 +174,26 @@
             </div>
         </section>
 
+        {% if achievements %}
+        <section class="gv-card gv-card--tight" aria-labelledby="achievements">
+            <div class="gv-section-head"><h2 id="achievements">Ваші досягнення</h2><span class="muted" style="font-weight: 700">Steam</span></div>
+            <div class="gv-progress-label"><span>{{ achievements.unlocked }} з {{ achievements.total }}</span><span>{{ achievements.percent }}%</span></div>
+            <div class="gv-progress" role="progressbar" aria-valuenow="{{ achievements.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Отримано досягнень"><span style="width: {{ achievements.percent }}%"></span></div>
+            {% if achievements.rarest and achievements.rarest.is_rare %}
+            <div class="gv-ach-row" style="margin-top: 14px">
+                {% if achievements.rarest.icon %}<img class="gv-ach is-rare" src="{{ achievements.rarest.icon }}" alt="" loading="lazy">{% endif %}
+                <span class="gv-ach-row__body"><b title="{{ achievements.rarest.name }}">{{ achievements.rarest.name }}</b><span>Найрідкісніше: {{ achievements.rarest.percent|floatformat:1 }}% гравців</span></span>
+            </div>
+            {% endif %}
+            {% if achievements.recent %}
+            <p class="gv-label" style="margin: 14px 0 0">Останні</p>
+            <div class="gv-ach-strip">
+                {% for a in achievements.recent %}{% if a.icon %}<img class="gv-ach{% if a.is_rare %} is-rare{% endif %}" src="{{ a.icon }}" alt="{{ a.name }}" title="{{ a.name }}{% if a.description %} — {{ a.description }}{% endif %} · {{ a.unlocked_at|date:'d.m.Y' }}" loading="lazy">{% endif %}{% endfor %}
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
         {% if friends_with_game %}
         <section class="gv-card gv-card--tight" aria-labelledby="friends-game">
             <div class="gv-section-head"><h2 id="friends-game">Друзі з цією грою</h2></div>
@@ -183,7 +203,7 @@
                     {% user_avatar f.user "sm" %}
                     <span class="gv-list-item__body">
                         <span class="gv-list-item__title">{{ f.user.username }}</span>
-                        <span class="gv-list-item__sub">{{ f.status_label }}{% if f.hours %} · {{ f.hours }} год у Steam{% endif %}</span>
+                        <span class="gv-list-item__sub">{% if f.live %}<span class="gv-live">Зараз у грі</span>{% else %}{{ f.status_label }}{% if f.hours %} · {{ f.hours }} год у Steam{% endif %}{% endif %}</span>
                     </span>
                 </a>
                 {% endfor %}

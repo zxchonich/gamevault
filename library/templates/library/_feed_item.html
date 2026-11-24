@@ -12,6 +12,8 @@ compact=True — для бокових панелей (без уривка ре�
     <div class="gv-event__body">
         {% if item.event_type == 'status_change' and item.status == 'completed' %}
         <span class="gv-event__badge">★ Пройдено</span>
+        {% elif item.event_type == 'play_session' and item.status == 'first' %}
+        <span class="gv-event__badge">Перший запуск</span>
         {% endif %}
 
         <p class="gv-event__text">
@@ -28,7 +30,13 @@ compact=True — для бокових панелей (без уривка ре�
             і <a class="feed-user" href="{% if item.target_user.id == current_library_user.id %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' item.target_user.id %}{% endif %}">{{ item.target_user.username }}</a> тепер друзі
             {% elif item.event_type == 'game_approved' %}
             пропонує гру, і її додано в каталог:
+            {% elif item.event_type == 'play_session' %}
+            {% if item.status == 'first' %}вперше запускає{% else %}грає в{% endif %}
+            {% elif item.event_type == 'achievements' %}
+            отримує досягнення (<b>{{ item.item_count }}</b>) у
             {% endif %}
+            {% if item.event_type == 'play_session' or item.event_type == 'achievements' %}{% if not item.game %}{% if item.appid %}<a class="feed-game" href="{{ item.store_url }}" target="_blank" rel="noopener">«{{ item.game_name }}»</a>{% else %}<b>«{{ item.game_name }}»</b>{% endif %}{% endif %}{% endif %}
+            {% if item.event_type == 'play_session' and item.duration_minutes %} — <b>{{ item.duration_minutes|minutes_label }}</b>{% endif %}
             {% for game in item.games|slice:":3" %}<a class="feed-game" href="{% url 'library:game_detail' game.id %}">«{{ game.title }}»</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if item.extra_games_count %} і ще {{ item.extra_games_count }}{% endif %}
             {% if item.event_type == 'review' and item.score %} на <b>{{ item.score }}/10</b>{% endif %}
             {% if item.event_type == 'status_change' and item.status != 'completed' %}<span class="gv-status gv-status--{{ item.status }}">{{ item.status|status_label_other }}</span>{% endif %}
@@ -36,6 +44,12 @@ compact=True — для бокових панелей (без уривка ре�
 
         {% if not compact and item.event_type == 'review' and item.review_text %}
         <blockquote class="gv-event__quote">«{{ item.review_text|truncatechars:220 }}»</blockquote>
+        {% endif %}
+
+        {% if item.achievements %}
+        <div class="gv-ach-strip">
+            {% for a in item.achievements %}{% if a.icon %}<img class="gv-ach{% if a.is_rare %} is-rare{% endif %}" src="{{ a.icon }}" alt="{{ a.name }}" title="{{ a.name }}{% if a.description %} — {{ a.description }}{% endif %}{% if a.percent is not None %} ({{ a.percent|floatformat:1 }}% гравців){% endif %}" loading="lazy">{% endif %}{% endfor %}
+        </div>
         {% endif %}
 
         {% if item.games|length > 1 %}
@@ -51,6 +65,10 @@ compact=True — для бокових панелей (без уривка ре�
     <a class="gv-event__thumb" href="{% url 'library:game_detail' item.game.id %}" tabindex="-1" aria-hidden="true">
         {% game_cover item.game "sm" %}
         {% if item.event_type == 'review' and item.score %}<span class="gv-event__score">{{ item.score }}</span>{% endif %}
+    </a>
+    {% elif item.external_cover %}
+    <a class="gv-event__thumb gv-event__thumb--wide" href="{{ item.store_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+        <img src="{{ item.external_cover }}" alt="" loading="lazy" onerror="this.parentNode.remove()">
     </a>
     {% endif %}
 </article>

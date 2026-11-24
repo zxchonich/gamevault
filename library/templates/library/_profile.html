@@ -1,7 +1,8 @@
 {% load library_extras %}{% comment %}
 Тіло профілю (свій — profile.html, чужий — user_profile.html).
 Контекст: profile_user, is_own_profile, connection, статистика з selectors.profile_stats,
-steam_summary, backdrop (улюблена гра для фону шапки), top_genres, recent_activity.
+steam_summary, backdrop (улюблена гра для фону шапки), top_genres, recent_activity,
+live_session (зараз у грі), recent_achievements, achievements_count.
 {% endcomment %}
 <section class="gv-profile-head{% if backdrop %} has-backdrop{% endif %}">
     {% if backdrop %}<div class="gv-profile-head__backdrop" style="background-image: url('{{ backdrop.image }}')" aria-hidden="true"></div>{% endif %}
@@ -11,6 +12,7 @@ steam_summary, backdrop (улюблена гра для фону шапки), to
             {% if profile_user.role.name == 'admin' %}<span class="gv-chip gv-chip--accent">Адміністратор</span>{% endif %}
             {% if profile_user.is_private %}<span class="gv-chip">Закритий профіль</span>{% endif %}
             {% if backdrop %}<span class="gv-chip gv-profile-head__fav" title="{{ backdrop.caption }}">{% icon "play" 12 %} {{ backdrop.title }}</span>{% endif %}
+            {% if live_session %}<span class="gv-chip gv-chip--live"><span class="gv-live" title="З {{ live_session.started_at|date:'H:i' }}"><span class="gv-live__game">Грає в {{ live_session.game_name }} · {{ live_session.minutes|minutes_label }}</span></span></span>{% endif %}
         </div>
         <h1 class="gv-profile-head__name">{{ profile_user.username }}</h1>
         <p class="gv-profile-head__sub">
@@ -35,6 +37,7 @@ steam_summary, backdrop (улюблена гра для фону шапки), to
     <div class="gv-stat"><span>Середня оцінка</span><b>{% if review_count %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</b></div>
     <div class="gv-stat"><span>Друзів</span><b>{{ friends_count }}</b></div>
     {% if steam_summary %}<div class="gv-stat"><span>Годин у Steam</span><b>{{ steam_summary.total_hours }}</b></div>{% endif %}
+    {% if achievements_count %}<div class="gv-stat"><span>Досягнень</span><b>{{ achievements_count }}</b></div>{% endif %}
 </div>
 
 <div class="gv-row">
@@ -190,6 +193,28 @@ steam_summary, backdrop (улюблена гра для фону шапки), to
             <div class="gv-section-head"><h2 id="steam">Steam</h2></div>
             <p class="muted" style="font-weight: 600">Підключіть Steam, щоб імпортувати ігри, бачити години в іграх і отримувати точніші рекомендації.</p>
             <a class="gv-btn gv-btn--primary" href="{% url 'library:steam_connect' %}">Підключити Steam</a>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        {% if recent_achievements %}
+        <section class="gv-card gv-card--tight" aria-labelledby="achievements">
+            <div class="gv-section-head"><h2 id="achievements">Останні досягнення</h2></div>
+            <div class="gv-ach-list">
+                {% for a in recent_achievements|slice:":5" %}
+                <div class="gv-ach-row">
+                    {% if a.icon %}<img class="gv-ach{% if a.is_rare %} is-rare{% endif %}" src="{{ a.icon }}" alt="" loading="lazy">{% else %}<span class="gv-ach" aria-hidden="true"></span>{% endif %}
+                    <span class="gv-ach-row__body">
+                        <b title="{{ a.name }}{% if a.description %} — {{ a.description }}{% endif %}">{{ a.name }}</b>
+                        <span>{{ a.game_name }} · {{ a.unlocked_at|day_label }}{% if a.is_rare %} · рідкісне ({{ a.percent|floatformat:1 }}%){% endif %}</span>
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% if recent_achievements|length > 5 %}
+            <div class="gv-ach-strip">
+                {% for a in recent_achievements|slice:"5:" %}{% if a.icon %}<img class="gv-ach{% if a.is_rare %} is-rare{% endif %}" src="{{ a.icon }}" alt="{{ a.name }}" title="{{ a.name }} · {{ a.game_name }}" loading="lazy">{% endif %}{% endfor %}
+            </div>
             {% endif %}
         </section>
         {% endif %}

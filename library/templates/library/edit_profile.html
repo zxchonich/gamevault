@@ -97,7 +97,29 @@
                 <span class="gv-switch__track" aria-hidden="true"></span>
                 <span class="gv-switch__text">
                     <b>Показувати мою активність</b>
-                    <span>Додані й пройдені ігри, оцінки та ігри в Steam з'являються у стрічці друзів і у вашому профілі.</span>
+                    <span>Додані й пройдені ігри, оцінки, ігрові сесії та досягнення Steam з'являються у стрічці друзів і у вашому профілі.</span>
+                </span>
+            </label>
+
+            <label class="gv-switch">
+                <input type="checkbox" name="show_playing_now" {% if user.show_playing_now %}checked{% endif %}>
+                <span class="gv-switch__track" aria-hidden="true"></span>
+                <span class="gv-switch__text">
+                    <b>Показувати, у що я граю зараз</b>
+                    <span>Друзі бачать статус «У грі» з назвою гри зі Steam і отримують сповіщення, коли ви запускаєте гру з їхньої бібліотеки.</span>
+                </span>
+            </label>
+        </section>
+
+        <section class="gv-card gv-form" aria-labelledby="notify">
+            <div class="gv-section-head"><h2 id="notify">Сповіщення</h2></div>
+
+            <label class="gv-switch">
+                <input type="checkbox" name="notify_friend_playing" {% if user.notify_friend_playing %}checked{% endif %}>
+                <span class="gv-switch__track" aria-hidden="true"></span>
+                <span class="gv-switch__text">
+                    <b>Друг запускає мою гру</b>
+                    <span>Сповіщення, коли друг починає грати в гру з вашої бібліотеки (не частіше разу на 12 годин для гри).</span>
                 </span>
             </label>
         </section>

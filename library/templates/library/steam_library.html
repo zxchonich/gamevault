@@ -83,7 +83,7 @@
             <div class="gv-np-card__body">
                 <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
                     <span class="gv-np-card__title" title="{{ item.game_title }}">{% if item.catalog_game %}<a href="{% url 'library:game_detail' item.catalog_game.id %}">{{ item.game_title }}</a>{% else %}{{ item.game_title }}{% endif %}</span>
-                    <span class="gv-np-card__sub">{{ item.playtime_hours }} год{% if item.last_played_at %} · {{ item.last_played_at|date:"d.m.Y" }}{% endif %}</span>
+                    <span class="gv-np-card__sub">{{ item.playtime_hours }} год{% if item.last_played_at %} · {{ item.last_played_at|date:"d.m.Y" }}{% endif %}{% if item.achievements_total %} · <span class="gv-np-card__ach" title="Досягнення Steam">{% icon "trophy" 13 %}{{ item.achievements_unlocked|default:0 }}/{{ item.achievements_total }}</span>{% endif %}</span>
                     {% if item.steam_app.genres %}<span class="gv-np-card__sub" title="{{ item.steam_app.genres }}">{{ item.steam_app.genres }}</span>{% endif %}
                 </div>
                 <div class="gv-np-card__actions">

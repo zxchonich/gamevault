@@ -119,6 +119,8 @@ class ProfileForm(LibraryForm):
     avatar = forms.ImageField(required=False, error_messages={"invalid_image": "Аватар має бути зображенням."})
     is_private = forms.BooleanField(required=False)
     show_activity = forms.BooleanField(required=False)
+    show_playing_now = forms.BooleanField(required=False)
+    notify_friend_playing = forms.BooleanField(required=False)
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)

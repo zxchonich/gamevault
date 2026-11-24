@@ -172,3 +172,8 @@ GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
 # більше STEAM_AUTOSYNC_HOURS, вона запускається у фоновому потоці (див. library/services/steam_autosync.py).
 STEAM_AUTOSYNC = os.getenv('STEAM_AUTOSYNC', 'True').lower() in ('1', 'true', 'yes')
 STEAM_AUTOSYNC_HOURS = int(os.getenv('STEAM_AUTOSYNC_HOURS', '6'))
+
+# Хто зараз у грі: опитування Steam раз на STEAM_PRESENCE_INTERVAL секунд (library/services/steam_presence.py).
+# Запускається з middleware, поки сайтом користуються, і командою `manage.py poll_steam_presence --loop`.
+STEAM_PRESENCE = os.getenv('STEAM_PRESENCE', 'True').lower() in ('1', 'true', 'yes')
+STEAM_PRESENCE_INTERVAL = int(os.getenv('STEAM_PRESENCE_INTERVAL', '60'))

@@ -19,7 +19,7 @@ ADMIN_ROLE_ID = 2
 DEFAULT_PASSWORD = "secret-pass-123"
 
 
-@override_settings(STEAM_AUTOSYNC=False)  # фонову синхронізацію вмикають лише тести автосинхронізації
+@override_settings(STEAM_AUTOSYNC=False, STEAM_PRESENCE=False)  # фонові задачі Steam вмикають лише їхні тести
 class GameVaultTestCase(TestCase):
     """Базовий клас із фабриками даних. Ролі user/admin створює schema.sql.
 

@@ -16,7 +16,7 @@ from ..access import (
     log_in,
     redirect_to_next,
 )
-from ..models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry, User
+from ..models import ExternalAccount, ExternalLibraryItem, Game, GameRequest, LibraryEntry, User, UserAchievement
 from ..selectors import get_status_label
 from ..services import activity
 from ..services.social_auth import can_remove_login_method, create_social_user
@@ -152,9 +152,10 @@ def steam_disconnect(request):
         )
         return redirect_to_next(request, "library:profile")
 
-    # Імпортовані ігри Steam (external_library_items) видаляються каскадно;
-    # записи в бібліотеці GameVault залишаються.
+    # Імпортовані ігри Steam (external_library_items) видаляються каскадно, досягнення — тут;
+    # записи в бібліотеці GameVault і події стрічки залишаються. Відкриту сесію закриє наступне опитування.
     ExternalAccount.objects.filter(user=user, provider="steam").delete()
+    UserAchievement.objects.filter(user=user).delete()
 
     messages.success(request, "Steam-акаунт відв'язано.")
     return redirect("library:profile")

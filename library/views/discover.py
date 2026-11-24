@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from ..access import friend_ids, library_login_required, redirect_to_next
 from ..models import DismissedRecommendation, Game, Notification
 from ..selectors import attach_visible_genres_to_entries
-from ..services import activity, notifications
+from ..services import activity, notifications, steam_presence
 from ..services.recommendations import build_recommendations
 
 
@@ -94,10 +94,12 @@ def feed(request):
 
     size = activity.FEED_PAGE_SIZE
     events = list(activity.feed_events(user, kind)[(page - 1) * size:page * size + 1])
+    live = steam_presence.live_sessions(user)
 
     return render(request, "library/feed.html", {
         "items": activity.group_events(events[:size]),
-        "now_playing": activity.now_playing(user, limit=12),
+        "live_sessions": live,
+        "now_playing": activity.now_playing(user, limit=12, live=live),
         "page": page,
         "has_more": len(events) > size,
         "has_friends": bool(friend_ids(user)),

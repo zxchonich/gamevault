@@ -247,12 +247,17 @@ def game_page_stats(game, viewer=None, similar_limit=6):
                 .values_list("user_id", "playtime_minutes")
             )
         statuses = dict(entries.filter(user_id__in=ids).values_list("user_id", "status"))
-        for user in User.objects.filter(id__in=set(statuses) | set(hours)).order_by("username"):
+        from library.services.steam_presence import live_in_game
+
+        live = live_in_game(viewer, game)
+        for user in User.objects.filter(id__in=set(statuses) | set(hours) | live).order_by("username"):
             friends_with_game.append({
                 "user": user,
                 "status_label": STATUS_LABELS_OTHER.get(statuses.get(user.id), "Є в Steam"),
                 "hours": round(hours[user.id] / 60) if hours.get(user.id) else None,
+                "live": user.id in live,
             })
+        friends_with_game.sort(key=lambda f: not f["live"])  # хто зараз у грі — першими
 
     genre_ids = list(GameGenre.objects.filter(game=game).values_list("genre_id", flat=True))
     similar_ids = list(

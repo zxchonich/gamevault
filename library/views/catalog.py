@@ -12,7 +12,7 @@ from ..selectors import (
     game_page_stats,
     get_status_label,
 )
-from ..services import activity, notifications
+from ..services import activity, notifications, steam_achievements, steam_presence
 from ..services.recommendations import build_recommendations
 from ..services.steam_service import steam_items_by_appid
 
@@ -57,6 +57,7 @@ def home(request):
         "home_recommendations": [],
         "home_feed": [],
         "home_now_playing": [],
+        "home_live": [],
         "games": attach_visible_genres_to_games(games),
         "genres": Genre.objects.all().order_by("name")[:10],
         "top_rated_games": attach_visible_genres_to_games(top_rated_games),
@@ -73,9 +74,11 @@ def home(request):
     }
 
     if current_user is not None:
+        home_live = steam_presence.live_sessions(current_user, limit=4)
         context.update({
             "home_feed": activity.build_feed(current_user, limit=8)[:5],
-            "home_now_playing": activity.now_playing(current_user, limit=4),
+            "home_live": home_live,
+            "home_now_playing": activity.now_playing(current_user, limit=max(0, 4 - len(home_live)), live=home_live),
             "home_recommendations": attach_visible_genres_to_entries(
                 build_recommendations(current_user, limit=3).recommendations
             ),
@@ -131,6 +134,7 @@ def game_detail(request, game_id):
     return render(request, "library/game_detail.html", {
         "game": game,
         "steam_item": steam_items_by_appid(user, [game.steam_appid]).get(game.steam_appid),
+        "achievements": steam_achievements.game_progress(user, game.steam_appid),
         "reviews": reviews,
         "game_genres": Genre.objects.filter(game_genres__game=game).order_by("name"),
         "library_entry": library_entry,

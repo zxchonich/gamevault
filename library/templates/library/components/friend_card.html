@@ -1,8 +1,8 @@
-{% load library_extras %}{% comment %}Картка друга: friend, connection.{% endcomment %}
+{% load library_extras %}{% comment %}Картка друга: friend (з live_session від steam_presence.attach_live), connection.{% endcomment %}
 <article class="gv-user-card">
     <a class="gv-user-card__head" href="{% url 'library:user_profile' friend.id %}" title="Профіль {{ friend.username }}">
         {% user_avatar friend %}
-        <span class="gv-user-card__name">{{ friend.username }}</span>
+        <span class="gv-user-card__name">{{ friend.username }}{% if friend.live_session %}<span class="gv-live gv-user-card__status" title="У грі {{ friend.live_session.minutes|minutes_label }}"><span class="gv-live__game">{{ friend.live_session.game_name }}</span></span>{% endif %}</span>
     </a>
     <div class="gv-user-card__actions">
         <a class="gv-btn gv-btn--sm gv-btn--icon" href="{% url 'library:user_library' friend.id %}" title="Бібліотека" aria-label="Бібліотека {{ friend.username }}">{% icon "library" %}</a>

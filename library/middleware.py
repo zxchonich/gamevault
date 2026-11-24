@@ -2,10 +2,12 @@
 
 from .access import SESSION_USER_KEY
 from .services.steam_autosync import maybe_autosync
+from .services.steam_presence import maybe_poll
 
 
 class SteamAutoSyncMiddleware:
-    """Запускає фонову синхронізацію Steam, якщо дані користувача застаріли.
+    """Запускає фонову синхронізацію Steam, якщо дані користувача застаріли, і опитування
+    «хто зараз у грі» (steam_presence.maybe_poll), якщо з минулого минула хвилина.
 
     Перевірка дешева (кеш), тому стоїть на кожному запиті; користувача з БД тут не беремо —
     достатньо id із сесії, а підробити його не можна (сесія підписана й зберігається на сервері)."""
@@ -18,4 +20,5 @@ class SteamAutoSyncMiddleware:
         user_id = request.session.get(SESSION_USER_KEY) if hasattr(request, "session") else None
         if user_id and response.status_code < 400:
             maybe_autosync(user_id)
+            maybe_poll()
         return response

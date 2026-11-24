@@ -63,7 +63,7 @@
     {% endif %}
 </section>
 
-{% if home_recommendations or home_feed or home_now_playing %}
+{% if home_recommendations or home_feed or home_now_playing or home_live %}
 <section class="gv-row">
     {% if home_recommendations %}
     <div class="gv-card gv-grow">
@@ -86,14 +86,14 @@
     </div>
     {% endif %}
 
-    {% if home_feed or home_now_playing %}
+    {% if home_feed or home_now_playing or home_live %}
     <div class="gv-card gv-side">
         <div class="gv-section-head">
             <h2>Активність</h2>
             <a class="gv-link" href="{% url 'library:feed' %}">Уся стрічка →</a>
         </div>
-        {% if home_now_playing %}
-        {% with now_playing=home_now_playing %}
+        {% if home_now_playing or home_live %}
+        {% with now_playing=home_now_playing live=home_live %}
         {% include 'library/_now_playing.html' %}
         {% endwith %}
         {% endif %}

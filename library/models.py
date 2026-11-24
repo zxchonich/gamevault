@@ -30,6 +30,8 @@ class User(models.Model):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     is_private = models.BooleanField(default=False)
     show_activity = models.BooleanField(default=True)
+    show_playing_now = models.BooleanField(default=True)       # друзі бачать, у що користувач грає зараз
+    notify_friend_playing = models.BooleanField(default=True)  # сповіщати, коли друг запускає гру з бібліотеки
     created_at = models.DateTimeField()
 
     class Meta:
@@ -313,6 +315,10 @@ class ExternalLibraryItem(models.Model):
     playtime_2weeks_minutes = models.IntegerField(default=0)
     last_played_at = models.DateTimeField(blank=True, null=True)
     launch_url = models.CharField(max_length=255, blank=True, null=True)
+    # Прогрес досягнень Steam (services/steam_achievements.py); total = 0 — у гри немає досягнень.
+    achievements_unlocked = models.IntegerField(blank=True, null=True)
+    achievements_total = models.IntegerField(blank=True, null=True)
+    achievements_checked_at = models.DateTimeField(blank=True, null=True)
     synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -391,6 +397,8 @@ class ActivityEvent(models.Model):
     STEAM_IMPORT = "steam_import"
     FRIENDSHIP = "friendship"
     GAME_APPROVED = "game_approved"
+    PLAY_SESSION = "play_session"   # «грає в …» (сесії однієї гри за день зливаються); status="first" — перший запуск
+    ACHIEVEMENTS = "achievements"   # «отримує N досягнень у …» (item_count)
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
@@ -401,6 +409,8 @@ class ActivityEvent(models.Model):
         Game, on_delete=models.CASCADE, db_column="game_id", null=True, blank=True,
         related_name="activity_events",
     )
+    appid = models.CharField(max_length=20, blank=True, null=True)        # Steam-гра (може бути поза каталогом)
+    game_name = models.CharField(max_length=255, blank=True, null=True)
     target_user = models.ForeignKey(
         User, on_delete=models.CASCADE, db_column="target_user_id", null=True, blank=True,
         related_name="activity_events_as_target",
@@ -408,6 +418,7 @@ class ActivityEvent(models.Model):
     status = models.CharField(max_length=30, blank=True, null=True)
     score = models.SmallIntegerField(blank=True, null=True)
     item_count = models.IntegerField(blank=True, null=True)
+    duration_minutes = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField()
 
     class Meta:
@@ -425,6 +436,7 @@ class Notification(models.Model):
     FRIEND_ACCEPTED = "friend_accepted"
     GAME_APPROVED = "game_approved"
     GAME_REJECTED = "game_rejected"
+    FRIEND_PLAYING = "friend_playing"  # друг запустив гру з бібліотеки користувача
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="notifications")
@@ -445,3 +457,106 @@ class Notification(models.Model):
     class Meta:
         managed = False
         db_table = "notifications"
+
+
+class PlaySession(models.Model):
+    """Сесія гри, яку сайт побачив, опитуючи Steam (services/steam_presence.py).
+
+    Відкрита сесія (ended_at IS NULL) — користувач зараз у грі. Тривалість наближена:
+    від першого до останнього опитування, у якому гру було видно."""
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="play_sessions")
+    appid = models.CharField(max_length=20, blank=True, null=True)  # NULL — не-Steam гра, додана в Steam вручну
+    game = models.ForeignKey(
+        Game, on_delete=models.SET_NULL, db_column="game_id", null=True, blank=True, related_name="play_sessions"
+    )
+    game_name = models.CharField(max_length=255)
+    first_play = models.BooleanField(default=False)
+    started_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField()
+    ended_at = models.DateTimeField(blank=True, null=True)
+    achievements_checked = models.BooleanField(default=False)
+
+    class Meta:
+        managed = False
+        db_table = "play_sessions"
+
+    def __str__(self):
+        return f"{self.user_id}: {self.game_name}"
+
+    @property
+    def minutes(self):
+        """Тривалість у хвилинах (для відкритої сесії — досі)."""
+        end = self.ended_at or self.last_seen_at
+        return max(1, round((end - self.started_at).total_seconds() / 60))
+
+    @property
+    def cover_url(self):
+        steam_app = getattr(self, "steam_app", None)
+        if steam_app is not None and steam_app.header_image:
+            return steam_app.header_image
+        if self.appid:
+            from library.services.steam_service import steam_cover_url
+            return steam_cover_url(self.appid)
+        return ""
+
+
+class SteamAchievementSchema(models.Model):
+    """Мітка: досягнення гри вже завантажено (total = 0 — у гри їх немає)."""
+
+    appid = models.CharField(max_length=20, primary_key=True)
+    total = models.IntegerField(default=0)
+    fetched_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "steam_achievement_schemas"
+
+
+class SteamAchievement(models.Model):
+    """Досягнення гри Steam: назва, опис, іконки, рідкість — спільні для всіх користувачів."""
+
+    id = models.AutoField(primary_key=True)
+    appid = models.CharField(max_length=20)
+    apiname = models.CharField(max_length=128)
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=500, blank=True, null=True)
+    icon = models.CharField(max_length=500, blank=True, null=True)
+    icon_gray = models.CharField(max_length=500, blank=True, null=True)
+    hidden = models.BooleanField(default=False)
+    percent = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "steam_achievements"
+        unique_together = (("appid", "apiname"),)
+
+    def __str__(self):
+        return f"{self.appid}: {self.name}"
+
+
+class UserAchievement(models.Model):
+    """Отримане користувачем досягнення Steam."""
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="achievements")
+    appid = models.CharField(max_length=20)
+    apiname = models.CharField(max_length=128)
+    unlocked_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "user_achievements"
+        unique_together = (("user", "appid", "apiname"),)
+
+
+class AppState(models.Model):
+    """Службові мітки часу, спільні для всіх процесів (наприклад, останнє опитування Steam)."""
+
+    name = models.CharField(max_length=50, primary_key=True)
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "app_state"

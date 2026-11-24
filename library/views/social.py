@@ -18,7 +18,7 @@ from ..forms import ProfileForm
 from ..models import LibraryEntry, Notification, SocialConnection, User
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
-from ..services import activity, notifications
+from ..services import activity, notifications, steam_achievements, steam_presence
 from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
 from ..services.social_auth import can_remove_login_method
@@ -64,11 +64,18 @@ def friends(request):
     received_requests = (
         SocialConnection.objects.filter(receiver=current_user, status="pending").select_related("sender")
     )
-    accepted_connections = (
+    accepted_connections = list(
         SocialConnection.objects
         .filter(status="accepted")
         .filter(models.Q(sender=current_user) | models.Q(receiver=current_user))
         .select_related("sender", "receiver")
+    )
+    # Статус «у грі» біля друзів; хто зараз грає — першими.
+    steam_presence.attach_live(current_user, [
+        c.receiver if c.sender_id == current_user.id else c.sender for c in accepted_connections
+    ])
+    accepted_connections.sort(
+        key=lambda c: (c.receiver if c.sender_id == current_user.id else c.sender).live_session is None
     )
 
     connected_ids = set()
@@ -107,7 +114,7 @@ def friends(request):
         "received_requests": received_requests,
         "accepted_connections": accepted_connections,
         "suggested_users": suggested,
-        "friends_count": accepted_connections.count(),
+        "friends_count": len(accepted_connections),
         "received_requests_count": received_requests.count(),
         "sent_requests_count": sent_requests.count(),
     })
@@ -192,6 +199,8 @@ def _profile_extras(user):
         "steam_summary": steam_summary,
         "backdrop": profile_backdrop(user, steam_summary),
         "top_genres": top_genres(user),
+        "recent_achievements": steam_achievements.recent_achievements(user, limit=10),
+        "achievements_count": steam_achievements.achievements_count(user),
     }
 
 
@@ -204,6 +213,7 @@ def profile(request):
         "profile_user": user,
         "is_own_profile": True,
         **_profile_extras(user),
+        "live_session": steam_presence.live_for_users(user, [user]).get(user.id),
         "recent_activity": activity.user_activity(user, user),
     })
 
@@ -226,6 +236,7 @@ def user_profile(request, user_id):
         "profile_user": profile_user,
         "connection": connection,
         **_profile_extras(profile_user),
+        "live_session": steam_presence.live_for_users(current_user, [profile_user]).get(profile_user.id),
         "recent_activity": activity.user_activity(current_user, profile_user),
     })
 
@@ -247,6 +258,8 @@ def edit_profile(request):
                 user.email, user.email_verified_at = None, None
             user.is_private = data["is_private"]
             user.show_activity = data["show_activity"]
+            user.show_playing_now = data["show_playing_now"]
+            user.notify_friend_playing = data["notify_friend_playing"]
             if data["password"]:
                 user.password_hash = make_password(data["password"])
             old_avatar = user.avatar.name if user.avatar else ""

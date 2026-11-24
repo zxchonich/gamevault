@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-005.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-009.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -73,6 +73,8 @@ CREATE TABLE `users` (
   `avatar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_private` tinyint(1) NOT NULL DEFAULT '0',
   `show_activity` tinyint(1) NOT NULL DEFAULT '1',
+  `show_playing_now` tinyint(1) NOT NULL DEFAULT '1',
+  `notify_friend_playing` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_username` (`username`),
   UNIQUE KEY `uq_users_email` (`email`),
@@ -169,12 +171,15 @@ CREATE TABLE `dismissed_recommendations` (
 CREATE TABLE `activity_events` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
-  `event_type` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'library_add, status_change, review, steam_import, friendship, game_approved',
+  `event_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'library_add, status_change, review, steam_import, friendship, game_approved, play_session, achievements',
   `game_id` int DEFAULT NULL,
-  `target_user_id` int DEFAULT NULL COMMENT '╨┤╤А╤Г╨│╨╕╨╣ ╨║╨╛╤А╨╕╤Б╤В╤Г╨▓╨░╤З (╨┤╨╗╤П friendship)',
-  `status` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '╨╜╨╛╨▓╨╕╨╣ ╤Б╤В╨░╤В╤Г╤Б (status_change)',
-  `score` smallint DEFAULT NULL COMMENT '╨╛╤Ж╤Ц╨╜╨║╨░ (review)',
-  `item_count` int DEFAULT NULL COMMENT '╨║╤Ц╨╗╤М╨║╤Ц╤Б╤В╤М ╤Ц╨│╨╛╤А (steam_import)',
+  `appid` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `game_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `target_user_id` int DEFAULT NULL COMMENT 'другий користувач (для friendship)',
+  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'новий статус (status_change)',
+  `score` smallint DEFAULT NULL COMMENT 'оцінка (review)',
+  `item_count` int DEFAULT NULL COMMENT 'кількість ігор (steam_import)',
+  `duration_minutes` int DEFAULT NULL,
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_activity_events_created` (`created_at`),
@@ -217,6 +222,9 @@ CREATE TABLE `external_library_items` (
   `playtime_2weeks_minutes` int NOT NULL DEFAULT '0',
   `last_played_at` datetime DEFAULT NULL,
   `launch_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `achievements_unlocked` int DEFAULT NULL,
+  `achievements_total` int DEFAULT NULL,
+  `achievements_checked_at` datetime DEFAULT NULL,
   `synced_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_external_library_item` (`user_id`,`provider`,`external_game_id`),
@@ -232,13 +240,13 @@ CREATE TABLE `steam_apps` (
   `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `app_type` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `header_image` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `genres` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '╨Ц╨░╨╜╤А╨╕ Steam ╨░╨╜╨│╨╗╤Ц╨╣╤Б╤М╨║╨╛╤О ╤З╨╡╤А╨╡╨╖ ╨║╨╛╨╝╤Г',
+  `genres` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'Жанри Steam англійською через кому',
   `description` text COLLATE utf8mb4_unicode_ci,
   `developer` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `release_date` date DEFAULT NULL,
   `adult` tinyint(1) NOT NULL DEFAULT '0',
   `blocked` tinyint(1) NOT NULL DEFAULT '0',
-  `found` tinyint(1) NOT NULL DEFAULT '1' COMMENT '0 тАФ ╨│╤А╨╕ ╨╜╨╡╨╝╨░╤Ф ╨▓ Steam Store (╨╜╨╡ ╨╖╨░╨┐╨╕╤В╤Г╨▓╨░╤В╨╕ ╨┐╨╛╨▓╤В╨╛╤А╨╜╨╛)',
+  `found` tinyint(1) NOT NULL DEFAULT '1' COMMENT '0 — гри немає в Steam Store (не запитувати повторно)',
   `fetched_at` datetime NOT NULL,
   PRIMARY KEY (`appid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -268,6 +276,77 @@ CREATE TABLE `notifications` (
   CONSTRAINT `fk_notifications_game_request` FOREIGN KEY (`game_request_id`) REFERENCES `game_requests` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `play_sessions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `appid` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'NULL — не-Steam гра',
+  `game_id` int DEFAULT NULL COMMENT 'гра каталогу, якщо є',
+  `game_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `first_play` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'перший запуск гри',
+  `started_at` datetime NOT NULL,
+  `last_seen_at` datetime NOT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `achievements_checked` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_play_sessions_open` (`ended_at`,`user_id`),
+  KEY `idx_play_sessions_user_started` (`user_id`,`started_at`),
+  KEY `fk_play_sessions_game` (`game_id`),
+  CONSTRAINT `fk_play_sessions_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_play_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `steam_achievement_schemas` (
+  `appid` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total` int NOT NULL DEFAULT '0',
+  `fetched_at` datetime NOT NULL,
+  PRIMARY KEY (`appid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `steam_achievements` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `appid` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `apiname` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `icon` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `icon_gray` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `hidden` tinyint(1) NOT NULL DEFAULT '0',
+  `percent` decimal(5,2) DEFAULT NULL COMMENT 'частка гравців, що мають досягнення',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_steam_achievement` (`appid`,`apiname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_achievements` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `appid` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `apiname` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `unlocked_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_achievement` (`user_id`,`appid`,`apiname`),
+  KEY `idx_user_achievements_user_unlocked` (`user_id`,`unlocked_at`),
+  CONSTRAINT `fk_user_achievements_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `app_state` (
+  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Мітка останнього опитування Steam (див. library/services/steam_presence.py).
+INSERT INTO `app_state` (`name`, `updated_at`) VALUES ('steam_presence_poll', '2000-01-01 00:00:00');
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

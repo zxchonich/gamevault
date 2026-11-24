@@ -23,6 +23,9 @@
     --danger-bg: rgba(255, 107, 90, 0.14);
     --success-bg: rgba(200, 240, 49, 0.14);
     --info-bg: rgba(124, 92, 255, 0.18);
+    --live: #5BD475;
+    --live-bg: rgba(91, 212, 117, 0.16);
+    --on-live: #0B1A0F;
     --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
 }
@@ -44,6 +47,9 @@
     --danger-bg: rgba(194, 65, 12, 0.10);
     --success-bg: rgba(63, 86, 0, 0.10);
     --info-bg: rgba(106, 72, 240, 0.10);
+    --live: #1E8A3C;
+    --live-bg: rgba(30, 138, 60, 0.12);
+    --on-live: #FFFFFF;
     --shadow: 0 18px 50px rgba(23, 21, 31, 0.10);
     color-scheme: light;
 }
@@ -565,6 +571,9 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 /* Компактний варіант (бокові панелі) */
 .gv-feed--compact .gv-event { padding: 10px; gap: 10px; }
 .gv-feed--compact .gv-event__thumb { width: 44px; }
+.gv-event__thumb--wide { width: 116px; }
+.gv-event__thumb--wide img { display: block; width: 100%; aspect-ratio: 460 / 215; object-fit: cover; border-radius: var(--r-xs); }
+.gv-feed--compact .gv-event__thumb--wide { width: 84px; }
 .gv-feed--compact .gv-event__strip .gv-cover { width: 40px; }
 
 /* Кольорові статуси */
@@ -1262,3 +1271,35 @@ fieldset.gv-field { border: 0; padding: 0; margin: 0; min-width: 0; }
     .gv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gv-game-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 }
+
+
+/* --- Зараз у грі (steam_presence) та досягнення Steam ------------------------- */
+.gv-live { display: inline-flex; align-items: center; gap: 6px; color: var(--live); font-weight: 800; min-width: 0; }
+.gv-live::before {
+    content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--live);
+    box-shadow: 0 0 0 3px var(--live-bg); animation: gv-live-pulse 2s ease-in-out infinite;
+}
+.gv-live__game { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes gv-live-pulse { 50% { box-shadow: 0 0 0 6px transparent; } }
+@media (prefers-reduced-motion: reduce) { .gv-live::before { animation: none; } }
+.gv-chip--live { background: var(--live-bg); color: var(--live); max-width: 100%; }
+.gv-np-card__hours.is-live { background: var(--live); color: var(--on-live); }
+.gv-np-card.is-live { border-color: var(--live); }
+.steam-mini-card .gv-live { font-size: 0.86em; }
+.gv-user-card__status { display: flex; font-family: var(--font-body); font-size: 13px; margin-top: 2px; max-width: 100%; }
+
+.gv-ach-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.gv-ach {
+    width: 40px; height: 40px; border-radius: var(--r-xs); background: var(--surface-2);
+    object-fit: cover; display: block;
+}
+.gv-ach.is-rare { box-shadow: 0 0 0 2px var(--violet); }
+.gv-ach-list { display: flex; flex-direction: column; gap: 10px; }
+.gv-ach-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gv-ach-row__body { min-width: 0; display: flex; flex-direction: column; }
+.gv-ach-row__body b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-ach-row__body span { color: var(--muted); font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-progress { height: 10px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; }
+.gv-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--violet), var(--accent)); }
+.gv-progress-label { display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 8px; }
+.gv-np-card__ach { display: inline-flex; align-items: center; gap: 4px; }
