@@ -316,6 +316,7 @@ class FeedEventTests(PresenceTestCase):
         self.login(self.alice)
         response = self.client.get(reverse("library:feed") + "?filter=games")
         self.assertContains(response, "2 год 15 хв")
+        self.assertRegex(response.content.decode(), r"«Hades»</a>\s*<b>2 год 15 хв</b>")  # назва, потім час
         self.assertContains(response, "отримує досягнення")
         self.assertContains(response, "store.steampowered.com/app/999/")
         self.assertEqual(len(response.context["items"]), 3)

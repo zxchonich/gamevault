@@ -38,8 +38,8 @@ compact=True — для бокових панелей (без уривка ре�
             отримує досягнення <a class="feed-game" href="{% if item.user.id == current_library_user.id %}{% url 'library:my_achievements' %}{% else %}{% url 'library:user_achievements' item.user.id %}{% endif %}">«{{ item.achievement_key|achievement_title }}»</a>{% if item.item_count|tier_label:item.achievement_key %} · <b>{{ item.item_count|tier_label:item.achievement_key }}</b>{% endif %}
             {% endif %}
             {% if item.event_type == 'play_session' or item.event_type == 'achievements' %}{% if not item.game %}{% if item.appid %}<a class="feed-game" href="{{ item.store_url }}" target="_blank" rel="noopener">«{{ item.game_name }}»</a>{% else %}<b>«{{ item.game_name }}»</b>{% endif %}{% endif %}{% endif %}
-            {% if item.event_type == 'play_session' and item.duration_minutes %} — <b>{{ item.duration_minutes|minutes_label }}</b>{% endif %}
             {% for game in item.games|slice:":3" %}<a class="feed-game" href="{% url 'library:game_detail' game.id %}">«{{ game.title }}»</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if item.extra_games_count %} і ще {{ item.extra_games_count }}{% endif %}
+            {% if item.event_type == 'play_session' and item.duration_minutes %} <b>{{ item.duration_minutes|minutes_label }}</b>{% endif %}
             {% if item.event_type == 'review' and item.score %} на <b>{{ item.score }}/10</b>{% endif %}
             {% if item.event_type == 'status_change' and item.status != 'completed' %}<span class="gv-status gv-status--{{ item.status }}">{{ item.status|status_label_other }}</span>{% endif %}
         </p>
