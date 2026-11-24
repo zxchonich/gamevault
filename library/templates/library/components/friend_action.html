@@ -1,5 +1,15 @@
-{% comment %}Стан дружби з користувачем other: {% include 'library/components/friend_action.html' with other=profile_user connection=connection %}{% endcomment %}
-{% if connection.status == 'accepted' %}
+{% comment %}Стан дружби з користувачем other: {% include 'library/components/friend_action.html' with other=profile_user connection=connection %}
+block_state з контексту: "blocked" — ви заблокували other, "blocked_by" — other заблокував вас (не розкриваємо).{% endcomment %}
+{% if block_state == 'blocked' %}
+<span class="gv-chip">У чорному списку</span>
+<form method="post" action="{% url 'library:unblock_user' other.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit" class="gv-btn gv-btn--ghost">Розблокувати</button>
+</form>
+{% elif block_state == 'blocked_by' %}
+<span class="gv-chip">Заявки недоступні</span>
+{% elif connection.status == 'accepted' %}
 <span class="gv-chip gv-chip--accent">✓ Ви друзі</span>
 {% elif connection.status == 'pending' and connection.receiver_id == current_library_user.id %}
 <form method="post" action="{% url 'library:accept_connection' connection.id %}">
@@ -12,8 +22,6 @@
 </form>
 {% elif connection.status == 'pending' %}
 <span class="gv-chip">Заявку надіслано</span>
-{% elif connection.status == 'rejected' %}
-<span class="gv-chip">Заявку відхилено</span>
 {% else %}
 <form method="post" action="{% url 'library:add_friend' other.id %}">
     {% csrf_token %}

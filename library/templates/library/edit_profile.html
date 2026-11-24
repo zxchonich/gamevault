@@ -111,6 +111,24 @@
             </label>
         </section>
 
+        <section class="gv-card gv-form" aria-labelledby="blacklist">
+            <div class="gv-section-head"><h2 id="blacklist">Чорний список</h2></div>
+            <p class="gv-field__hint">Заблоковані не можуть надсилати вам заявки й бачать ваш профіль закритим. Заблокувати можна в профілі користувача або біля вхідної заявки.</p>
+            {% if blocked_users %}
+            <div class="gv-list gv-methods">
+                {% for other in blocked_users %}
+                <div class="gv-admin-row">
+                    {% user_avatar other "sm" %}
+                    <div class="gv-admin-row__main"><b><a href="{% url 'library:user_profile' other.id %}">{{ other.username }}</a></b></div>
+                    <button type="submit" form="unblock-{{ other.id }}" class="gv-btn gv-btn--sm gv-btn--icon" title="Розблокувати" aria-label="Розблокувати {{ other.username }}">{% icon "x" 16 %}</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted" style="font-weight: 600; margin: 0">Список порожній.</p>
+            {% endif %}
+        </section>
+
         <section class="gv-card gv-form" aria-labelledby="notify">
             <div class="gv-section-head"><h2 id="notify">Сповіщення</h2></div>
 
@@ -171,4 +189,7 @@
 {# Окремі форми для кнопок «Відключити» (вкладати форми в головну не можна — кнопки посилаються на них через form=). #}
 <form id="disconnect-steam" method="post" action="{% url 'library:steam_disconnect' %}" hidden>{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"></form>
 <form id="disconnect-google" method="post" action="{% url 'library:google_disconnect' %}" hidden>{% csrf_token %}</form>
+{% for other in blocked_users %}
+<form id="unblock-{{ other.id }}" method="post" action="{% url 'library:unblock_user' other.id %}" hidden>{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"></form>
+{% endfor %}
 {% endblock %}

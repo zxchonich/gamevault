@@ -12,7 +12,7 @@ from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 
-from library.access import friend_ids
+from library.access import friend_ids, hidden_user_ids
 from library.models import ActivityEvent, ExternalLibraryItem, Game, Review
 from library.services import steam_achievements
 from library.services.steam_service import attach_steam_apps
@@ -270,6 +270,9 @@ def feed_events(viewer, kind="all"):
     friends = friend_ids(viewer)
     people = friends | {viewer.id}
     queryset = _base_queryset().filter(models.Q(user_id__in=people) | models.Q(target_user_id__in=people))
+    hidden = hidden_user_ids(viewer)  # чорний список у будь-який бік: ні подій, ні згадок
+    if hidden:
+        queryset = queryset.exclude(user_id__in=hidden).exclude(target_user_id__in=hidden)
 
     if kind == "mine":
         queryset = queryset.filter(models.Q(user=viewer) | models.Q(target_user=viewer))

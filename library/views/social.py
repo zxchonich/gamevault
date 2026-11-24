@@ -8,14 +8,18 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from ..access import (
+    block_state,
+    blocked_by_ids,
     can_view_profile,
     connection_between,
     friend_ids,
+    hidden_user_ids,
     library_login_required,
+    redirect_to_next,
     update_session_after_password_change,
 )
 from ..forms import ProfileForm
-from ..models import LibraryEntry, Notification, SocialConnection, User
+from ..models import LibraryEntry, Notification, SocialConnection, User, UserBlock
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
 from ..services import activity, notifications, steam_achievements, steam_presence
@@ -33,6 +37,7 @@ def private_profile_response(request, viewer, owner, connection):
         "current_user": viewer,
         "profile_user": owner,
         "connection": connection,
+        "block_state": block_state(viewer, owner),
         "library_count": LibraryEntry.objects.filter(user=owner).count(),
     })
 
@@ -45,9 +50,13 @@ def user_list(request):
     status_by_user = {}
     for connection in connections:
         other_id = connection.receiver_id if connection.sender_id == current_user.id else connection.sender_id
-        status_by_user[other_id] = connection.status
+        if connection.status != "rejected":  # після відхилення заявку можна надіслати знову
+            status_by_user[other_id] = connection.status
+    for blocked_id in UserBlock.objects.filter(blocker=current_user).values_list("blocked_id", flat=True):
+        status_by_user[blocked_id] = "blocked"
 
-    users = User.objects.exclude(id=current_user.id).order_by("username")
+    # Тих, хто заблокував поточного користувача, у списку не показуємо.
+    users = User.objects.exclude(id=current_user.id).exclude(id__in=blocked_by_ids(current_user)).order_by("username")
 
     return render(request, "library/user_list.html", {
         "current_user": current_user,
@@ -86,7 +95,8 @@ def friends(request):
     ):
         connected_ids.add(receiver_id if sender_id == current_user.id else sender_id)
 
-    # Пропозиції: друзі друзів, а якщо їх мало — будь-хто, з ким ще немає зв'язку.
+    # Пропозиції: друзі друзів, а якщо їх мало — будь-хто, з ким ще немає зв'язку і блокування.
+    connected_ids |= hidden_user_ids(current_user)
     my_friends = friend_ids(current_user)
     friends_of_friends = set()
     for sender_id, receiver_id in (
@@ -130,16 +140,41 @@ def add_friend(request, user_id):
         messages.error(request, "Не можна додати в друзі самого себе.")
         return redirect("library:user_list")
 
-    if connection_between(current_user, target_user) is None:
+    state = block_state(current_user, target_user)
+    if state == "blocked":
+        messages.error(request, f"{target_user.username} у вашому чорному списку — спершу розблокуйте.")
+        return redirect_to_next(request, "library:friends")
+    if state == "blocked_by":
+        messages.error(request, "Надіслати заявку цьому користувачу неможливо.")
+        return redirect_to_next(request, "library:friends")
+
+    connection = connection_between(current_user, target_user)
+    if connection is not None and connection.status == "rejected":
+        connection.delete()  # відхилену заявку можна надсилати знову
+        connection = None
+
+    if connection is None:
         connection = SocialConnection.objects.create(
             sender=current_user, receiver=target_user, status="pending", created_at=timezone.now()
         )
         notifications.notify_friend_request(connection)
         messages.success(request, f"Заявку в друзі для {target_user.username} надіслано.")
+    elif connection.status == "pending" and connection.receiver_id == current_user.id:
+        _accept(connection, current_user)  # зустрічна заявка — просто приймаємо
+        messages.success(request, f"Ви з {target_user.username} тепер друзі.")
     else:
         messages.info(request, "Заявка або зв’язок з цим користувачем уже існує.")
 
-    return redirect("library:friends")
+    return redirect_to_next(request, "library:friends")
+
+
+def _accept(connection, current_user):
+    was_accepted = connection.status == "accepted"
+    connection.status = "accepted"
+    connection.save()
+    if not was_accepted:
+        activity.record_friendship(current_user, connection.sender)
+        notifications.notify_friend_accepted(connection)
 
 
 @require_POST
@@ -148,13 +183,8 @@ def accept_connection(request, connection_id):
     current_user = request.library_user
     connection = get_object_or_404(SocialConnection, id=connection_id)
 
-    if connection.receiver_id == current_user.id:
-        was_accepted = connection.status == "accepted"
-        connection.status = "accepted"
-        connection.save()
-        if not was_accepted:
-            activity.record_friendship(current_user, connection.sender)
-            notifications.notify_friend_accepted(connection)
+    if connection.receiver_id == current_user.id and block_state(current_user, connection.sender) is None:
+        _accept(connection, current_user)
         messages.success(request, "Заявку в друзі прийнято.")
 
     return redirect("library:friends")
@@ -189,6 +219,38 @@ def delete_connection(request, connection_id):
 
     messages.success(request, f"Користувача {other_user.username} видалено з друзів.")
     return redirect("library:friends")
+
+
+@require_POST
+@library_login_required
+def block_user(request, user_id):
+    current_user = request.library_user
+    target = get_object_or_404(User, id=user_id)
+    if target.id == current_user.id:
+        messages.error(request, "Не можна заблокувати самого себе.")
+        return redirect("library:profile")
+
+    UserBlock.objects.get_or_create(blocker=current_user, blocked=target, defaults={"created_at": timezone.now()})
+    # Дружба, заявки й сповіщення між вами зникають (сповіщення-заявки — каскадно разом зі зв'язком).
+    SocialConnection.objects.filter(
+        models.Q(sender=current_user, receiver=target) | models.Q(sender=target, receiver=current_user)
+    ).delete()
+    Notification.objects.filter(
+        models.Q(user=current_user, actor=target) | models.Q(user=target, actor=current_user)
+    ).delete()
+
+    messages.success(request, f"{target.username} додано до чорного списку.")
+    return redirect_to_next(request, "library:user_profile", target.id)
+
+
+@require_POST
+@library_login_required
+def unblock_user(request, user_id):
+    current_user = request.library_user
+    target = get_object_or_404(User, id=user_id)
+    UserBlock.objects.filter(blocker=current_user, blocked=target).delete()
+    messages.success(request, f"{target.username} прибрано з чорного списку.")
+    return redirect_to_next(request, "library:user_profile", target.id)
 
 
 def _profile_extras(user):
@@ -235,6 +297,7 @@ def user_profile(request, user_id):
         "current_user": current_user,
         "profile_user": profile_user,
         "connection": connection,
+        "block_state": block_state(current_user, profile_user),
         **_profile_extras(profile_user),
         "live_session": steam_presence.live_for_users(current_user, [profile_user]).get(profile_user.id),
         "recent_activity": activity.user_activity(current_user, profile_user),
@@ -288,4 +351,8 @@ def edit_profile(request):
         "steam_account": accounts.get("steam"),
         "google_account": accounts.get("google"),
         "can_remove": {method: can_remove_login_method(user, method) for method in ("steam", "google")},
+        "blocked_users": [
+            block.blocked
+            for block in UserBlock.objects.filter(blocker=user).select_related("blocked").order_by("-created_at")
+        ],
     })

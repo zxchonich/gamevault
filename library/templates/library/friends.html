@@ -38,6 +38,11 @@
                     {% csrf_token %}
                     <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--ghost" title="Відхилити" aria-label="Відхилити заявку {{ connection.sender.username }}">{% icon "x" %}</button>
                 </form>
+                <form method="post" action="{% url 'library:block_user' connection.sender.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="gv-btn gv-btn--sm gv-btn--icon gv-btn--danger" title="Заблокувати" aria-label="Заблокувати {{ connection.sender.username }}" onclick="return confirm('Заблокувати {{ connection.sender.username|escapejs }}? Цей користувач більше не зможе надсилати вам заявки.');">{% icon "ban" %}</button>
+                </form>
             </div>
         </article>
         {% endfor %}

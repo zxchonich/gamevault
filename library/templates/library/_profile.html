@@ -26,6 +26,13 @@ live_session (зараз у грі), recent_achievements, achievements_count.
         {% else %}
         {% include 'library/components/friend_action.html' with other=profile_user connection=connection %}
         <a class="gv-btn gv-btn--icon" href="{% url 'library:user_library' profile_user.id %}" title="Бібліотека" aria-label="Бібліотека {{ profile_user.username }}">{% icon "library" %}</a>
+        {% if block_state is None %}
+        <form method="post" action="{% url 'library:block_user' profile_user.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="gv-btn gv-btn--icon gv-btn--danger" title="Заблокувати" aria-label="Заблокувати {{ profile_user.username }}" onclick="return confirm('Заблокувати {{ profile_user.username|escapejs }}? Дружба й заявки між вами зникнуть, а ваш профіль для цього користувача стане закритим.');">{% icon "ban" %}</button>
+        </form>
+        {% endif %}
         {% endif %}
     </div>
 </section>

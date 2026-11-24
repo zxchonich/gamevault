@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from ..access import can_view_profile, connection_between, library_login_required, redirect_to_next
+from ..access import block_state, can_view_profile, connection_between, library_login_required, redirect_to_next
 from ..forms import ReviewForm, StatusForm
 from ..models import Game, LibraryEntry, Review, User
 from ..selectors import library_context
@@ -43,6 +43,7 @@ def user_library(request, user_id):
         "current_user": current_user,
         "profile_user": profile_user,
         "connection": connection,
+        "block_state": block_state(current_user, profile_user),
         **library_context(request, profile_user, other=True),
     })
 

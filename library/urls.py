@@ -37,6 +37,8 @@ urlpatterns = [
     # Користувачі, друзі, профілі
     path('users/', social.user_list, name='user_list'),
     path('users/<int:user_id>/add-friend/', social.add_friend, name='add_friend'),
+    path('users/<int:user_id>/block/', social.block_user, name='block_user'),
+    path('users/<int:user_id>/unblock/', social.unblock_user, name='unblock_user'),
     path('friends/', social.friends, name='friends'),
     path('connections/<int:connection_id>/accept/', social.accept_connection, name='accept_connection'),
     path('connections/<int:connection_id>/reject/', social.reject_connection, name='reject_connection'),

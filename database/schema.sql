@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-009.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-010.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -347,6 +347,20 @@ CREATE TABLE `app_state` (
 
 -- Мітка останнього опитування Steam (див. library/services/steam_presence.py).
 INSERT INTO `app_state` (`name`, `updated_at`) VALUES ('steam_presence_poll', '2000-01-01 00:00:00');
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_blocks` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `blocker_id` int NOT NULL COMMENT 'хто заблокував',
+  `blocked_id` int NOT NULL COMMENT 'кого заблоковано',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_blocks` (`blocker_id`,`blocked_id`),
+  KEY `fk_user_blocks_blocked` (`blocked_id`),
+  CONSTRAINT `fk_user_blocks_blocked` FOREIGN KEY (`blocked_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_user_blocks_blocker` FOREIGN KEY (`blocker_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

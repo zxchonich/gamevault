@@ -31,7 +31,7 @@
                     <span class="gv-user-card__sub">
                         {% if item.connection_status == 'accepted' %}Ваш друг
                         {% elif item.connection_status == 'pending' %}Заявка очікує
-                        {% elif item.connection_status == 'rejected' %}Заявку відхилено
+                        {% elif item.connection_status == 'blocked' %}У чорному списку
                         {% elif item.user.is_private %}Закритий профіль
                         {% else %}Гравець{% endif %}
                     </span>

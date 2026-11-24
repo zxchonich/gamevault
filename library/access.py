@@ -14,7 +14,7 @@ from django.shortcuts import redirect, render
 from django.utils.crypto import constant_time_compare, salted_hmac
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from .models import SocialConnection, User
+from .models import SocialConnection, User, UserBlock
 
 SESSION_USER_KEY = "library_user_id"
 SESSION_AUTH_KEY = "library_auth_hash"
@@ -131,7 +131,45 @@ def friend_ids(user):
 
 
 def can_view_profile(viewer, owner):
-    """Чи може viewer бачити профіль/бібліотеку owner (з урахуванням приватності)."""
+    """Чи може viewer бачити профіль/бібліотеку owner (з урахуванням приватності й чорного списку)."""
     if viewer is None:
         return False
-    return viewer.id == owner.id or not owner.is_private or are_friends(viewer, owner)
+    if viewer.id == owner.id:
+        return True
+    if UserBlock.objects.filter(blocker=owner, blocked=viewer).exists():
+        return False  # для заблокованого профіль виглядає закритим
+    return not owner.is_private or are_friends(viewer, owner)
+
+
+# --- Чорний список -------------------------------------------------------------
+
+def blocked_ids(user):
+    """Кого user заблокував."""
+    return set(UserBlock.objects.filter(blocker=user).values_list("blocked_id", flat=True))
+
+
+def blocked_by_ids(user):
+    """Хто заблокував user."""
+    return set(UserBlock.objects.filter(blocked=user).values_list("blocker_id", flat=True))
+
+
+def hidden_user_ids(user):
+    """Користувачі, з якими в user блокування в будь-який бік (їх не показуємо одне одному)."""
+    rows = UserBlock.objects.filter(models.Q(blocker=user) | models.Q(blocked=user)).values_list("blocker_id", "blocked_id")
+    return {blocked if blocker == user.id else blocker for blocker, blocked in rows}
+
+
+def block_state(viewer, other):
+    """"blocked" — viewer заблокував other; "blocked_by" — other заблокував viewer; None — блокування немає."""
+    if viewer is None or other is None or viewer.id == other.id:
+        return None
+    rows = set(
+        UserBlock.objects.filter(
+            models.Q(blocker=viewer, blocked=other) | models.Q(blocker=other, blocked=viewer)
+        ).values_list("blocker_id", flat=True)
+    )
+    if viewer.id in rows:
+        return "blocked"
+    if other.id in rows:
+        return "blocked_by"
+    return None

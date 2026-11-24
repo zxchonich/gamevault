@@ -560,3 +560,17 @@ class AppState(models.Model):
     class Meta:
         managed = False
         db_table = "app_state"
+
+
+class UserBlock(models.Model):
+    """Чорний список: blocker заблокував blocked (див. access.can_view_profile, views/social.block_user)."""
+
+    id = models.AutoField(primary_key=True)
+    blocker = models.ForeignKey(User, on_delete=models.CASCADE, db_column="blocker_id", related_name="blocks")
+    blocked = models.ForeignKey(User, on_delete=models.CASCADE, db_column="blocked_id", related_name="blocked_by")
+    created_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "user_blocks"
+        unique_together = (("blocker", "blocked"),)

@@ -15,6 +15,13 @@
     <div class="gv-profile-head__actions" style="justify-content: center">
         {% include 'library/components/friend_action.html' with other=profile_user connection=connection %}
         <a class="gv-btn gv-btn--ghost" href="{% url 'library:user_list' %}">Інші гравці</a>
+        {% if block_state is None %}
+        <form method="post" action="{% url 'library:block_user' profile_user.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="gv-btn gv-btn--icon gv-btn--danger" title="Заблокувати" aria-label="Заблокувати {{ profile_user.username }}" onclick="return confirm('Заблокувати {{ profile_user.username|escapejs }}? Дружба й заявки між вами зникнуть, а ваш профіль для цього користувача стане закритим.');">{% icon "ban" %}</button>
+        </form>
+        {% endif %}
     </div>
 </section>
 {% endblock %}
