@@ -102,6 +102,24 @@ class SessionTests(PresenceTestCase):
         self.assertEqual(event.appid, "1145360")
         self.assertEqual(event.duration_minutes, 2)  # 1 хв першої сесії + 1 хв (мінімум) другої — злито за день
 
+    def test_short_gap_in_polling_keeps_session(self):
+        # Сервер перезапускався: 20 хв без опитувань, але гра та сама — сесія продовжується.
+        self.poll([player(ALICE_STEAM, 291550, "Brawlhalla")])
+        self.poll([player(ALICE_STEAM, 291550, "Brawlhalla")], minutes=20)
+        session = PlaySession.objects.get()
+        self.assertIsNone(session.ended_at)
+        self.assertEqual(session.minutes, 20)
+
+    def test_background_poller_starts_once(self):
+        with mock.patch("library.services.steam_presence.threading.Thread") as thread,                 mock.patch("library.services.steam_presence.threading.enumerate", return_value=[]):
+            self.assertTrue(steam_presence.start_background_poller())
+        thread.return_value.start.assert_called_once()
+
+        running = mock.Mock()
+        running.name = "steam-presence-loop"
+        with mock.patch("library.services.steam_presence.threading.enumerate", return_value=[running]):
+            self.assertFalse(steam_presence.start_background_poller())
+
     def test_continuous_session_updates_last_seen(self):
         for minute in range(0, 31):
             self.poll([player(ALICE_STEAM, 620, "Portal 2")], minutes=minute)

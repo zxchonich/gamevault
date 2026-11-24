@@ -12,8 +12,9 @@ Steam не надсилає подій сам, тому раз на STEAM_PRESEN
     опитування, де гру бачили), у стрічку пишеться «грає в …», потім перевіряються досягнення.
 
 Хто запускає опитування:
-  * middleware — поки сайтом хтось користується (у фоновому потоці, не частіше разу на інтервал);
-  * команда `python manage.py poll_steam_presence --loop` — окремим процесом, навіть без відвідувачів.
+  * фоновий потік, поки працює runserver (start_background_poller з LibraryConfig.ready) — основний спосіб;
+  * middleware — запасний варіант, якщо сайт запущено не через runserver (поки сайтом користуються);
+  * команда `python manage.py poll_steam_presence --loop` — окремим процесом, коли сервер не запущено.
 Щоб два процеси не опитували одночасно, інтервал «застовплюється» атомарним UPDATE у app_state.
 """
 
@@ -50,7 +51,8 @@ logger = logging.getLogger(__name__)
 
 POLL_STATE = "steam_presence_poll"
 BATCH_SIZE = 100                       # GetPlayerSummaries приймає до 100 steamid
-STALE_AFTER = timedelta(minutes=5)     # без опитувань довше — сесію вважаємо завершеною
+STALE_AFTER = timedelta(minutes=5)     # без опитувань довше — статус «у грі» не показуємо
+CONTINUE_GAP = timedelta(minutes=30)   # та сама гра після паузи в опитуваннях (перезапуск сервера) — та сама сесія
 NOTIFY_COOLDOWN = timedelta(hours=12)  # не частіше одного сповіщення «друг грає в X» на гру
 TICK_SECONDS = 15                      # як часто процес узагалі заглядає в БД (middleware)
 LOCK_TIMEOUT = 5 * 60
@@ -198,7 +200,7 @@ def poll(now=None):
         state = presence.get(steam_id)
         current = open_sessions.pop(user_id, None)
         if current is not None:
-            fresh = current.last_seen_at >= now - STALE_AFTER
+            fresh = current.last_seen_at >= now - CONTINUE_GAP
             if state is not None and fresh and _same_game(current, state):
                 still_playing.append(current.id)
                 continue
@@ -259,6 +261,28 @@ def _thread_main():
 def _start():
     """Окремий метод, щоб у тестах запускати синхронно (_poll_and_unlock)."""
     threading.Thread(target=_thread_main, name="steam-presence", daemon=True).start()
+
+
+def _background_loop():
+    import time
+
+    while True:
+        try:
+            if claim_poll():
+                poll()
+        except Exception:  # потік має жити далі, навіть якщо одне опитування впало
+            logger.exception("Фонове опитування Steam: неочікувана помилка")
+        finally:
+            close_old_connections()
+        time.sleep(max(5, settings.STEAM_PRESENCE_INTERVAL // 4))
+
+
+def start_background_poller():
+    """Запускає фонове опитування в цьому процесі (один раз)."""
+    if any(t.name == "steam-presence-loop" for t in threading.enumerate()):
+        return False
+    threading.Thread(target=_background_loop, name="steam-presence-loop", daemon=True).start()
+    return True
 
 
 def maybe_poll():
