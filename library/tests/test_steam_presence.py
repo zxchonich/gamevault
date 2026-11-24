@@ -382,6 +382,7 @@ class AchievementTests(GameVaultTestCase):
         self.assertEqual(page.context["achievements"]["percent"], 50)
         self.assertContains(page, "Ваші досягнення")
         self.assertContains(page, "Найрідкісніше")
+        self.assertContains(page, "ваші досягнення")  # прогрес і в шапці гри
 
         profile = self.client.get(reverse("library:profile"))
         self.assertContains(profile, "Останні досягнення")

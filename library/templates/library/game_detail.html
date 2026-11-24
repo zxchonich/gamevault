@@ -23,6 +23,7 @@
             <div><b>{{ players_total }}</b><span>у бібліотеках</span></div>
             {% if game.release_date %}<div><b>{{ game.release_date|date:"Y" }}</b><span>рік виходу</span></div>{% endif %}
             {% if steam_item %}<div><b>{{ steam_item.playtime_hours }} год</b><span>ваш час у Steam</span></div>{% endif %}
+            {% if achievements %}<a href="#achievements"><b>{% icon "trophy" 20 %} {{ achievements.unlocked }}/{{ achievements.total }}</b><span>ваші досягнення</span></a>{% endif %}
         </div>
 
         <div class="gv-game-hero__actions">
@@ -147,6 +148,26 @@
     </div>
 
     <aside class="gv-game__side">
+        {% if achievements %}
+        <section class="gv-card gv-card--tight" aria-labelledby="achievements">
+            <div class="gv-section-head"><h2 id="achievements">Ваші досягнення</h2><span class="muted" style="font-weight: 700">Steam</span></div>
+            <div class="gv-progress-label"><span>{{ achievements.unlocked }} з {{ achievements.total }}</span><span>{{ achievements.percent }}%</span></div>
+            <div class="gv-progress" role="progressbar" aria-valuenow="{{ achievements.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Отримано досягнень"><span style="width: {{ achievements.percent }}%"></span></div>
+            {% if achievements.rarest and achievements.rarest.is_rare %}
+            <div class="gv-ach-row" style="margin-top: 14px">
+                {% if achievements.rarest.icon %}<img class="gv-ach is-rare" src="{{ achievements.rarest.icon }}" alt="" loading="lazy">{% endif %}
+                <span class="gv-ach-row__body"><b title="{{ achievements.rarest.name }}">{{ achievements.rarest.name }}</b><span>Найрідкісніше: {{ achievements.rarest.percent|floatformat:1 }}% гравців</span></span>
+            </div>
+            {% endif %}
+            {% if achievements.recent %}
+            <p class="gv-label" style="margin: 14px 0 0">Останні</p>
+            <div class="gv-ach-strip">
+                {% for a in achievements.recent %}{% if a.icon %}<img class="gv-ach{% if a.is_rare %} is-rare{% endif %}" src="{{ a.icon }}" alt="{{ a.name }}" title="{{ a.name }}{% if a.description %} — {{ a.description }}{% endif %} · {{ a.unlocked_at|date:'d.m.Y' }}" loading="lazy">{% endif %}{% endfor %}
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
         <section class="gv-card gv-card--tight" aria-labelledby="players">
             <div class="gv-section-head"><h2 id="players">Хто грає</h2><span class="muted" style="font-weight: 700">{{ players_total }}</span></div>
             {% if players_total %}
@@ -173,26 +194,6 @@
                 {% endfor %}
             </div>
         </section>
-
-        {% if achievements %}
-        <section class="gv-card gv-card--tight" aria-labelledby="achievements">
-            <div class="gv-section-head"><h2 id="achievements">Ваші досягнення</h2><span class="muted" style="font-weight: 700">Steam</span></div>
-            <div class="gv-progress-label"><span>{{ achievements.unlocked }} з {{ achievements.total }}</span><span>{{ achievements.percent }}%</span></div>
-            <div class="gv-progress" role="progressbar" aria-valuenow="{{ achievements.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Отримано досягнень"><span style="width: {{ achievements.percent }}%"></span></div>
-            {% if achievements.rarest and achievements.rarest.is_rare %}
-            <div class="gv-ach-row" style="margin-top: 14px">
-                {% if achievements.rarest.icon %}<img class="gv-ach is-rare" src="{{ achievements.rarest.icon }}" alt="" loading="lazy">{% endif %}
-                <span class="gv-ach-row__body"><b title="{{ achievements.rarest.name }}">{{ achievements.rarest.name }}</b><span>Найрідкісніше: {{ achievements.rarest.percent|floatformat:1 }}% гравців</span></span>
-            </div>
-            {% endif %}
-            {% if achievements.recent %}
-            <p class="gv-label" style="margin: 14px 0 0">Останні</p>
-            <div class="gv-ach-strip">
-                {% for a in achievements.recent %}{% if a.icon %}<img class="gv-ach{% if a.is_rare %} is-rare{% endif %}" src="{{ a.icon }}" alt="{{ a.name }}" title="{{ a.name }}{% if a.description %} — {{ a.description }}{% endif %} · {{ a.unlocked_at|date:'d.m.Y' }}" loading="lazy">{% endif %}{% endfor %}
-            </div>
-            {% endif %}
-        </section>
-        {% endif %}
 
         {% if friends_with_game %}
         <section class="gv-card gv-card--tight" aria-labelledby="friends-game">

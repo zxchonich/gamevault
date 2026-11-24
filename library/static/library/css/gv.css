@@ -810,7 +810,10 @@ a.gv-list-item:hover { color: var(--text); background: var(--surface-3); }
 .gv-game__title { font-size: clamp(36px, 4vw, 76px); font-weight: 800; letter-spacing: -0.04em; line-height: 0.95; overflow-wrap: anywhere; }
 
 .gv-game-hero__facts { display: flex; flex-wrap: wrap; gap: 10px 26px; }
-.gv-game-hero__facts div { display: flex; flex-direction: column; }
+.gv-game-hero__facts div, .gv-game-hero__facts a { display: flex; flex-direction: column; }
+.gv-game-hero__facts a { color: inherit; }
+.gv-game-hero__facts a:hover span { opacity: 1; text-decoration: underline; }
+.gv-game-hero__facts b svg { vertical-align: -2px; }
 .gv-game-hero__facts b { font-family: var(--font-display); font-size: clamp(22px, 1.6vw, 32px); font-weight: 800; letter-spacing: -0.02em; }
 .gv-game-hero__facts span { font-size: 13px; font-weight: 700; opacity: 0.75; }
 
