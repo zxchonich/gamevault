@@ -128,6 +128,7 @@ def register_view(request):
                     email=data["email"],
                     password_hash=make_password(data["password"]),
                     created_at=timezone.now(),
+                    achievements_synced_at=timezone.now(),  # новим користувачам досягнення — зі сповіщеннями
                 )
             except IntegrityError:
                 error = "Користувач із таким логіном або email уже існує."

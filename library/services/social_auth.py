@@ -51,6 +51,7 @@ def create_social_user(provider, external_id, *, username_hint, email=None, emai
                     email_verified_at=timezone.now() if email and email_verified else None,
                     password_hash=make_password(None),
                     created_at=timezone.now(),
+                    achievements_synced_at=timezone.now(),  # новим користувачам досягнення — зі сповіщеннями
                 )
                 ExternalAccount.objects.create(
                     user=user, provider=provider, external_user_id=external_id, **(account_defaults or {})

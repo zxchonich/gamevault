@@ -44,8 +44,10 @@ live_session (зараз у грі), recent_achievements, achievements_count.
     <div class="gv-stat"><span>Середня оцінка</span><b>{% if review_count %}{{ average_score|floatformat:1 }}{% else %}—{% endif %}</b></div>
     <div class="gv-stat"><span>Друзів</span><b>{{ friends_count }}</b></div>
     {% if steam_summary %}<div class="gv-stat"><span>Годин у Steam</span><b>{{ steam_summary.total_hours }}</b></div>{% endif %}
-    {% if achievements_count %}<div class="gv-stat"><span>Досягнень</span><b>{{ achievements_count }}</b></div>{% endif %}
+    {% if achievements_count %}<div class="gv-stat"><span>Досягнень Steam</span><b>{{ achievements_count }}</b></div>{% endif %}
 </div>
+
+{% include 'library/components/showcase.html' %}
 
 <div class="gv-row">
     <div class="gv-grow" style="display: flex; flex-direction: column; gap: var(--gap)">

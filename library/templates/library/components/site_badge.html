@@ -1,0 +1,2 @@
+{% comment %}Значок досягнення GameVault (тег site_badge). Колір кільця — рівень: бронза/срібло/золото, одноразові — акцент.{% endcomment %}
+{% if badge %}<span class="gv-badge gv-badge--{{ tier_class }}{% if size %} gv-badge--{{ size }}{% endif %}{% if locked %} is-locked{% endif %}" title="{% if hidden %}Секретне досягнення{% else %}{{ badge.title }}{% if tier_name %} · {{ tier_name }}{% endif %}{% endif %}" aria-hidden="true">{% if hidden %}<b>?</b>{% else %}{{ svg }}{% endif %}</span>{% endif %}

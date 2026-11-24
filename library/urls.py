@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import accounts, catalog, catalog_admin, discover, google, library, moderation, social, steam
+from .views import accounts, achievements, catalog, catalog_admin, discover, google, library, moderation, social, steam
 
 app_name = 'library'
 
@@ -46,6 +46,11 @@ urlpatterns = [
     path('users/<int:user_id>/profile/', social.user_profile, name='user_profile'),
     path('profile/', social.profile, name='profile'),
     path('edit-profile/', social.edit_profile, name='edit_profile'),
+
+    # Досягнення GameVault
+    path('achievements/', achievements.my_achievements, name='my_achievements'),
+    path('achievements/showcase/', achievements.save_showcase, name='save_showcase'),
+    path('users/<int:user_id>/achievements/', achievements.user_achievements, name='user_achievements'),
 
     # Акаунт
     path('login/', accounts.login_view, name='login'),

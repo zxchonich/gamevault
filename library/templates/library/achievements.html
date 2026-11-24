@@ -1,0 +1,54 @@
+{% extends 'library/base.html' %}
+{% load library_extras %}
+
+{% block title %}Досягнення{% if not is_own %} {{ profile_user.username }}{% endif %} | GameVault{% endblock %}
+
+{% block content %}
+<header class="gv-page-head">
+    <div>
+        <h1>{% if is_own %}Мої досягнення{% else %}Досягнення {{ profile_user.username }}{% endif %}</h1>
+        <p>Значки GameVault за бібліотеку, рецензії, друзів і гру в Steam. Більшість має три рівні: бронзу, срібло й золото.</p>
+    </div>
+    <div class="gv-page-head__actions">
+        <a class="gv-btn gv-btn--ghost" href="{% if is_own %}{% url 'library:profile' %}{% else %}{% url 'library:user_profile' profile_user.id %}{% endif %}">Профіль</a>
+    </div>
+</header>
+
+<div class="gv-stats">
+    <div class="gv-stat"><span>Досягнень</span><b>{{ summary.unlocked }}/{{ summary.total }}</b></div>
+    <div class="gv-stat"><span>Рівнів</span><b>{{ summary.tiers }}/{{ summary.tiers_total }}</b></div>
+</div>
+
+{% for title, items in categories %}
+<section class="gv-card" aria-labelledby="cat-{{ forloop.counter }}">
+    <div class="gv-section-head"><h2 id="cat-{{ forloop.counter }}">{{ title }}</h2></div>
+    <div class="gv-site-ach-grid">
+        {% for v in items %}
+        <article class="gv-site-ach{% if not v.unlocked %} is-locked{% endif %}">
+            {% site_badge v.key v.tier "lg" v.hidden %}
+            <div class="gv-site-ach__body">
+                {% if v.hidden %}
+                <div class="gv-site-ach__title">???</div>
+                <div class="gv-site-ach__desc">Секретне досягнення — умову видно після отримання.</div>
+                {% else %}
+                <div class="gv-site-ach__title">
+                    {{ v.achievement.title }}
+                    {% if v.tier_name %}<span class="gv-site-ach__tier">{{ v.tier_name }}</span>{% endif %}
+                    {% if not v.achievement.single %}<span class="gv-tier-pips" aria-label="Рівень {{ v.tier }} з 3">{% for t in v.tiers %}<i class="{% if t.unlocked_at %}t{{ t.tier }}{% endif %}" title="{{ t.name }}: {{ t.threshold }}{% if t.unlocked_at %} · отримано {{ t.unlocked_at|date:'d.m.Y' }}{% endif %} · є в {{ t.rarity }}% гравців"></i>{% endfor %}</span>{% endif %}
+                </div>
+                <div class="gv-site-ach__desc">{{ v.description }}</div>
+                {% if not v.done %}
+                <div class="gv-progress" role="progressbar" aria-valuenow="{{ v.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Прогрес"><span style="width: {{ v.percent }}%"></span></div>
+                {% endif %}
+                <div class="gv-site-ach__meta">
+                    <span>{% if v.done %}Завершено{% if v.unlocked_at %} · {{ v.unlocked_at|date:"d.m.Y" }}{% endif %}{% else %}{{ v.value_label }}/{{ v.next_threshold }}{% if v.achievement.unit %} {{ v.achievement.unit }}{% endif %}{% if v.next_tier_name %} · до {{ v.next_tier_name }}{% endif %}{% endif %}</span>
+                    {% if v.unlocked %}<span title="Частка гравців GameVault з цим рівнем">є в {{ v.rarity }}% гравців</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+{% endblock %}

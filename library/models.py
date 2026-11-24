@@ -32,6 +32,10 @@ class User(models.Model):
     show_activity = models.BooleanField(default=True)
     show_playing_now = models.BooleanField(default=True)       # друзі бачать, у що користувач грає зараз
     notify_friend_playing = models.BooleanField(default=True)  # сповіщати, коли друг запускає гру з бібліотеки
+    # Досягнення GameVault (services/site_achievements.py): вибрані для вітрини ключі через кому (NULL — авто)
+    # і коли досягнення вперше перераховано (поки NULL — перший підрахунок тихий, без сповіщень).
+    achievement_showcase = models.CharField(max_length=300, blank=True, null=True)
+    achievements_synced_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField()
 
     class Meta:
@@ -399,6 +403,7 @@ class ActivityEvent(models.Model):
     GAME_APPROVED = "game_approved"
     PLAY_SESSION = "play_session"   # «грає в …» (сесії однієї гри за день зливаються); status="first" — перший запуск
     ACHIEVEMENTS = "achievements"   # «отримує N досягнень у …» (item_count)
+    SITE_ACHIEVEMENT = "site_achievement"  # досягнення GameVault: achievement_key, рівень — item_count
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
@@ -411,6 +416,7 @@ class ActivityEvent(models.Model):
     )
     appid = models.CharField(max_length=20, blank=True, null=True)        # Steam-гра (може бути поза каталогом)
     game_name = models.CharField(max_length=255, blank=True, null=True)
+    achievement_key = models.CharField(max_length=40, blank=True, null=True)
     target_user = models.ForeignKey(
         User, on_delete=models.CASCADE, db_column="target_user_id", null=True, blank=True,
         related_name="activity_events_as_target",
@@ -437,6 +443,7 @@ class Notification(models.Model):
     GAME_APPROVED = "game_approved"
     GAME_REJECTED = "game_rejected"
     FRIEND_PLAYING = "friend_playing"  # друг запустив гру з бібліотеки користувача
+    SITE_ACHIEVEMENT = "site_achievement"  # нове досягнення GameVault (achievement_key, tier)
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="notifications")
@@ -451,6 +458,8 @@ class Notification(models.Model):
         GameRequest, on_delete=models.CASCADE, db_column="game_request_id", null=True, blank=True, related_name="+"
     )
     game = models.ForeignKey(Game, on_delete=models.SET_NULL, db_column="game_id", null=True, blank=True, related_name="+")
+    achievement_key = models.CharField(max_length=40, blank=True, null=True)
+    tier = models.SmallIntegerField(blank=True, null=True)
     created_at = models.DateTimeField()
     read_at = models.DateTimeField(null=True, blank=True)
 
@@ -574,3 +583,18 @@ class UserBlock(models.Model):
         managed = False
         db_table = "user_blocks"
         unique_together = (("blocker", "blocked"),)
+
+
+class UserSiteAchievement(models.Model):
+    """Отриманий рівень досягнення GameVault (1 — бронза, 2 — срібло, 3 — золото; одноразові — 1)."""
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column="user_id", related_name="site_achievements")
+    achievement_key = models.CharField(max_length=40)
+    tier = models.SmallIntegerField()
+    unlocked_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "user_site_achievements"
+        unique_together = (("user", "achievement_key", "tier"),)

@@ -13,7 +13,7 @@ from django.db import models
 from django.utils import timezone
 
 from library.access import friend_ids, hidden_user_ids
-from library.models import ActivityEvent, ExternalLibraryItem, Game, Review
+from library.models import ActivityEvent, ExternalLibraryItem, Game, Review, User
 from library.services import steam_achievements
 from library.services.steam_service import attach_steam_apps
 
@@ -33,12 +33,21 @@ FEED_FILTERS = {
     "reviews": "Оцінки",
     "completed": "Пройдене",
     "games": "Ігри",
+    "achievements": "Досягнення",
 }
 
 PLAY_TYPES = (ActivityEvent.PLAY_SESSION, ActivityEvent.ACHIEVEMENTS)
 
 
 # --- Запис ---------------------------------------------------------------------
+
+def _check_achievements(*users):
+    """Після дії — перевірка досягнень GameVault (services/site_achievements.py)."""
+    from library.services import site_achievements
+
+    for user in users:
+        site_achievements.check_quietly(user)
+
 
 def _record_or_merge(user, event_type, game, **fields):
     """Створює подію або оновлює нещодавню таку саму (той самий тип і гра)."""
@@ -60,37 +69,50 @@ def _record_or_merge(user, event_type, game, **fields):
 
 
 def record_library_add(user, game):
-    return ActivityEvent.objects.create(
+    event = ActivityEvent.objects.create(
         user=user, event_type=ActivityEvent.LIBRARY_ADD, game=game, created_at=timezone.now()
     )
+    _check_achievements(user)
+    return event
 
 
 def record_status_change(user, game, status):
-    return _record_or_merge(user, ActivityEvent.STATUS_CHANGE, game, status=status)
+    event = _record_or_merge(user, ActivityEvent.STATUS_CHANGE, game, status=status)
+    _check_achievements(user)
+    return event
 
 
 def record_review(user, game, score):
-    return _record_or_merge(user, ActivityEvent.REVIEW, game, score=score)
+    event = _record_or_merge(user, ActivityEvent.REVIEW, game, score=score)
+    _check_achievements(user)
+    return event
 
 
 def record_steam_import(user, added_count):
-    if added_count <= 0:
-        return None
-    return ActivityEvent.objects.create(
-        user=user, event_type=ActivityEvent.STEAM_IMPORT, item_count=added_count, created_at=timezone.now()
-    )
+    """Подія лише якщо додано нові ігри; досягнення (години, Steam) перевіряються після кожної синхронізації."""
+    event = None
+    if added_count > 0:
+        event = ActivityEvent.objects.create(
+            user=user, event_type=ActivityEvent.STEAM_IMPORT, item_count=added_count, created_at=timezone.now()
+        )
+    _check_achievements(user)
+    return event
 
 
 def record_friendship(user, other_user):
-    return ActivityEvent.objects.create(
+    event = ActivityEvent.objects.create(
         user=user, event_type=ActivityEvent.FRIENDSHIP, target_user=other_user, created_at=timezone.now()
     )
+    _check_achievements(user, other_user)
+    return event
 
 
 def record_game_approved(requested_by, game):
-    return ActivityEvent.objects.create(
+    event = ActivityEvent.objects.create(
         user=requested_by, event_type=ActivityEvent.GAME_APPROVED, game=game, created_at=timezone.now()
     )
+    _check_achievements(requested_by)
+    return event
 
 
 def _day_event(event_type, session):
@@ -116,12 +138,14 @@ def record_play_session(session):
         if session.first_play:
             event.status = "first"
         event.save(update_fields=["duration_minutes", "created_at", "status"])
-        return event
-    return ActivityEvent.objects.create(
-        user_id=session.user_id, event_type=ActivityEvent.PLAY_SESSION, game_id=session.game_id,
-        appid=session.appid, game_name=session.game_name, duration_minutes=session.minutes,
-        status="first" if session.first_play else None, created_at=when,
-    )
+    else:
+        event = ActivityEvent.objects.create(
+            user_id=session.user_id, event_type=ActivityEvent.PLAY_SESSION, game_id=session.game_id,
+            appid=session.appid, game_name=session.game_name, duration_minutes=session.minutes,
+            status="first" if session.first_play else None, created_at=when,
+        )
+    _check_achievements(User.objects.filter(id=session.user_id).first())
+    return event
 
 
 def record_achievements(session, count):
@@ -132,11 +156,13 @@ def record_achievements(session, count):
         event.item_count = (event.item_count or 0) + count
         event.created_at = when
         event.save(update_fields=["item_count", "created_at"])
-        return event
-    return ActivityEvent.objects.create(
-        user_id=session.user_id, event_type=ActivityEvent.ACHIEVEMENTS, game_id=session.game_id,
-        appid=session.appid, game_name=session.game_name, item_count=count, created_at=when,
-    )
+    else:
+        event = ActivityEvent.objects.create(
+            user_id=session.user_id, event_type=ActivityEvent.ACHIEVEMENTS, game_id=session.game_id,
+            appid=session.appid, game_name=session.game_name, item_count=count, created_at=when,
+        )
+    _check_achievements(User.objects.filter(id=session.user_id).first())
+    return event
 
 
 def forget_game_activity(user, game, include_reviews=True):
@@ -166,6 +192,7 @@ class FeedItem:
     score: int = None
     item_count: int = None
     review_text: str = ""
+    achievement_key: str = None
     appid: str = None
     game_name: str = ""
     duration_minutes: int = None
@@ -239,6 +266,7 @@ def group_events(events):
             score=event.score,
             item_count=event.item_count,
             appid=event.appid,
+            achievement_key=event.achievement_key,
             game_name=event.game_name or "",
             duration_minutes=event.duration_minutes,
         ))
@@ -284,6 +312,8 @@ def feed_events(viewer, kind="all"):
         queryset = queryset.filter(event_type=ActivityEvent.STATUS_CHANGE, status="completed")
     elif kind == "games":
         queryset = queryset.filter(event_type__in=PLAY_TYPES)
+    elif kind == "achievements":
+        queryset = queryset.filter(event_type__in=(ActivityEvent.ACHIEVEMENTS, ActivityEvent.SITE_ACHIEVEMENT))
 
     return _visible_to(viewer, queryset)
 

@@ -22,7 +22,7 @@ from ..forms import ProfileForm
 from ..models import LibraryEntry, Notification, SocialConnection, User, UserBlock
 from ..selectors import profile_backdrop, profile_stats
 from ..storage import delete_unused_file
-from ..services import activity, notifications, steam_achievements, steam_presence
+from ..services import activity, notifications, site_achievements, steam_achievements, steam_presence
 from ..services.account_email import send_verification_email
 from ..services.recommendations import top_genres
 from ..services.social_auth import can_remove_login_method
@@ -253,9 +253,12 @@ def unblock_user(request, user_id):
     return redirect_to_next(request, "library:user_profile", target.id)
 
 
-def _profile_extras(user):
+def _profile_extras(user, own=False):
     """Спільні дані свого й чужого профілю."""
     steam_summary = get_steam_summary(user, top_limit=4)
+    if own:
+        site_achievements.check_quietly(user)  # страховка: досягнення, що залежать від часу («Старожил»)
+    site_views = site_achievements.build_views(user)
     return {
         **profile_stats(user),
         "steam_summary": steam_summary,
@@ -263,6 +266,10 @@ def _profile_extras(user):
         "top_genres": top_genres(user),
         "recent_achievements": steam_achievements.recent_achievements(user, limit=10),
         "achievements_count": steam_achievements.achievements_count(user),
+        "site_showcase": site_achievements.showcase(user, site_views),
+        "site_summary": site_achievements.summary(site_views),
+        "site_unlocked": [v for v in site_views if v.unlocked] if own else [],
+        "showcase_custom": user.achievement_showcase is not None,
     }
 
 
@@ -274,7 +281,7 @@ def profile(request):
         "user": user,
         "profile_user": user,
         "is_own_profile": True,
-        **_profile_extras(user),
+        **_profile_extras(user, own=True),
         "live_session": steam_presence.live_for_users(user, [user]).get(user.id),
         "recent_activity": activity.user_activity(user, user),
     })

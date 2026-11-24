@@ -179,3 +179,6 @@ STEAM_AUTOSYNC_HOURS = int(os.getenv('STEAM_AUTOSYNC_HOURS', '6'))
 # Запускається з middleware, поки сайтом користуються, і командою `manage.py poll_steam_presence --loop`.
 STEAM_PRESENCE = os.getenv('STEAM_PRESENCE', 'True').lower() in ('1', 'true', 'yes')
 STEAM_PRESENCE_INTERVAL = int(os.getenv('STEAM_PRESENCE_INTERVAL', '60'))
+
+# Досягнення GameVault: перевірка після дій (library/services/site_achievements.py). У тестах вимкнено.
+SITE_ACHIEVEMENTS = True

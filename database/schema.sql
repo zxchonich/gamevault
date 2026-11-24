@@ -1,5 +1,5 @@
 -- Схема БД GameVault (лише структура, без даних користувачів).
--- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-010.
+-- Відповідає актуальній локальній БД, включно з міграціями database/migrations/001-011.
 --
 --   mysql -u root -p -e "CREATE DATABASE game_library_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 --   mysql -u root -p game_library_db < database/schema.sql
@@ -75,6 +75,8 @@ CREATE TABLE `users` (
   `show_activity` tinyint(1) NOT NULL DEFAULT '1',
   `show_playing_now` tinyint(1) NOT NULL DEFAULT '1',
   `notify_friend_playing` tinyint(1) NOT NULL DEFAULT '1',
+  `achievement_showcase` varchar(300) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `achievements_synced_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_username` (`username`),
   UNIQUE KEY `uq_users_email` (`email`),
@@ -171,10 +173,11 @@ CREATE TABLE `dismissed_recommendations` (
 CREATE TABLE `activity_events` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
-  `event_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'library_add, status_change, review, steam_import, friendship, game_approved, play_session, achievements',
+  `event_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'library_add, status_change, review, steam_import, friendship, game_approved, play_session, achievements, site_achievement',
   `game_id` int DEFAULT NULL,
   `appid` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `game_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `achievement_key` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `target_user_id` int DEFAULT NULL COMMENT 'другий користувач (для friendship)',
   `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'новий статус (status_change)',
   `score` smallint DEFAULT NULL COMMENT 'оцінка (review)',
@@ -261,6 +264,8 @@ CREATE TABLE `notifications` (
   `connection_id` int DEFAULT NULL,
   `game_request_id` int DEFAULT NULL,
   `game_id` int DEFAULT NULL,
+  `achievement_key` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `tier` tinyint DEFAULT NULL,
   `created_at` datetime NOT NULL,
   `read_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -360,6 +365,20 @@ CREATE TABLE `user_blocks` (
   KEY `fk_user_blocks_blocked` (`blocked_id`),
   CONSTRAINT `fk_user_blocks_blocked` FOREIGN KEY (`blocked_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_blocks_blocker` FOREIGN KEY (`blocker_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_site_achievements` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `achievement_key` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tier` tinyint NOT NULL,
+  `unlocked_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_site_achievement` (`user_id`,`achievement_key`,`tier`),
+  KEY `idx_site_achievements_key` (`achievement_key`,`tier`),
+  CONSTRAINT `fk_user_site_achievements_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

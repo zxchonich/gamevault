@@ -88,6 +88,7 @@
                     <a href="{% url 'library:profile' %}">Профіль</a>
                     <a href="{% url 'library:steam_library' %}">Steam-бібліотека</a>
                     <a href="{% url 'library:my_reviews' %}">Мої рецензії</a>
+                    <a href="{% url 'library:my_achievements' %}">Досягнення</a>
                     <a href="{% url 'library:my_requests' %}">Мої заявки</a>
                     <a href="{% url 'library:edit_profile' %}">Налаштування</a>
                     {% if current_library_user.role.name == 'admin' %}

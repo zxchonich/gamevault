@@ -51,6 +51,24 @@ ICONS = {
     "key": '<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6l3 3M14.5 8.5l2 2"/>',
     "steam": '<circle cx="15.5" cy="8.5" r="3.5"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="8.5" cy="16" r="2.5"/><path d="m10.6 14.6 2.4-3.3M2.5 12.6l4 1.8"/>',
     "bell": '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+    "box": '<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>',
+    "flag": '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+    "shapes": '<circle cx="7" cy="7" r="3.5"/><rect x="13" y="3.5" width="7" height="7" rx="1"/><path d="m7 13.5 4 7H3zM16.5 13.5l3.5 3.5-3.5 3.5-3.5-3.5z"/>',
+    "shield": '<path d="M12 3 4.5 6v6c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+    "pen": '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+    "scroll": '<path d="M7 4h11a2 2 0 0 1 2 2v1h-4M7 4a2 2 0 0 0-2 2v12a2 2 0 0 1-2-2v-1h4"/><path d="M7 4v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7M10 9h6M10 13h6"/>',
+    "scale": '<path d="M12 4v16M8 20h8M5 7h14M12 4l-1 3h2z"/><path d="m5 7-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/>',
+    "users": '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.7c2.4.6 4 2.4 4 5.3"/>',
+    "compass": '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
+    "calendar": '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    "timer": '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M9.5 2.5h5M19 6.5l-1.5 1.5"/>',
+    "moon": '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+    "flame": '<path d="M12 21c-4 0-7-2.7-7-6.5 0-4 3-6 4-10 2 1.5 3 3.5 3 5.5 1-1 1.5-2 1.5-3.5 2.5 2 4.5 4.8 4.5 8 0 3.8-2.6 6.5-6 6.5z"/>',
+    "gem": '<path d="M6.5 3.5h11L21 9l-9 11.5L3 9z"/><path d="M3 9h18M12 20.5 8.5 9l3.5-5.5L15.5 9z"/>',
+    "star": '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    "grip": '<circle cx="9" cy="6" r="1.2" fill="currentColor"/><circle cx="15" cy="6" r="1.2" fill="currentColor"/><circle cx="9" cy="12" r="1.2" fill="currentColor"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/><circle cx="9" cy="18" r="1.2" fill="currentColor"/><circle cx="15" cy="18" r="1.2" fill="currentColor"/>',
+    "edit": '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/>',
     "ban": '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
     "trophy": '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M10 17h4"/>',
     "gamepad": '<rect x="2.5" y="7" width="19" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="15.5" cy="11.5" r=".9" fill="currentColor"/><circle cx="17.5" cy="13.8" r=".9" fill="currentColor"/>',
@@ -203,3 +221,46 @@ def minutes_label(minutes):
     if not hours:
         return f"{rest} хв"
     return f"{hours} год {rest} хв" if rest else f"{hours} год"
+
+
+
+@register.inclusion_tag("library/components/site_badge.html")
+def site_badge(key, tier=0, size="", hidden=False):
+    """{% site_badge "finisher" 2 "lg" %} — круглий значок досягнення GameVault з кільцем рівня.
+
+    tier 0 — ще не отримано (сірий); hidden — секретне (знак питання замість іконки)."""
+    from library.services.site_achievements import BY_KEY, TIER_NAMES
+
+    achievement = BY_KEY.get(key)
+    if achievement is None:
+        return {"badge": None}
+    return {
+        "badge": achievement,
+        "tier": tier,
+        "tier_class": "single" if achievement.single else f"t{min(max(tier, 1), 3)}",
+        "tier_name": "" if achievement.single else TIER_NAMES.get(tier, ""),
+        "size": size,
+        "locked": tier == 0,
+        "hidden": hidden,
+        "svg": icon(achievement.icon, {"sm": 16, "lg": 34}.get(size, 24)),
+    }
+
+
+
+@register.filter
+def achievement_title(key):
+    from library.services.site_achievements import BY_KEY
+
+    achievement = BY_KEY.get(key)
+    return achievement.title if achievement else key
+
+
+@register.filter
+def tier_label(tier, key):
+    """{{ tier|tier_label:key }} — «срібло»; для одноразових досягнень — порожньо."""
+    from library.services.site_achievements import BY_KEY, TIER_NAMES
+
+    achievement = BY_KEY.get(key)
+    if achievement is None or achievement.single:
+        return ""
+    return TIER_NAMES.get(tier, "")
